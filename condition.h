@@ -20,9 +20,10 @@ public:
 
     enum class Statement
     {
-        equal,
+        equals,
         above,
-        below
+        below,
+        between
     };
 
     ConditionObject(Type type) :

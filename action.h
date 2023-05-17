@@ -15,6 +15,7 @@ public:
 
     enum class Type
     {
+        mqtt,
         property,
         telegram
     };
@@ -29,6 +30,26 @@ public:
 private:
 
     Type m_type;
+
+};
+
+class MqttAction : public ActionObject
+{
+
+public:
+
+    MqttAction(const QString &topic, const QString &message, bool retain) :
+        ActionObject(Type::mqtt), m_topic(topic), m_message(message), m_retain(retain) {}
+
+    inline QString topic(void) { return m_topic; }
+    inline QString message(void) { return m_message; }
+    inline bool retain(void) { return m_retain; }
+
+private:
+
+    QString m_topic;
+    QString m_message;
+    bool m_retain;
 
 };
 

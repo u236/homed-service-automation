@@ -84,6 +84,13 @@ void Controller::runActions(const Automation &automation)
                 break;
             }
 
+            case ActionObject::Type::mqtt:
+            {
+                MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
+                mqttPublishString(action->topic(), action->message(), action->retain());
+                break;
+            }
+
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());

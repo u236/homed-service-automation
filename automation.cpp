@@ -104,6 +104,17 @@ void AutomationList::unserialize(const QJsonArray &automations)
 
             switch (type)
             {
+                case ActionObject::Type::mqtt:
+                {
+                    QString topic = item.value("topic").toString(), message = item.value("message").toString();
+
+                    if (topic.isEmpty(), message.isEmpty())
+                        continue;
+
+                    automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
+                    break;
+                }
+
                 case ActionObject::Type::property:
                 {
                     QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
