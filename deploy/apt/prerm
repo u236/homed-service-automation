@@ -1,0 +1,6 @@
+#!/bin/bash
+
+systemctl stop homed-automation.service
+systemctl disable homed-automation.service
+
+exit 0

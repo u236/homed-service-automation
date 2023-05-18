@@ -1,0 +1,10 @@
+[Unit]
+Description=HOMEd Automation Service
+
+[Service]
+ExecStart=/usr/local/bin/homed-automation
+KillSignal=SIGTERM
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
