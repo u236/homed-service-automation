@@ -2,7 +2,7 @@ Package: homed-automation
 Version:
 Architecture:
 Maintainer: u236 <mail@u236.org>
-Depends: homed-qt
+Depends: curl, homed-qt
 Section: misc
 Priority: standard
 Description: HOMEd Automation Service

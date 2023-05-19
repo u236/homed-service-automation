@@ -64,6 +64,17 @@ void AutomationList::unserialize(const QJsonArray &automations)
 
                     break;
                 }
+
+                case TriggerObject::Type::telegram:
+                {
+                    QString message = item.value("message").toString();
+
+                    if (message.isEmpty())
+                        continue;
+
+                    automation->triggers().append(Trigger(new TelegramTrigger(message)));
+                    break;
+                }
             }
         }
 

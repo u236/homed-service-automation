@@ -15,7 +15,8 @@ public:
 
     enum class Type
     {
-        property
+        property,
+        telegram
     };
 
     enum class Statement
@@ -58,6 +59,22 @@ private:
     QString m_endpoint, m_property;
     Statement m_statement;
     QVariant m_value;
+
+};
+
+class TelegramTrigger : public TriggerObject
+{
+
+public:
+
+    TelegramTrigger(const QString &message) :
+        TriggerObject(Type::telegram), m_message(message) {}
+
+    inline bool match(const QString &message) { return message == m_message; }
+
+private:
+
+    QString m_message;
 
 };
 

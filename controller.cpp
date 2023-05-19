@@ -1,10 +1,8 @@
 #include "controller.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this))
+Controller::Controller(const QString &configFile) : HOMEd(configFile), m_telegram(new Telegram(getConfig(), this)), m_automations(new AutomationList(getConfig(), this))
 {
-    m_telegramToken = getConfig()->value("telegram/token").toString();
-    m_telegramChat = getConfig()->value("telegram/chat").toInt();
-
+    connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
     m_automations->init();
 }
 
@@ -33,7 +31,6 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
                 if (trigger->type() != TriggerObject::Type::property || trigger->endpoint() != endpoint->name() || trigger->property() != it.key() || !trigger->match(value, it.value()))
                     continue;
 
-                logInfo << "Automation" << automation->name() << "triggered"; // TODO: publish "triggered" event here?
                 checkConditions(automation);
             }
         }
@@ -44,6 +41,8 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
 
 void Controller::checkConditions(const Automation &automation)
 {
+    logInfo << "Automation" << automation->name() << "triggered"; // TODO: publish "triggered" event here?
+
     for (int i = 0; i < automation->conditions().count(); i++)
     {
         const Condition &item = automation->conditions().at(i);
@@ -94,10 +93,7 @@ void Controller::runActions(const Automation &automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-
-                if (!m_telegramToken.isEmpty() && m_telegramChat)
-                    system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(QJsonObject {{"chat_id", m_telegramChat}, {"text", action->message()}, {"parse_mode", "Markdown"}}).toJson(QJsonDocument::Compact), m_telegramToken).toUtf8());
-
+                m_telegram->sendMessage(action->message());
                 break;
             }
         }
@@ -162,5 +158,23 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             it = m_endpoints.insert(endpoint, Endpoint(new EndpointObject(endpoint)));
 
         updateStatus(it.value(), json.toVariantMap());
+    }
+}
+
+void Controller::telegramReceived(const QString &message)
+{
+    for (int i = 0; i < m_automations->count(); i++)
+    {
+        const Automation &automation = m_automations->at(i);
+
+        for (int j = 0; j < automation->triggers().count(); j++)
+        {
+            TelegramTrigger *trigger = reinterpret_cast < TelegramTrigger*> (automation->triggers().at(j).data());
+
+            if (trigger->type() != TriggerObject::Type::telegram || !trigger->match(message))
+                continue;
+
+            checkConditions(automation);
+        }
     }
 }
