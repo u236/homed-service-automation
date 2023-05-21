@@ -11,6 +11,7 @@ class Telegram : public QObject
 public:
 
     Telegram(QSettings *config, QObject *parent);
+    ~Telegram(void);
 
     void sendMessage(const QString &message);
 

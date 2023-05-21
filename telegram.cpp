@@ -18,6 +18,11 @@ Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_proc
     getUpdates();
 }
 
+Telegram::~Telegram(void)
+{
+    m_process->close();
+}
+
 void Telegram::sendMessage(const QString &message)
 {
     if (m_token.isEmpty() || !m_chat)
