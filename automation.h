@@ -76,6 +76,10 @@ private:
 
     void unserialize(const QJsonArray &automations);
 
+signals:
+
+    void addSubscription(const QString &topic);
+
 };
 
 #endif

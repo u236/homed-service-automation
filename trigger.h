@@ -16,7 +16,8 @@ public:
     enum class Type
     {
         property,
-        telegram
+        telegram,
+        mqtt
     };
 
     enum class Statement
@@ -75,6 +76,22 @@ public:
 private:
 
     QString m_message;
+
+};
+
+class MqttTrigger : public TriggerObject
+{
+
+public:
+
+    MqttTrigger(const QString &topic, const QString &message) :
+        TriggerObject(Type::mqtt), m_topic(topic), m_message(message) {}
+
+    inline bool match(const QString &topic, const QString &message) { return topic == m_topic && message == m_message; }
+
+private:
+
+    QString m_topic, m_message;
 
 };
 

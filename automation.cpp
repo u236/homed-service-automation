@@ -76,6 +76,18 @@ void AutomationList::unserialize(const QJsonArray &automations)
                     automation->triggers().append(Trigger(new TelegramTrigger(message)));
                     break;
                 }
+
+                case TriggerObject::Type::mqtt:
+                {
+                    QString topic = item.value("topic").toString(), message = item.value("message").toString();
+
+                    if (topic.isEmpty() || message.isEmpty())
+                        continue;
+
+                    automation->triggers().append(Trigger(new MqttTrigger(topic, message)));
+                    emit addSubscription(topic);
+                    break;
+                }
             }
         }
 
@@ -152,7 +164,7 @@ void AutomationList::unserialize(const QJsonArray &automations)
                 {
                     QString topic = item.value("topic").toString(), message = item.value("message").toString();
 
-                    if (topic.isEmpty(), message.isEmpty())
+                    if (topic.isEmpty() || message.isEmpty())
                         continue;
 
                     automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));

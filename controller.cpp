@@ -3,6 +3,8 @@
 Controller::Controller(const QString &configFile) : HOMEd(configFile), m_telegram(new Telegram(getConfig(), this)), m_automations(new AutomationList(getConfig(), this))
 {
     connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
+    connect(m_automations, &AutomationList::addSubscription, this, &Controller::addSubscription);
+
     m_automations->init();
 }
 
@@ -26,7 +28,7 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
 
             for (int j = 0; j < automation->triggers().count(); j++)
             {
-                PropertyTrigger *trigger = reinterpret_cast < PropertyTrigger*> (automation->triggers().at(j).data());
+                PropertyTrigger *trigger = reinterpret_cast <PropertyTrigger*> (automation->triggers().at(j).data());
 
                 if (trigger->type() != TriggerObject::Type::property || trigger->endpoint() != endpoint->name() || trigger->property() != it.key() || !trigger->match(value, it.value()))
                     continue;
@@ -105,6 +107,12 @@ void Controller::mqttConnected(void)
 {
     logInfo << "MQTT connected";
     mqttSubscribe(mqttTopic("service/#"));
+
+    for (int i = 0; i < m_subscriptions.count(); i++)
+    {
+        logInfo << "MQTT subscribed to" << m_subscriptions.at(i);
+        mqttSubscribe(m_subscriptions.at(i));
+    }
 }
 
 void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &topic)
@@ -160,6 +168,23 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
         updateStatus(it.value(), json.toVariantMap());
     }
+    else if (m_subscriptions.contains(topic.name()))
+    {
+        for (int i = 0; i < m_automations->count(); i++)
+        {
+            const Automation &automation = m_automations->at(i);
+
+            for (int j = 0; j < automation->triggers().count(); j++)
+            {
+                MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
+
+                if (trigger->type() != TriggerObject::Type::mqtt || !trigger->match(topic.name(), message))
+                    continue;
+
+                checkConditions(automation);
+            }
+        }
+    }
 }
 
 void Controller::telegramReceived(const QString &message)
@@ -178,4 +203,12 @@ void Controller::telegramReceived(const QString &message)
             checkConditions(automation);
         }
     }
+}
+
+void Controller::addSubscription(const QString &topic)
+{
+    if (m_subscriptions.contains(topic))
+        return;
+
+    m_subscriptions.append(topic);
 }
