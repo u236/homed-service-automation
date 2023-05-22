@@ -11,6 +11,7 @@ AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(par
 
     m_triggerStatements   = QMetaEnum::fromType <TriggerObject::Statement> ();
     m_conditionStatements = QMetaEnum::fromType <ConditionObject::Statement> ();
+    m_actionStatements    = QMetaEnum::fromType <ActionObject::Statement> ();
 }
 
 void AutomationList::init(void)
@@ -115,26 +116,24 @@ void AutomationList::unserialize(const QJsonArray &automations)
 
             switch (type)
             {
-                case ActionObject::Type::mqtt:
-                {
-                    QString topic = item.value("topic").toString(), message = item.value("message").toString();
-
-                    if (topic.isEmpty(), message.isEmpty())
-                        continue;
-
-                    automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
-                    break;
-                }
-
                 case ActionObject::Type::property:
                 {
                     QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
-                    QVariant value = item.value("value").toVariant();
 
-                    if (endpoint.isEmpty() || property.isEmpty() || !value.isValid())
+                    if (endpoint.isEmpty() || property.isEmpty())
                         continue;
 
-                    automation->actions().append(Action(new PropertyAction(endpoint, property, value)));
+                    for (int i = 0; i < m_actionStatements.keyCount(); i++)
+                    {
+                        QVariant value = item.value(m_actionStatements.key(i)).toVariant();
+
+                        if (!value.isValid())
+                            continue;
+
+                        automation->actions().append(Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value)));
+                        break;
+                    }
+
                     break;
                 }
 
@@ -146,6 +145,17 @@ void AutomationList::unserialize(const QJsonArray &automations)
                         continue;
 
                     automation->actions().append(Action(new TelegramAction(message)));
+                    break;
+                }
+
+                case ActionObject::Type::mqtt:
+                {
+                    QString topic = item.value("topic").toString(), message = item.value("message").toString();
+
+                    if (topic.isEmpty(), message.isEmpty())
+                        continue;
+
+                    automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
                     break;
                 }
             }

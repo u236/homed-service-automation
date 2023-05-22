@@ -9,6 +9,7 @@ HEADERS += \
     trigger.h
 
 SOURCES += \
+    action.cpp \
     automation.cpp \
     condition.cpp \
     controller.cpp \

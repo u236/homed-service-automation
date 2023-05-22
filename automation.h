@@ -72,7 +72,7 @@ public:
 private:
 
     QFile m_databaseFile;
-    QMetaEnum m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements;
+    QMetaEnum m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
 
     void unserialize(const QJsonArray &automations);
 

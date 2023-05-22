@@ -79,14 +79,8 @@ void Controller::runActions(const Automation &automation)
             case ActionObject::Type::property:
             {
                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
-                mqttPublish(mqttTopic("td/").append(action->endpoint()), {{action->property(), QJsonValue::fromVariant(action->value())}});
-                break;
-            }
-
-            case ActionObject::Type::mqtt:
-            {
-                MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), action->message(), action->retain());
+                auto it = m_endpoints.find(action->endpoint());
+                mqttPublish(mqttTopic("td/").append(action->endpoint()), {{action->property(), QJsonValue::fromVariant(action->value(it != m_endpoints.end() ? it.value()->properties().value(action->property()) : QVariant()))}});
                 break;
             }
 
@@ -94,6 +88,13 @@ void Controller::runActions(const Automation &automation)
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
                 m_telegram->sendMessage(action->message());
+                break;
+            }
+
+            case ActionObject::Type::mqtt:
+            {
+                MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
+                mqttPublishString(action->topic(), action->message(), action->retain());
                 break;
             }
         }

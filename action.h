@@ -15,9 +15,16 @@ public:
 
     enum class Type
     {
-        mqtt,
         property,
-        telegram
+        telegram,
+        mqtt
+    };
+
+    enum class Statement
+    {
+        increase,
+        decrease,
+        value
     };
 
     ActionObject(Type type) :
@@ -26,30 +33,11 @@ public:
     inline Type type(void) { return m_type; }
 
     Q_ENUM(Type)
+    Q_ENUM(Statement)
 
 private:
 
     Type m_type;
-
-};
-
-class MqttAction : public ActionObject
-{
-
-public:
-
-    MqttAction(const QString &topic, const QString &message, bool retain) :
-        ActionObject(Type::mqtt), m_topic(topic), m_message(message), m_retain(retain) {}
-
-    inline QString topic(void) { return m_topic; }
-    inline QString message(void) { return m_message; }
-    inline bool retain(void) { return m_retain; }
-
-private:
-
-    QString m_topic;
-    QString m_message;
-    bool m_retain;
 
 };
 
@@ -58,16 +46,18 @@ class PropertyAction : public ActionObject
 
 public:
 
-    PropertyAction(const QString &endpoint, const QString &property, const QVariant &value) :
-        ActionObject(Type::property), m_endpoint(endpoint), m_property(property), m_value(value) {}
+    PropertyAction(const QString &endpoint, const QString &property, Statement statement, const QVariant &value) :
+        ActionObject(Type::property), m_endpoint(endpoint), m_property(property), m_statement(statement), m_value(value) {}
 
     inline QString endpoint(void) { return m_endpoint; }
     inline QString property(void) { return m_property; }
-    inline QVariant value(void) { return m_value; }
+
+    QVariant value(const QVariant &oldValue);
 
 private:
 
     QString m_endpoint, m_property;
+    Statement m_statement;
     QVariant m_value;
 
 };
@@ -85,6 +75,25 @@ public:
 private:
 
     QString m_message;
+
+};
+
+class MqttAction : public ActionObject
+{
+
+public:
+
+    MqttAction(const QString &topic, const QString &message, bool retain) :
+        ActionObject(Type::mqtt), m_topic(topic), m_message(message), m_retain(retain) {}
+
+    inline QString topic(void) { return m_topic; }
+    inline QString message(void) { return m_message; }
+    inline bool retain(void) { return m_retain; }
+
+private:
+
+    QString m_topic, m_message;
+    bool m_retain;
 
 };
 
