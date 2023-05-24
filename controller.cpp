@@ -1,14 +1,16 @@
 #include "controller.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this))
+Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_date(QDate::currentDate())
 {
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
+    updateSun();
 
-    connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
     connect(m_automations, &AutomationList::addSubscription, this, &Controller::addSubscription);
+    connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
+    connect(m_timer, &QTimer::timeout, this, &Controller::updateTime);
 
     m_automations->init();
-    updateSun();
+    m_timer->start(1000);
 }
 
 void Controller::updateSun(void)
@@ -19,7 +21,7 @@ void Controller::updateSun(void)
     m_sunrise = m_sun->sunrise();
     m_sunset = m_sun->sunset();
 
-    logInfo << "Sunrise set to" << m_sunrise.toString().toUtf8().constData() << "and sunset set to" << m_sunset.toString().toUtf8().constData();
+    logInfo << "Sunrise set to" << m_sunrise.toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sunset.toString("hh:mm").toUtf8().constData();
 }
 
 void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
@@ -201,6 +203,14 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     }
 }
 
+void Controller::addSubscription(const QString &topic)
+{
+    if (m_subscriptions.contains(topic))
+        return;
+
+    m_subscriptions.append(topic);
+}
+
 void Controller::telegramReceived(const QString &message)
 {
     for (int i = 0; i < m_automations->count(); i++)
@@ -209,7 +219,7 @@ void Controller::telegramReceived(const QString &message)
 
         for (int j = 0; j < automation->triggers().count(); j++)
         {
-            TelegramTrigger *trigger = reinterpret_cast < TelegramTrigger*> (automation->triggers().at(j).data());
+            TelegramTrigger *trigger = reinterpret_cast <TelegramTrigger*> (automation->triggers().at(j).data());
 
             if (trigger->type() != TriggerObject::Type::telegram || !trigger->match(message))
                 continue;
@@ -219,10 +229,54 @@ void Controller::telegramReceived(const QString &message)
     }
 }
 
-void Controller::addSubscription(const QString &topic)
+void Controller::updateTime(void)
 {
-    if (m_subscriptions.contains(topic))
+    QDateTime now = QDateTime::currentDateTime();
+
+    if (m_date != now.date())
+    {
+        updateSun();
+        m_date = now.date();
+    }
+
+    if (now.time().second())
         return;
 
-    m_subscriptions.append(topic);
+    for (int i = 0; i < m_automations->count(); i++)
+    {
+        const Automation &automation = m_automations->at(i);
+
+        for (int j = 0; j < automation->triggers().count(); j++)
+        {
+            const Trigger &trigger = automation->triggers().at(j);
+            QTime value = QTime(now.time().hour(), now.time().minute());
+
+            switch (trigger->type())
+            {
+                case TriggerObject::Type::sunrise:
+
+                    if (reinterpret_cast <SunriseTrigger*> (trigger.data())->match(m_sunrise, value))
+                        checkConditions(automation);
+
+                    break;
+
+                case TriggerObject::Type::sunset:
+
+                    if (reinterpret_cast <SunsetTrigger*> (trigger.data())->match(m_sunset, value))
+                        checkConditions(automation);
+
+                    break;
+
+                case TriggerObject::Type::time:
+
+                    if (reinterpret_cast <TimeTrigger*> (trigger.data())->match(value))
+                        checkConditions(automation);
+
+                    break;
+
+                default:
+                    break;
+            }
+        }
+    }
 }

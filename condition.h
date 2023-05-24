@@ -15,7 +15,10 @@ public:
 
     enum class Type
     {
-        property
+        property,
+        date,
+        week,
+        time
     };
 
     enum class Statement

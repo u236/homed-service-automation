@@ -22,7 +22,10 @@ private:
     Telegram *m_telegram;
     Sun *m_sun;
 
+    QTimer *m_timer;
+
     QTime m_sunrise, m_sunset;
+    QDate m_date;
 
     QList <QString> m_subscriptions;
     QMap <QString, Endpoint> m_endpoints;
@@ -37,8 +40,9 @@ private slots:
     void mqttConnected(void) override;
     void mqttReceived(const QByteArray &message, const QMqttTopicName &topic) override;
 
-    void telegramReceived(const QString &message);
     void addSubscription(const QString &topic);
+    void telegramReceived(const QString &message);
+    void updateTime(void);
 
 };
 

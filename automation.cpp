@@ -88,6 +88,24 @@ void AutomationList::unserialize(const QJsonArray &automations)
                     emit addSubscription(topic);
                     break;
                 }
+
+                case TriggerObject::Type::sunrise:
+                {
+                    automation->triggers().append(Trigger(new SunriseTrigger(static_cast <qint32> (item.value("offset").toInt()))));
+                    break;
+                }
+
+                case TriggerObject::Type::sunset:
+                {
+                    automation->triggers().append(Trigger(new SunsetTrigger(static_cast <qint32> (item.value("offset").toInt()))));
+                    break;
+                }
+
+                case TriggerObject::Type::time:
+                {
+                    automation->triggers().append(Trigger(new TimeTrigger(QTime::fromString(item.value("time").toString()))));
+                    break;
+                }
             }
         }
 
@@ -118,6 +136,9 @@ void AutomationList::unserialize(const QJsonArray &automations)
 
                     break;
                 }
+
+                default:    // TODO: remove it
+                    break;
             }
         }
 
