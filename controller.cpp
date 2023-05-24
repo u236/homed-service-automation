@@ -1,11 +1,25 @@
 #include "controller.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile), m_telegram(new Telegram(getConfig(), this)), m_automations(new AutomationList(getConfig(), this))
+Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this))
 {
+    m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
+
     connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
     connect(m_automations, &AutomationList::addSubscription, this, &Controller::addSubscription);
 
     m_automations->init();
+    updateSun();
+}
+
+void Controller::updateSun(void)
+{
+    m_sun->setDate(QDate::currentDate());
+    m_sun->setOffset(QDateTime::currentDateTime().offsetFromUtc());
+
+    m_sunrise = m_sun->sunrise();
+    m_sunset = m_sun->sunset();
+
+    logInfo << "Sunrise set to" << m_sunrise.toString().toUtf8().constData() << "and sunset set to" << m_sunset.toString().toUtf8().constData();
 }
 
 void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVariant> &data)

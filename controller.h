@@ -5,6 +5,7 @@
 
 #include "automation.h"
 #include "homed.h"
+#include "sun.h"
 #include "telegram.h"
 
 class Controller : public HOMEd
@@ -17,12 +18,16 @@ public:
 
 private:
 
-    Telegram *m_telegram;
     AutomationList *m_automations;
+    Telegram *m_telegram;
+    Sun *m_sun;
+
+    QTime m_sunrise, m_sunset;
 
     QList <QString> m_subscriptions;
     QMap <QString, Endpoint> m_endpoints;
 
+    void updateSun(void);
     void updateStatus(const Endpoint &endpoint, const QMap<QString, QVariant> &data);
     void checkConditions(const Automation &automation);
     void runActions(const Automation &automation);
