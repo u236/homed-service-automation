@@ -59,7 +59,10 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
 
 void Controller::checkConditions(const Automation &automation)
 {
-    logInfo << "Automation" << automation->name() << "triggered"; // TODO: publish "triggered" event here?
+    QDateTime now = QDateTime::currentDateTime();
+
+    logInfo << "Automation" << automation->name() << "triggered";
+    // TODO: publish "triggered" event here?
 
     for (int i = 0; i < automation->conditions().count(); i++)
     {
@@ -74,7 +77,46 @@ void Controller::checkConditions(const Automation &automation)
 
                 if (it == m_endpoints.end() || !condition->match(it.value()->properties().value(condition->property())))
                 {
-                    logInfo << "Automation" << automation->name() << "conditions mismatch";
+                    logInfo << "Automation" << automation->name() << "properties mismatch";
+                    return;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::date:
+            {
+                DateCondition *condition = reinterpret_cast <DateCondition*> (item.data());
+
+                if (!condition->match(QDate(1900, now.date().month(), now.date().day())))
+                {
+                    logInfo << "Automation" << automation->name() << "date mismatch";
+                    return;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::time:
+            {
+                TimeCondition *condition = reinterpret_cast <TimeCondition*> (item.data());
+
+                if (!condition->match(QTime(now.time().hour(), now.time().minute())))
+                {
+                    logInfo << "Automation" << automation->name() << "time mismatch";
+                    return;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::week:
+            {
+                WeekCondition *condition = reinterpret_cast <WeekCondition*> (item.data());
+
+                if (!condition->match(QDate::currentDate().dayOfWeek()))
+                {
+                    logInfo << "Automation" << automation->name() << "day of week mismatch";
                     return;
                 }
 
@@ -249,27 +291,27 @@ void Controller::updateTime(void)
         for (int j = 0; j < automation->triggers().count(); j++)
         {
             const Trigger &trigger = automation->triggers().at(j);
-            QTime value = QTime(now.time().hour(), now.time().minute());
+            QTime time = QTime(now.time().hour(), now.time().minute());
 
             switch (trigger->type())
             {
                 case TriggerObject::Type::sunrise:
 
-                    if (reinterpret_cast <SunriseTrigger*> (trigger.data())->match(m_sunrise, value))
+                    if (reinterpret_cast <SunriseTrigger*> (trigger.data())->match(m_sunrise, time))
                         checkConditions(automation);
 
                     break;
 
                 case TriggerObject::Type::sunset:
 
-                    if (reinterpret_cast <SunsetTrigger*> (trigger.data())->match(m_sunset, value))
+                    if (reinterpret_cast <SunsetTrigger*> (trigger.data())->match(m_sunset, time))
                         checkConditions(automation);
 
                     break;
 
                 case TriggerObject::Type::time:
 
-                    if (reinterpret_cast <TimeTrigger*> (trigger.data())->match(value))
+                    if (reinterpret_cast <TimeTrigger*> (trigger.data())->match(time))
                         checkConditions(automation);
 
                     break;

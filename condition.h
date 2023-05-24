@@ -1,6 +1,7 @@
 #ifndef CONDITION_H
 #define CONDITION_H
 
+#include <QDateTime>
 #include <QSharedPointer>
 #include <QVariant>
 
@@ -60,6 +61,56 @@ private:
 
     QString m_endpoint, m_property;
     Statement m_statement;
+    QVariant m_value;
+
+};
+
+class DateCondition : public ConditionObject
+{
+
+public:
+
+    DateCondition(Statement statement, const QVariant &value) :
+        ConditionObject(Type::date), m_statement(statement), m_value(value) {}
+
+    bool match(const QDate &value);
+
+private:
+
+    Statement m_statement;
+    QVariant m_value;
+
+};
+
+class TimeCondition : public ConditionObject
+{
+
+public:
+
+    TimeCondition(Statement statement, const QVariant &value) :
+        ConditionObject(Type::time), m_statement(statement), m_value(value) {}
+
+    bool match(const QTime &value);
+
+private:
+
+    Statement m_statement;
+    QVariant m_value;
+
+};
+
+class WeekCondition : public ConditionObject
+{
+
+public:
+
+    WeekCondition(const QVariant &value) :
+        ConditionObject(Type::week), m_value(value) {}
+
+    inline bool match(int value) { return m_value.toList().contains(value); }
+
+private:
+
     QVariant m_value;
 
 };

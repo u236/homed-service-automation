@@ -137,8 +137,48 @@ void AutomationList::unserialize(const QJsonArray &automations)
                     break;
                 }
 
-                default:    // TODO: remove it
+                case ConditionObject::Type::date:
+                {
+                    for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                    {
+                        QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                        if (!value.isValid())
+                            continue;
+
+                        automation->conditions().append(Condition(new DateCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                        break;
+                    }
+
                     break;
+                }
+
+                case ConditionObject::Type::time:
+                {
+                    for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                    {
+                        QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                        if (!value.isValid())
+                            continue;
+
+                        automation->conditions().append(Condition(new TimeCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                        break;
+                    }
+
+                    break;
+                }
+
+                case ConditionObject::Type::week:
+                {
+                    QVariant value = item.value("days").toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    automation->conditions().append(Condition(new WeekCondition(value)));
+                    break;
+                }
             }
         }
 
