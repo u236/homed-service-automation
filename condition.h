@@ -18,8 +18,8 @@ public:
     {
         property,
         date,
-        week,
-        time
+        time,
+        week
     };
 
     enum class Statement
