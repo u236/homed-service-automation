@@ -222,7 +222,7 @@ void AutomationList::unserialize(const QJsonArray &automations)
                     for (auto it = array.begin(); it != array.end(); it++)
                         chats.append(it->toInt());
 
-                    automation->actions().append(Action(new TelegramAction(message, chats)));
+                    automation->actions().append(Action(new TelegramAction(message, item.value("silent").toBool(), chats)));
                     break;
                 }
 

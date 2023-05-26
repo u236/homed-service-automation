@@ -67,15 +67,18 @@ class TelegramAction : public ActionObject
 
 public:
 
-    TelegramAction(const QString &message, const QList <qint64> &chats) :
-        ActionObject(Type::telegram), m_message(message), m_chats(chats) {}
+    TelegramAction(const QString &message, bool silent, const QList <qint64> &chats) :
+        ActionObject(Type::telegram), m_message(message), m_silent(silent), m_chats(chats) {}
 
     inline QString message(void) { return m_message; }
+    inline bool silent(void) { return m_silent; }
     inline QList <qint64> &chats(void) { return m_chats; }
 
 private:
 
     QString m_message;
+    bool m_silent;
+
     QList <qint64> m_chats;
 };
 

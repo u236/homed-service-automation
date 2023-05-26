@@ -21,8 +21,9 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendMessage(const QString &message, const QList <qint64> &chats)
+void Telegram::sendMessage(const QString &message, bool silent, const QList <qint64> &chats)
 {
+    QJsonObject json = {{"text", message}, {"disable_notification", silent}, {"parse_mode", "Markdown"}};
     QList <qint64> list = chats;
 
     if (m_token.isEmpty() || !m_chat)
@@ -32,7 +33,10 @@ void Telegram::sendMessage(const QString &message, const QList <qint64> &chats)
         list.append(m_chat);
 
     for (int i = 0; i < list.count(); i++)
-        system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(QJsonObject {{"chat_id", list.at(i)}, {"text", message}, {"parse_mode", "Markdown"}}).toJson(QJsonDocument::Compact), m_token).toUtf8());
+    {
+        json.insert("chat_id", list.at(i));
+        system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token).toUtf8());
+    }
 }
 
 void Telegram::getUpdates(void)
