@@ -50,4 +50,6 @@ bool TimeCondition::match(const QTime &value)
             return value >= QTime::fromString(list.value(0).toString(), "hh:mm") && value <= QTime::fromString(list.value(1).toString(), "hh:mm");
         }
     }
+
+    return false;
 }

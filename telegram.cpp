@@ -3,8 +3,6 @@
 #include <QJsonObject>
 #include "telegram.h"
 
-#include "logger.h"
-
 Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_process(new QProcess(this)), m_offset(0)
 {
     m_token = config->value("telegram/token").toString();
@@ -23,12 +21,18 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendMessage(const QString &message)
+void Telegram::sendMessage(const QString &message, const QList <qint64> &chats)
 {
+    QList <qint64> list = chats;
+
     if (m_token.isEmpty() || !m_chat)
         return;
 
-    system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(QJsonObject {{"chat_id", m_chat}, {"text", message}, {"parse_mode", "Markdown"}}).toJson(QJsonDocument::Compact), m_token).toUtf8());
+    if (list.isEmpty())
+        list.append(m_chat);
+
+    for (int i = 0; i < list.count(); i++)
+        system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(QJsonObject {{"chat_id", list.at(i)}, {"text", message}, {"parse_mode", "Markdown"}}).toJson(QJsonDocument::Compact), m_token).toUtf8());
 }
 
 void Telegram::getUpdates(void)

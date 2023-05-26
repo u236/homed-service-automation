@@ -13,7 +13,7 @@ public:
     Telegram(QSettings *config, QObject *parent);
     ~Telegram(void);
 
-    void sendMessage(const QString &message);
+    void sendMessage(const QString &message, const QList <qint64> &chats = {});
 
 private:
 

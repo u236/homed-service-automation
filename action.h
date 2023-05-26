@@ -67,15 +67,16 @@ class TelegramAction : public ActionObject
 
 public:
 
-    TelegramAction(const QString &message) :
-        ActionObject(Type::telegram), m_message(message) {}
+    TelegramAction(const QString &message, const QList <qint64> &chats) :
+        ActionObject(Type::telegram), m_message(message), m_chats(chats) {}
 
     inline QString message(void) { return m_message; }
+    inline QList <qint64> &chats(void) { return m_chats; }
 
 private:
 
     QString m_message;
-
+    QList <qint64> m_chats;
 };
 
 class MqttAction : public ActionObject

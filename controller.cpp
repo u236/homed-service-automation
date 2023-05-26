@@ -147,7 +147,7 @@ void Controller::runActions(const Automation &automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(action->message());
+                m_telegram->sendMessage(action->message(), action->chats());
                 break;
             }
 

@@ -213,11 +213,16 @@ void AutomationList::unserialize(const QJsonArray &automations)
                 case ActionObject::Type::telegram:
                 {
                     QString message = item.value("message").toString();
+                    QJsonArray array = item.value("chats").toArray();
+                    QList <qint64> chats;
 
                     if (message.isEmpty())
                         continue;
 
-                    automation->actions().append(Action(new TelegramAction(message)));
+                    for (auto it = array.begin(); it != array.end(); it++)
+                        chats.append(it->toInt());
+
+                    automation->actions().append(Action(new TelegramAction(message, chats)));
                     break;
                 }
 
