@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QMetaEnum>
 #include <QSettings>
+#include <QTimer>
 #include "action.h"
 #include "condition.h"
 #include "trigger.h"
@@ -35,15 +36,20 @@ private:
 
 };
 
-class AutomationObject
+class AutomationObject : public QObject
 {
+    Q_OBJECT
 
 public:
 
-    AutomationObject(const QString &name) :
-        m_name(name) {}
+    AutomationObject(const QString &name, qint64 delay, bool restart) :
+        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_delay(delay), m_restart(restart) {}
+
+    inline QTimer *timer(void) { return m_timer; }
 
     inline QString name(void) { return m_name; }
+    inline qint64 delay(void) { return m_delay; }
+    inline bool restart(void) { return m_restart; }
 
     inline QList <Trigger> &triggers(void) { return m_triggers; }
     inline QList <Condition> &conditions(void) { return m_conditions; }
@@ -51,7 +57,11 @@ public:
 
 private:
 
+    QTimer *m_timer;
+
     QString m_name;
+    qint64 m_delay;
+    bool m_restart;
 
     QList <Trigger> m_triggers;
     QList <Condition> m_conditions;

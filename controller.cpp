@@ -49,7 +49,7 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
                 if (trigger->type() != TriggerObject::Type::property || trigger->endpoint() != endpoint->name() || trigger->property() != it.key() || !trigger->match(value, it.value()))
                     continue;
 
-                checkConditions(automation);
+                checkConditions(automation.data());
             }
         }
     }
@@ -57,7 +57,7 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
     endpoint->properties() = properties;
 }
 
-void Controller::checkConditions(const Automation &automation)
+void Controller::checkConditions(AutomationObject *automation)
 {
     QDateTime now = QDateTime::currentDateTime();
 
@@ -125,10 +125,26 @@ void Controller::checkConditions(const Automation &automation)
         }
     }
 
-    runActions(automation);
+    if (!automation->delay())
+    {
+        runActions(automation);
+        return;
+    }
+
+    connect(automation->timer(), &QTimer::timeout, this, &Controller::automationTimeout);
+    automation->timer()->setSingleShot(true);
+
+    if (!automation->timer()->isActive() || automation->restart())
+    {
+        logInfo << "Automation" << automation->name() << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
+        automation->timer()->start(automation->delay() * 1000);
+        return;
+    }
+
+    logWarning << "Automation" << automation->name() << "timer already started";
 }
 
-void Controller::runActions(const Automation &automation)
+void Controller::runActions(AutomationObject *automation)
 {
     for (int i = 0; i < automation->actions().count(); i++)
     {
@@ -239,7 +255,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 if (trigger->type() != TriggerObject::Type::mqtt || !trigger->match(topic.name(), message))
                     continue;
 
-                checkConditions(automation);
+                checkConditions(automation.data());
             }
         }
     }
@@ -266,7 +282,7 @@ void Controller::telegramReceived(const QString &message)
             if (trigger->type() != TriggerObject::Type::telegram || !trigger->match(message))
                 continue;
 
-            checkConditions(automation);
+            checkConditions(automation.data());
         }
     }
 }
@@ -298,21 +314,21 @@ void Controller::updateTime(void)
                 case TriggerObject::Type::sunrise:
 
                     if (reinterpret_cast <SunriseTrigger*> (trigger.data())->match(m_sunrise, time))
-                        checkConditions(automation);
+                        checkConditions(automation.data());
 
                     break;
 
                 case TriggerObject::Type::sunset:
 
                     if (reinterpret_cast <SunsetTrigger*> (trigger.data())->match(m_sunset, time))
-                        checkConditions(automation);
+                        checkConditions(automation.data());
 
                     break;
 
                 case TriggerObject::Type::time:
 
                     if (reinterpret_cast <TimeTrigger*> (trigger.data())->match(time))
-                        checkConditions(automation);
+                        checkConditions(automation.data());
 
                     break;
 
@@ -321,4 +337,11 @@ void Controller::updateTime(void)
             }
         }
     }
+}
+
+void Controller::automationTimeout(void)
+{
+    AutomationObject *automation = reinterpret_cast <AutomationObject*> (sender()->parent());
+    logInfo << "Automation" << automation->name() << "timer stopped";
+    runActions(automation);
 }

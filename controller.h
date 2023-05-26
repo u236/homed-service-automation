@@ -32,8 +32,8 @@ private:
 
     void updateSun(void);
     void updateStatus(const Endpoint &endpoint, const QMap<QString, QVariant> &data);
-    void checkConditions(const Automation &automation);
-    void runActions(const Automation &automation);
+    void checkConditions(AutomationObject *automation);
+    void runActions(AutomationObject *automation);
 
 private slots:
 
@@ -42,7 +42,9 @@ private slots:
 
     void addSubscription(const QString &topic);
     void telegramReceived(const QString &message);
+
     void updateTime(void);
+    void automationTimeout(void);
 
 };
 

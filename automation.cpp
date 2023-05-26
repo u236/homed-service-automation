@@ -33,7 +33,7 @@ void AutomationList::unserialize(const QJsonArray &automations)
     {
         QJsonObject json = it->toObject();
         QJsonArray triggers = json.value("triggers").toArray(), conditions = json.value("conditions").toArray(), actions = json.value("actions").toArray();
-        Automation automation(new AutomationObject(json.value("name").toString()));
+        Automation automation(new AutomationObject(json.value("name").toString(), json.value("delay").toInt(), json.value("restart").toBool()));
 
         if (!json.value("active").toBool() || automation->name().isEmpty())
             continue;
