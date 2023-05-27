@@ -13,6 +13,25 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     m_timer->start(1000);
 }
 
+QString Controller::composeMessage(QString message)
+{
+    QRegularExpressionMatchIterator match = QRegularExpression("{{(.+?)}}").globalMatch(message);
+
+    while (match.hasNext())
+    {
+        QString item = match.next().captured(), value;
+        QList <QString> list = item.mid(2, item.length() - 4).split('|');
+        auto it = m_endpoints.find(list.value(0).trimmed());
+
+        if (it != m_endpoints.end())
+            value = it.value()->properties().value(list.value(1).trimmed()).toString();
+
+        message.replace(item, value.isEmpty() ? "_unknown_" : value);
+    }
+
+    return message;
+}
+
 void Controller::updateSun(void)
 {
     m_sun->setDate(QDate::currentDate());
@@ -163,14 +182,14 @@ void Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(action->message(), action->silent(), action->chats());
+                m_telegram->sendMessage(composeMessage(action->message()), action->silent(), action->chats());
                 break;
             }
 
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), action->message(), action->retain());
+                mqttPublishString(action->topic(), composeMessage(action->message()), action->retain());
                 break;
             }
         }

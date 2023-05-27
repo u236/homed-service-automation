@@ -30,8 +30,11 @@ private:
     QList <QString> m_subscriptions;
     QMap <QString, Endpoint> m_endpoints;
 
+    QString composeMessage(QString message);
+
     void updateSun(void);
     void updateStatus(const Endpoint &endpoint, const QMap<QString, QVariant> &data);
+
     void checkConditions(AutomationObject *automation);
     void runActions(AutomationObject *automation);
 
