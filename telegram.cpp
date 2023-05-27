@@ -1,6 +1,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include "logger.h"
 #include "telegram.h"
 
 Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_process(new QProcess(this)), m_offset(0)
@@ -46,16 +47,20 @@ void Telegram::getUpdates(void)
 
 void Telegram::readyRead(void)
 {
-    QJsonArray array = QJsonDocument::fromJson(m_process->readAllStandardOutput()).object().value("result").toArray();
+    QJsonObject json = QJsonDocument::fromJson(m_process->readAllStandardOutput()).object();
+    QJsonArray array = json.value("result").toArray();
+
+    if (!json.value("ok").toBool())
+        logWarning << "Telegram getUpdate request error, description:" << json.value("description").toString();
 
     for (auto it = array.begin(); it != array.end(); it++)
     {
-        QJsonObject json = it->toObject(), message = json.value("message").toObject();
+        QJsonObject item = it->toObject(), message = item.value("message").toObject();
 
         if (message.value("chat").toObject().value("id").toInt() == m_chat)
             emit messageReceived(message.value("text").toString());
 
-        m_offset = json.value("update_id").toInt() + 1;
+        m_offset = item.value("update_id").toInt() + 1;
     }
 
     m_process->close();
