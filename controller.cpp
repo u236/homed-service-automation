@@ -288,7 +288,7 @@ void Controller::addSubscription(const QString &topic)
     m_subscriptions.append(topic);
 }
 
-void Controller::telegramReceived(const QString &message)
+void Controller::telegramReceived(const QString &message, qint64 chat)
 {
     for (int i = 0; i < m_automations->count(); i++)
     {
@@ -298,7 +298,7 @@ void Controller::telegramReceived(const QString &message)
         {
             TelegramTrigger *trigger = reinterpret_cast <TelegramTrigger*> (automation->triggers().at(j).data());
 
-            if (trigger->type() != TriggerObject::Type::telegram || !trigger->match(message))
+            if (trigger->type() != TriggerObject::Type::telegram || !trigger->match(message, chat))
                 continue;
 
             checkConditions(automation.data());

@@ -36,7 +36,7 @@ void Telegram::sendMessage(const QString &message, bool silent, const QList <qin
     for (int i = 0; i < list.count(); i++)
     {
         json.insert("chat_id", list.at(i));
-        system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token).toUtf8());
+        system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token).toUtf8().constData());
     }
 }
 
@@ -56,10 +56,7 @@ void Telegram::readyRead(void)
     for (auto it = array.begin(); it != array.end(); it++)
     {
         QJsonObject item = it->toObject(), message = item.value("message").toObject();
-
-        if (message.value("chat").toObject().value("id").toInt() == m_chat)
-            emit messageReceived(message.value("text").toString());
-
+        emit messageReceived(message.value("text").toString(), message.value("chat").toObject().value("id").toInt());
         m_offset = item.value("update_id").toInt() + 1;
     }
 

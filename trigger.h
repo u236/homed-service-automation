@@ -72,14 +72,15 @@ class TelegramTrigger : public TriggerObject
 
 public:
 
-    TelegramTrigger(const QString &message) :
-        TriggerObject(Type::telegram), m_message(message) {}
+    TelegramTrigger(const QString &message, const QList <qint64> &chats) :
+        TriggerObject(Type::telegram), m_message(message), m_chats(chats) {}
 
-    inline bool match(const QString &message) { return message == m_message; }
+    inline bool match(const QString &message, qint64 chat) { return message == m_message && m_chats.contains(chat); }
 
 private:
 
     QString m_message;
+    QList <qint64> m_chats;
 
 };
 

@@ -30,7 +30,7 @@ private slots:
 
 signals:
 
-    void messageReceived(const QString &message);
+    void messageReceived(const QString &message, qint64 chat);
 
 };
 

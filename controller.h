@@ -44,7 +44,7 @@ private slots:
     void mqttReceived(const QByteArray &message, const QMqttTopicName &topic) override;
 
     void addSubscription(const QString &topic);
-    void telegramReceived(const QString &message);
+    void telegramReceived(const QString &message, qint64 chat);
 
     void updateTime(void);
     void automationTimeout(void);

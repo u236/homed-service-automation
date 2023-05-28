@@ -81,8 +81,9 @@ public:
 
 private:
 
-    QFile m_databaseFile;
     QMetaEnum m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
+    QFile m_databaseFile;
+    qint64 m_telegramChat;
 
     void unserialize(const QJsonArray &automations);
 

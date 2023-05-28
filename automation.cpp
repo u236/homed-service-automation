@@ -3,8 +3,6 @@
 
 AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(parent)
 {
-    m_databaseFile.setFileName(config->value("automation/database", "/opt/homed-automation/database.json").toString());
-
     m_triggerTypes        = QMetaEnum::fromType <TriggerObject::Type> ();
     m_conditionTypes      = QMetaEnum::fromType <ConditionObject::Type> ();
     m_actionTypes         = QMetaEnum::fromType <ActionObject::Type> ();
@@ -12,6 +10,9 @@ AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(par
     m_triggerStatements   = QMetaEnum::fromType <TriggerObject::Statement> ();
     m_conditionStatements = QMetaEnum::fromType <ConditionObject::Statement> ();
     m_actionStatements    = QMetaEnum::fromType <ActionObject::Statement> ();
+
+    m_databaseFile.setFileName(config->value("automation/database", "/opt/homed-automation/database.json").toString());
+    m_telegramChat = config->value("telegram/chat").toInt();
 }
 
 void AutomationList::init(void)
@@ -69,11 +70,19 @@ void AutomationList::unserialize(const QJsonArray &automations)
                 case TriggerObject::Type::telegram:
                 {
                     QString message = item.value("message").toString();
+                    QJsonArray array = item.value("chats").toArray();
+                    QList <qint64> chats;
 
                     if (message.isEmpty())
                         continue;
 
-                    automation->triggers().append(Trigger(new TelegramTrigger(message)));
+                    for (auto it = array.begin(); it != array.end(); it++)
+                        chats.append(it->toInt());
+
+                    if (chats.isEmpty())
+                        chats.append(m_telegramChat);
+
+                    automation->triggers().append(Trigger(new TelegramTrigger(message, chats)));
                     break;
                 }
 
