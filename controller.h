@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.0.4"
+#define SERVICE_VERSION     "1.0.5"
 
 #include "automation.h"
 #include "homed.h"
@@ -30,7 +30,7 @@ private:
     QList <QString> m_subscriptions;
     QMap <QString, Endpoint> m_endpoints;
 
-    QString composeMessage(QString message);
+    QString composeString(QString string);
 
     void updateSun(void);
     void updateStatus(const Endpoint &endpoint, const QMap<QString, QVariant> &data);

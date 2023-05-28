@@ -13,9 +13,9 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     m_timer->start(1000);
 }
 
-QString Controller::composeMessage(QString message)
+QString Controller::composeString(QString string)
 {
-    QRegularExpressionMatchIterator match = QRegularExpression("{{(.+?)}}").globalMatch(message);
+    QRegularExpressionMatchIterator match = QRegularExpression("{{(.+?)}}").globalMatch(string);
 
     while (match.hasNext())
     {
@@ -26,10 +26,10 @@ QString Controller::composeMessage(QString message)
         if (it != m_endpoints.end())
             value = it.value()->properties().value(list.value(1).trimmed()).toString();
 
-        message.replace(item, value.isEmpty() ? "_unknown_" : value);
+        string.replace(item, value.isEmpty() ? "_unknown_" : value);
     }
 
-    return message;
+    return string;
 }
 
 void Controller::updateSun(void)
@@ -182,14 +182,21 @@ void Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(composeMessage(action->message()), action->silent(), action->chats());
+                m_telegram->sendMessage(composeString(action->message()), action->silent(), action->chats());
                 break;
             }
 
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), composeMessage(action->message()), action->retain());
+                mqttPublishString(action->topic(), composeString(action->message()), action->retain());
+                break;
+            }
+
+            case ActionObject::Type::shell:
+            {
+                ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
+                system(QString("sh -c \"%1\" > /dev/null &").arg(composeString(action->command())).toUtf8().constData());
                 break;
             }
         }

@@ -245,6 +245,17 @@ void AutomationList::unserialize(const QJsonArray &automations)
                     automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
                     break;
                 }
+
+                case ActionObject::Type::shell:
+                {
+                    QString command = item.value("command").toString();
+
+                    if (command.isEmpty())
+                        continue;
+
+                    automation->actions().append(Action(new ShellAction(command)));
+                    break;
+                }
             }
         }
 

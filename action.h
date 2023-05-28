@@ -17,7 +17,8 @@ public:
     {
         property,
         telegram,
-        mqtt
+        mqtt,
+        shell
     };
 
     enum class Statement
@@ -98,6 +99,22 @@ private:
 
     QString m_topic, m_message;
     bool m_retain;
+
+};
+
+class ShellAction : public ActionObject
+{
+
+public:
+
+    ShellAction(const QString &command) :
+        ActionObject(Type::shell), m_command(command) {}
+
+    inline QString command(void) { return m_command; }
+
+private:
+
+    QString m_command;
 
 };
 
