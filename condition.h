@@ -25,6 +25,7 @@ public:
     enum class Statement
     {
         equals,
+        differs,
         above,
         below,
         between
