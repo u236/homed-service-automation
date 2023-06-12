@@ -2,7 +2,7 @@
 Description=HOMEd Automation Service
 
 [Service]
-ExecStart=/usr/local/bin/homed-automation
+ExecStart=/usr/bin/homed-automation
 KillSignal=SIGTERM
 Restart=on-failure
 
