@@ -12,7 +12,7 @@ AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(par
     m_actionStatements    = QMetaEnum::fromType <ActionObject::Statement> ();
 
     m_databaseFile.setFileName(config->value("automation/database", "/opt/homed-automation/database.json").toString());
-    m_telegramChat = config->value("telegram/chat").toInt();
+    m_telegramChat = config->value("telegram/chat").toLongLong();
 }
 
 void AutomationList::init(void)
@@ -77,7 +77,7 @@ void AutomationList::unserialize(const QJsonArray &automations)
                         continue;
 
                     for (auto it = array.begin(); it != array.end(); it++)
-                        chats.append(it->toInt());
+                        chats.append(it->toVariant().toLongLong());
 
                     if (chats.isEmpty())
                         chats.append(m_telegramChat);
@@ -229,7 +229,7 @@ void AutomationList::unserialize(const QJsonArray &automations)
                         continue;
 
                     for (auto it = array.begin(); it != array.end(); it++)
-                        chats.append(it->toInt());
+                        chats.append(it->toVariant().toLongLong());
 
                     automation->actions().append(Action(new TelegramAction(message, item.value("silent").toBool(), chats)));
                     break;

@@ -7,7 +7,7 @@
 Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_process(new QProcess(this)), m_offset(0)
 {
     m_token = config->value("telegram/token").toString();
-    m_chat = config->value("telegram/chat").toInt();
+    m_chat = config->value("telegram/chat").toLongLong();
     m_timeout = config->value("telegram/timeout", 60).toInt();
 
     if (m_token.isEmpty() || !m_chat)
@@ -56,8 +56,8 @@ void Telegram::readyRead(void)
     for (auto it = array.begin(); it != array.end(); it++)
     {
         QJsonObject item = it->toObject(), message = item.value("message").toObject();
-        emit messageReceived(message.value("text").toString(), message.value("chat").toObject().value("id").toInt());
-        m_offset = item.value("update_id").toInt() + 1;
+        emit messageReceived(message.value("text").toString(), message.value("chat").toObject().value("id").toVariant().toLongLong());
+        m_offset = item.value("update_id").toVariant().toLongLong() + 1;
     }
 
     m_process->close();

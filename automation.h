@@ -42,13 +42,13 @@ class AutomationObject : public QObject
 
 public:
 
-    AutomationObject(const QString &name, qint64 delay, bool restart) :
+    AutomationObject(const QString &name, qint32 delay, bool restart) :
         QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_delay(delay), m_restart(restart) {}
 
     inline QTimer *timer(void) { return m_timer; }
 
     inline QString name(void) { return m_name; }
-    inline qint64 delay(void) { return m_delay; }
+    inline qint32 delay(void) { return m_delay; }
     inline bool restart(void) { return m_restart; }
 
     inline QList <Trigger> &triggers(void) { return m_triggers; }
@@ -60,7 +60,7 @@ private:
     QTimer *m_timer;
 
     QString m_name;
-    qint64 m_delay;
+    qint32 m_delay;
     bool m_restart;
 
     QList <Trigger> m_triggers;

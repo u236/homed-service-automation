@@ -20,7 +20,8 @@ private:
     QProcess *m_process;
 
     QString m_token;
-    qint64 m_chat, m_timeout, m_offset;
+    qint64 m_chat, m_offset;
+    qint32 m_timeout;
 
     void getUpdates(void);
 
