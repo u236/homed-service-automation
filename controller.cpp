@@ -5,11 +5,15 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
     updateSun();
 
+    connect(m_automations, &AutomationList::statusUpdated, this, &Controller::statusUpdated);
     connect(m_automations, &AutomationList::addSubscription, this, &Controller::addSubscription);
+
     connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
     connect(m_timer, &QTimer::timeout, this, &Controller::updateTime);
 
     m_automations->init();
+    m_automations->store();
+
     m_timer->start(1000);
 }
 
@@ -285,6 +289,11 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             }
         }
     }
+}
+
+void Controller::statusUpdated(const QJsonObject &json)
+{
+    mqttPublish(mqttTopic("status/automation"), json, true);
 }
 
 void Controller::addSubscription(const QString &topic)

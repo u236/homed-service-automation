@@ -55,6 +55,8 @@ public:
 
     inline QString endpoint(void) { return m_endpoint; }
     inline QString property(void) { return m_property; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
 
     bool match(const QVariant &value);
 
@@ -74,6 +76,9 @@ public:
     DateCondition(Statement statement, const QVariant &value) :
         ConditionObject(Type::date), m_statement(statement), m_value(value) {}
 
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
+
     bool match(const QDate &value);
 
 private:
@@ -90,6 +95,9 @@ public:
 
     TimeCondition(Statement statement, const QVariant &value) :
         ConditionObject(Type::time), m_statement(statement), m_value(value) {}
+
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
 
     bool match(const QTime &value);
 
@@ -108,6 +116,7 @@ public:
     WeekCondition(const QVariant &value) :
         ConditionObject(Type::week), m_value(value) {}
 
+    inline QVariant value(void) { return m_value; }
     inline bool match(int value) { return m_value.toList().contains(value); }
 
 private:

@@ -52,6 +52,8 @@ public:
 
     inline QString endpoint(void) { return m_endpoint; }
     inline QString property(void) { return m_property; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
 
     QVariant value(const QVariant &oldValue);
 

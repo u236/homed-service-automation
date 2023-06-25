@@ -43,6 +43,7 @@ private slots:
     void mqttConnected(void) override;
     void mqttReceived(const QByteArray &message, const QMqttTopicName &topic) override;
 
+    void statusUpdated(const QJsonObject &json);
     void addSubscription(const QString &topic);
     void telegramReceived(const QString &message, qint64 chat);
 

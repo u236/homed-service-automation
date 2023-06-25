@@ -56,6 +56,8 @@ public:
 
     inline QString endpoint(void) { return m_endpoint; }
     inline QString property(void) { return m_property; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
 
     bool match(const QVariant &oldValue, const QVariant &newValue);
 
@@ -75,6 +77,9 @@ public:
     TelegramTrigger(const QString &message, const QList <qint64> &chats) :
         TriggerObject(Type::telegram), m_message(message), m_chats(chats) {}
 
+    inline QString message(void) { return m_message; }
+    inline QList <qint64> &chats(void) { return m_chats; }
+
     inline bool match(const QString &message, qint64 chat) { return message == m_message && m_chats.contains(chat); }
 
 private:
@@ -92,6 +97,9 @@ public:
     MqttTrigger(const QString &topic, const QString &message) :
         TriggerObject(Type::mqtt), m_topic(topic), m_message(message) {}
 
+    inline QString topic(void) { return m_topic; }
+    inline QString message(void) { return m_message; }
+
     inline bool match(const QString &topic, const QString &message) { return topic == m_topic && message == m_message; }
 
 private:
@@ -108,6 +116,7 @@ public:
     SunriseTrigger(qint32 offset) :
         TriggerObject(Type::sunrise), m_offset(offset * 60) {}
 
+    inline quint32 offset(void) { return m_offset / 60; }
     inline bool match(const QTime &sunrise, const QTime &value) { return value == sunrise.addSecs(m_offset); }
 
 private:
@@ -124,6 +133,7 @@ public:
     SunsetTrigger(qint32 offset) :
         TriggerObject(Type::sunset), m_offset(offset * 60) {}
 
+    inline quint32 offset(void) { return m_offset / 60; }
     inline bool match(const QTime &sunset, const QTime &value) { return value == sunset.addSecs(m_offset); }
 
 private:
@@ -140,6 +150,7 @@ public:
     TimeTrigger(const QTime &time) :
         TriggerObject(Type::time), m_time(time) {}
 
+    inline QTime time(void) { return m_time; }
     inline bool match(const QTime &value) { return value == m_time; }
 
 private:

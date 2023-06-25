@@ -1,6 +1,8 @@
 #ifndef AUTOMATION_H
 #define AUTOMATION_H
 
+#define STORE_DELAY     20
+
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -42,12 +44,14 @@ class AutomationObject : public QObject
 
 public:
 
-    AutomationObject(const QString &name, qint32 delay, bool restart) :
-        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_delay(delay), m_restart(restart) {}
+    AutomationObject(const QString &name, bool active, qint32 delay, bool restart) :
+        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_delay(delay), m_restart(restart) {}
 
     inline QTimer *timer(void) { return m_timer; }
 
     inline QString name(void) { return m_name; }
+    inline bool active(void) { return m_active; }
+
     inline qint32 delay(void) { return m_delay; }
     inline bool restart(void) { return m_restart; }
 
@@ -60,6 +64,8 @@ private:
     QTimer *m_timer;
 
     QString m_name;
+    bool m_active;
+
     qint32 m_delay;
     bool m_restart;
 
@@ -76,19 +82,29 @@ class AutomationList : public QObject, public QList <Automation>
 public:
 
     AutomationList(QSettings *config, QObject *parent);
+    ~AutomationList(void);
 
     void init(void);
+    void store(void);
 
 private:
 
+    QTimer *m_timer;
+
     QMetaEnum m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
-    QFile m_databaseFile;
+    QFile m_file;
     qint64 m_telegramChat;
 
     void unserialize(const QJsonArray &automations);
+    QJsonArray serialize(void);
+
+private slots:
+
+    void write(void);
 
 signals:
 
+    void statusUpdated(const QJsonObject &json);
     void addSubscription(const QString &topic);
 
 };
