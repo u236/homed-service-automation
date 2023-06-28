@@ -23,9 +23,9 @@ public:
 
     enum class Statement
     {
+        value,
         increase,
-        decrease,
-        value
+        decrease
     };
 
     ActionObject(Type type) :

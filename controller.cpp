@@ -1,6 +1,6 @@
 #include "controller.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_date(QDate::currentDate())
+Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
 {
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
     updateSun();
@@ -207,9 +207,16 @@ void Controller::runActions(AutomationObject *automation)
     }
 }
 
+void Controller::publishEvent(const Automation &automation, Event event)
+{
+    mqttPublish(mqttTopic("event/automation"), {{"automation", automation->name()}, {"event", m_events.valueToKey(static_cast <int> (event))}});
+}
+
 void Controller::mqttConnected(void)
 {
     logInfo << "MQTT connected";
+
+    mqttSubscribe(mqttTopic("command/automation"));
     mqttSubscribe(mqttTopic("service/#"));
 
     for (int i = 0; i < m_subscriptions.count(); i++)
@@ -224,7 +231,38 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     QString subTopic = topic.name().replace(mqttTopic(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
 
-    if (subTopic.startsWith("service/"))
+    if (subTopic == "command/automation" && json.value("action").toString() == "updateAutomation")
+    {
+        int index = -1;
+        QJsonObject data = json.value("data").toObject();
+        Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(data.value("name").toString());
+
+        if (!other.isNull() && other != automation)
+        {
+            logWarning << "Automation" << automation->name() << "update failed, name already in use";
+            publishEvent(automation, Event::nameDuplicate);
+            return;
+        }
+
+        automation = m_automations->parse(data);
+
+        if (automation.isNull())
+        {
+            logWarning << "Automation" << automation->name() << "update failed, data is incomplete";
+            publishEvent(automation, Event::incompleteData);
+            return;
+        }
+
+        if (index >= 0)
+            m_automations->replace(index, automation);
+        else
+            m_automations->append(automation);
+
+        logInfo << "Automation" << automation->name() << "successfully updated";
+        publishEvent(automation, Event::updated);
+        m_automations->store();
+    }
+    else if (subTopic.startsWith("service/"))
     {
         QString service = subTopic.split('/').value(1);
 

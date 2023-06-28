@@ -16,13 +16,23 @@ public:
 
     Controller(const QString &configFile);
 
+    enum class Event
+    {
+        nameDuplicate,
+        incompleteData,
+        updated
+    };
+
+    Q_ENUM(Event)
+
 private:
 
     AutomationList *m_automations;
     Telegram *m_telegram;
     Sun *m_sun;
-
     QTimer *m_timer;
+
+    QMetaEnum m_events;
 
     QTime m_sunrise, m_sunset;
     QDate m_date;
@@ -37,6 +47,8 @@ private:
 
     void checkConditions(AutomationObject *automation);
     void runActions(AutomationObject *automation);
+
+    void publishEvent(const Automation &automation, Event event);
 
 private slots:
 

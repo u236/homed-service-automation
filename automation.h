@@ -87,6 +87,9 @@ public:
     void init(void);
     void store(void);
 
+    Automation byName(const QString &name, int *index = nullptr);
+    Automation parse(const QJsonObject &json);
+
 private:
 
     QTimer *m_timer;

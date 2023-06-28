@@ -41,6 +41,253 @@ void AutomationList::store(void)
     m_timer->start(STORE_DELAY);
 }
 
+Automation AutomationList::byName(const QString &name, int *index)
+{
+    for (int i = 0; i < count(); i++)
+    {
+        if (at(i)->name() != name)
+            continue;
+
+        if (index)
+            *index = i;
+
+        return at(i);
+    }
+
+    return Automation();
+}
+
+Automation AutomationList::parse(const QJsonObject &json)
+{
+    QJsonArray triggers = json.value("triggers").toArray(), conditions = json.value("conditions").toArray(), actions = json.value("actions").toArray();
+    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("delay").toInt(), json.value("restart").toBool()));
+
+    for (auto it = triggers.begin(); it != triggers.end(); it++)
+    {
+        QJsonObject item = it->toObject();
+        TriggerObject::Type type = static_cast <TriggerObject::Type> (m_triggerTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+
+        switch (type)
+        {
+            case TriggerObject::Type::property:
+            {
+                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+
+                if (endpoint.isEmpty() || property.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_triggerStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_triggerStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    automation->triggers().append(Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case TriggerObject::Type::telegram:
+            {
+                QString message = item.value("message").toString();
+                QJsonArray array = item.value("chats").toArray();
+                QList <qint64> chats;
+
+                if (message.isEmpty())
+                    continue;
+
+                for (auto it = array.begin(); it != array.end(); it++)
+                    chats.append(it->toVariant().toLongLong());
+
+                if (chats.isEmpty())
+                    chats.append(m_telegramChat);
+
+                automation->triggers().append(Trigger(new TelegramTrigger(message, chats)));
+                break;
+            }
+
+            case TriggerObject::Type::mqtt:
+            {
+                QString topic = item.value("topic").toString(), message = item.value("message").toString();
+
+                if (topic.isEmpty() || message.isEmpty())
+                    continue;
+
+                automation->triggers().append(Trigger(new MqttTrigger(topic, message)));
+                emit addSubscription(topic);
+                break;
+            }
+
+            case TriggerObject::Type::sunrise:
+            {
+                automation->triggers().append(Trigger(new SunriseTrigger(static_cast <qint32> (item.value("offset").toInt()))));
+                break;
+            }
+
+            case TriggerObject::Type::sunset:
+            {
+                automation->triggers().append(Trigger(new SunsetTrigger(static_cast <qint32> (item.value("offset").toInt()))));
+                break;
+            }
+
+            case TriggerObject::Type::time:
+            {
+                automation->triggers().append(Trigger(new TimeTrigger(QTime::fromString(item.value("time").toString()))));
+                break;
+            }
+        }
+    }
+
+    for (auto it = conditions.begin(); it != conditions.end(); it++)
+    {
+        QJsonObject item = it->toObject();
+        ConditionObject::Type type = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+
+        switch (type)
+        {
+            case ConditionObject::Type::property:
+            {
+                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+
+                if (endpoint.isEmpty() || property.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    automation->conditions().append(Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::date:
+            {
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    automation->conditions().append(Condition(new DateCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::time:
+            {
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    automation->conditions().append(Condition(new TimeCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::week:
+            {
+                QVariant value = item.value("days").toVariant();
+
+                if (!value.isValid())
+                    continue;
+
+                automation->conditions().append(Condition(new WeekCondition(value)));
+                break;
+            }
+        }
+    }
+
+    for (auto it = actions.begin(); it != actions.end(); it++)
+    {
+        QJsonObject item = it->toObject();
+        ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+
+        switch (type)
+        {
+            case ActionObject::Type::property:
+            {
+                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+
+                if (endpoint.isEmpty() || property.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_actionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_actionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    automation->actions().append(Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case ActionObject::Type::telegram:
+            {
+                QString message = item.value("message").toString();
+                QJsonArray array = item.value("chats").toArray();
+                QList <qint64> chats;
+
+                if (message.isEmpty())
+                    continue;
+
+                for (auto it = array.begin(); it != array.end(); it++)
+                    chats.append(it->toVariant().toLongLong());
+
+                automation->actions().append(Action(new TelegramAction(message, item.value("silent").toBool(), chats)));
+                break;
+            }
+
+            case ActionObject::Type::mqtt:
+            {
+                QString topic = item.value("topic").toString(), message = item.value("message").toString();
+
+                if (topic.isEmpty() || message.isEmpty())
+                    continue;
+
+                automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
+                break;
+            }
+
+            case ActionObject::Type::shell:
+            {
+                QString command = item.value("command").toString();
+
+                if (command.isEmpty())
+                    continue;
+
+                automation->actions().append(Action(new ShellAction(command)));
+                break;
+            }
+        }
+    }
+
+    if (automation->name().isEmpty() || automation->triggers().isEmpty() || automation->actions().isEmpty())
+        return Automation();
+
+    return automation;
+}
+
 void AutomationList::unserialize(const QJsonArray &automations)
 {
     quint16 count = 0;
@@ -48,233 +295,14 @@ void AutomationList::unserialize(const QJsonArray &automations)
     for (auto it = automations.begin(); it != automations.end(); it++)
     {
         QJsonObject json = it->toObject();
-        QJsonArray triggers = json.value("triggers").toArray(), conditions = json.value("conditions").toArray(), actions = json.value("actions").toArray();
-        Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("delay").toInt(), json.value("restart").toBool()));
+        Automation automation = byName(json.value("name").toString());
 
-        if (automation->name().isEmpty())
+        if (!automation.isNull())
             continue;
 
-        for (auto it = triggers.begin(); it != triggers.end(); it++)
-        {
-            QJsonObject item = it->toObject();
-            TriggerObject::Type type = static_cast <TriggerObject::Type> (m_triggerTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+        automation = parse(json);
 
-            switch (type)
-            {
-                case TriggerObject::Type::property:
-                {
-                    QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
-
-                    if (endpoint.isEmpty() || property.isEmpty())
-                        continue;
-
-                    for (int i = 0; i < m_triggerStatements.keyCount(); i++)
-                    {
-                        QVariant value = item.value(m_triggerStatements.key(i)).toVariant();
-
-                        if (!value.isValid())
-                            continue;
-
-                        automation->triggers().append(Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value)));
-                        break;
-                    }
-
-                    break;
-                }
-
-                case TriggerObject::Type::telegram:
-                {
-                    QString message = item.value("message").toString();
-                    QJsonArray array = item.value("chats").toArray();
-                    QList <qint64> chats;
-
-                    if (message.isEmpty())
-                        continue;
-
-                    for (auto it = array.begin(); it != array.end(); it++)
-                        chats.append(it->toVariant().toLongLong());
-
-                    if (chats.isEmpty())
-                        chats.append(m_telegramChat);
-
-                    automation->triggers().append(Trigger(new TelegramTrigger(message, chats)));
-                    break;
-                }
-
-                case TriggerObject::Type::mqtt:
-                {
-                    QString topic = item.value("topic").toString(), message = item.value("message").toString();
-
-                    if (topic.isEmpty() || message.isEmpty())
-                        continue;
-
-                    automation->triggers().append(Trigger(new MqttTrigger(topic, message)));
-                    emit addSubscription(topic);
-                    break;
-                }
-
-                case TriggerObject::Type::sunrise:
-                {
-                    automation->triggers().append(Trigger(new SunriseTrigger(static_cast <qint32> (item.value("offset").toInt()))));
-                    break;
-                }
-
-                case TriggerObject::Type::sunset:
-                {
-                    automation->triggers().append(Trigger(new SunsetTrigger(static_cast <qint32> (item.value("offset").toInt()))));
-                    break;
-                }
-
-                case TriggerObject::Type::time:
-                {
-                    automation->triggers().append(Trigger(new TimeTrigger(QTime::fromString(item.value("time").toString()))));
-                    break;
-                }
-            }
-        }
-
-        for (auto it = conditions.begin(); it != conditions.end(); it++)
-        {
-            QJsonObject item = it->toObject();
-            ConditionObject::Type type = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
-
-            switch (type)
-            {
-                case ConditionObject::Type::property:
-                {
-                    QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
-
-                    if (endpoint.isEmpty() || property.isEmpty())
-                        continue;
-
-                    for (int i = 0; i < m_conditionStatements.keyCount(); i++)
-                    {
-                        QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
-
-                        if (!value.isValid())
-                            continue;
-
-                        automation->conditions().append(Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                        break;
-                    }
-
-                    break;
-                }
-
-                case ConditionObject::Type::date:
-                {
-                    for (int i = 0; i < m_conditionStatements.keyCount(); i++)
-                    {
-                        QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
-
-                        if (!value.isValid())
-                            continue;
-
-                        automation->conditions().append(Condition(new DateCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                        break;
-                    }
-
-                    break;
-                }
-
-                case ConditionObject::Type::time:
-                {
-                    for (int i = 0; i < m_conditionStatements.keyCount(); i++)
-                    {
-                        QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
-
-                        if (!value.isValid())
-                            continue;
-
-                        automation->conditions().append(Condition(new TimeCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                        break;
-                    }
-
-                    break;
-                }
-
-                case ConditionObject::Type::week:
-                {
-                    QVariant value = item.value("days").toVariant();
-
-                    if (!value.isValid())
-                        continue;
-
-                    automation->conditions().append(Condition(new WeekCondition(value)));
-                    break;
-                }
-            }
-        }
-
-        for (auto it = actions.begin(); it != actions.end(); it++)
-        {
-            QJsonObject item = it->toObject();
-            ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
-
-            switch (type)
-            {
-                case ActionObject::Type::property:
-                {
-                    QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
-
-                    if (endpoint.isEmpty() || property.isEmpty())
-                        continue;
-
-                    for (int i = 0; i < m_actionStatements.keyCount(); i++)
-                    {
-                        QVariant value = item.value(m_actionStatements.key(i)).toVariant();
-
-                        if (!value.isValid())
-                            continue;
-
-                        automation->actions().append(Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value)));
-                        break;
-                    }
-
-                    break;
-                }
-
-                case ActionObject::Type::telegram:
-                {
-                    QString message = item.value("message").toString();
-                    QJsonArray array = item.value("chats").toArray();
-                    QList <qint64> chats;
-
-                    if (message.isEmpty())
-                        continue;
-
-                    for (auto it = array.begin(); it != array.end(); it++)
-                        chats.append(it->toVariant().toLongLong());
-
-                    automation->actions().append(Action(new TelegramAction(message, item.value("silent").toBool(), chats)));
-                    break;
-                }
-
-                case ActionObject::Type::mqtt:
-                {
-                    QString topic = item.value("topic").toString(), message = item.value("message").toString();
-
-                    if (topic.isEmpty() || message.isEmpty())
-                        continue;
-
-                    automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
-                    break;
-                }
-
-                case ActionObject::Type::shell:
-                {
-                    QString command = item.value("command").toString();
-
-                    if (command.isEmpty())
-                        continue;
-
-                    automation->actions().append(Action(new ShellAction(command)));
-                    break;
-                }
-            }
-        }
-
-        if (automation->triggers().isEmpty() || automation->actions().isEmpty())
+        if (automation.isNull())
             continue;
 
         append(automation);
