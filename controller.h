@@ -20,7 +20,9 @@ public:
     {
         nameDuplicate,
         incompleteData,
-        updated
+        added,
+        updated,
+        removed
     };
 
     Q_ENUM(Event)

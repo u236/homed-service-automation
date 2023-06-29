@@ -231,36 +231,61 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     QString subTopic = topic.name().replace(mqttTopic(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
 
-    if (subTopic == "command/automation" && json.value("action").toString() == "updateAutomation")
+    if (subTopic == "command/automation")
     {
-        int index = -1;
-        QJsonObject data = json.value("data").toObject();
-        QString name = data.value("name").toString();
-        Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
+        QString action = json.value("action").toString();
 
-        if (!other.isNull() && other != automation)
+        if (action == "updateAutomation")
         {
-            logWarning << "Automation" << name << "update failed, name already in use";
-            publishEvent(name, Event::nameDuplicate);
-            return;
+            int index = -1;
+            QJsonObject data = json.value("data").toObject();
+            QString name = data.value("name").toString();
+            Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
+
+            if (!other.isNull() && other != automation)
+            {
+                logWarning << "Automation" << name << "update failed, name already in use";
+                publishEvent(name, Event::nameDuplicate);
+                return;
+            }
+
+            automation = m_automations->parse(data);
+
+            if (automation.isNull())
+            {
+                logWarning << "Automation" << name << "update failed, data is incomplete";
+                publishEvent(name, Event::incompleteData);
+                return;
+            }
+
+            if (index < 0)
+            {
+                m_automations->append(automation);
+                logInfo << "Automation" << automation->name() << "successfully added";
+                publishEvent(automation->name(), Event::added);
+            }
+            else
+            {
+                m_automations->replace(index, automation);
+                logInfo << "Automation" << automation->name() << "successfully updated";
+                publishEvent(automation->name(), Event::updated);
+            }
         }
-
-        automation = m_automations->parse(data);
-
-        if (automation.isNull())
+        else if (action == "removeAutomation")
         {
-            logWarning << "Automation" << name << "update failed, data is incomplete";
-            publishEvent(name, Event::incompleteData);
-            return;
-        }
+            int index = -1;
+            Automation automation = m_automations->byName(json.value("automation").toString(), &index);
 
-        if (index >= 0)
-            m_automations->replace(index, automation);
+            if (index < 0)
+                return;
+
+            m_automations->remove(index);
+            logInfo << "Automation" << automation->name() << "removed";
+            publishEvent(automation->name(), Event::removed);
+        }
         else
-            m_automations->append(automation);
+            return;
 
-        logInfo << "Automation" << automation->name() << "successfully updated";
-        publishEvent(automation->name(), Event::updated);
         m_automations->store();
     }
     else if (subTopic.startsWith("service/"))
