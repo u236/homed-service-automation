@@ -48,7 +48,7 @@ private:
     void checkConditions(AutomationObject *automation);
     void runActions(AutomationObject *automation);
 
-    void publishEvent(const Automation &automation, Event event);
+    void publishEvent(const QString &name, Event event);
 
 private slots:
 

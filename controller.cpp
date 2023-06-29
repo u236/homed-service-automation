@@ -207,9 +207,9 @@ void Controller::runActions(AutomationObject *automation)
     }
 }
 
-void Controller::publishEvent(const Automation &automation, Event event)
+void Controller::publishEvent(const QString &name, Event event)
 {
-    mqttPublish(mqttTopic("event/automation"), {{"automation", automation->name()}, {"event", m_events.valueToKey(static_cast <int> (event))}});
+    mqttPublish(mqttTopic("event/automation"), {{"automation", name}, {"event", m_events.valueToKey(static_cast <int> (event))}});
 }
 
 void Controller::mqttConnected(void)
@@ -235,12 +235,13 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     {
         int index = -1;
         QJsonObject data = json.value("data").toObject();
-        Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(data.value("name").toString());
+        QString name = data.value("name").toString();
+        Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
 
         if (!other.isNull() && other != automation)
         {
-            logWarning << "Automation" << automation->name() << "update failed, name already in use";
-            publishEvent(automation, Event::nameDuplicate);
+            logWarning << "Automation" << name << "update failed, name already in use";
+            publishEvent(name, Event::nameDuplicate);
             return;
         }
 
@@ -248,8 +249,8 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
         if (automation.isNull())
         {
-            logWarning << "Automation" << automation->name() << "update failed, data is incomplete";
-            publishEvent(automation, Event::incompleteData);
+            logWarning << "Automation" << name << "update failed, data is incomplete";
+            publishEvent(name, Event::incompleteData);
             return;
         }
 
@@ -259,7 +260,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             m_automations->append(automation);
 
         logInfo << "Automation" << automation->name() << "successfully updated";
-        publishEvent(automation, Event::updated);
+        publishEvent(automation->name(), Event::updated);
         m_automations->store();
     }
     else if (subTopic.startsWith("service/"))
