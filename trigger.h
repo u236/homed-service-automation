@@ -116,7 +116,7 @@ public:
     SunriseTrigger(qint32 offset) :
         TriggerObject(Type::sunrise), m_offset(offset * 60) {}
 
-    inline quint32 offset(void) { return m_offset / 60; }
+    inline qint32 offset(void) { return m_offset / 60; }
     inline bool match(const QTime &sunrise, const QTime &value) { return value == sunrise.addSecs(m_offset); }
 
 private:
@@ -133,7 +133,7 @@ public:
     SunsetTrigger(qint32 offset) :
         TriggerObject(Type::sunset), m_offset(offset * 60) {}
 
-    inline quint32 offset(void) { return m_offset / 60; }
+    inline qint32 offset(void) { return m_offset / 60; }
     inline bool match(const QTime &sunset, const QTime &value) { return value == sunset.addSecs(m_offset); }
 
 private:
