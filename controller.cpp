@@ -65,6 +65,9 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
         {
             const Automation &automation = m_automations->at(i);
 
+            if (!automation->active())
+                continue;
+
             for (int j = 0; j < automation->triggers().count(); j++)
             {
                 PropertyTrigger *trigger = reinterpret_cast <PropertyTrigger*> (automation->triggers().at(j).data());
@@ -279,7 +282,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             if (index < 0)
                 return;
 
-            m_automations->remove(index);
+            m_automations->removeAt(index);
             logInfo << "Automation" << automation->name() << "removed";
             publishEvent(automation->name(), Event::removed);
         }
@@ -342,6 +345,9 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         {
             const Automation &automation = m_automations->at(i);
 
+            if (!automation->active())
+                continue;
+
             for (int j = 0; j < automation->triggers().count(); j++)
             {
                 MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
@@ -374,6 +380,9 @@ void Controller::telegramReceived(const QString &message, qint64 chat)
     {
         const Automation &automation = m_automations->at(i);
 
+        if (!automation->active())
+            continue;
+
         for (int j = 0; j < automation->triggers().count(); j++)
         {
             TelegramTrigger *trigger = reinterpret_cast <TelegramTrigger*> (automation->triggers().at(j).data());
@@ -402,6 +411,9 @@ void Controller::updateTime(void)
     for (int i = 0; i < m_automations->count(); i++)
     {
         const Automation &automation = m_automations->at(i);
+
+        if (!automation->active())
+            continue;
 
         for (int j = 0; j < automation->triggers().count(); j++)
         {
