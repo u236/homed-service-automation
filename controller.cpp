@@ -157,7 +157,7 @@ void Controller::checkConditions(AutomationObject *automation)
         return;
     }
 
-    connect(automation->timer(), &QTimer::timeout, this, &Controller::automationTimeout);
+    connect(automation->timer(), &QTimer::timeout, this, &Controller::automationTimeout, Qt::UniqueConnection);
     automation->timer()->setSingleShot(true);
 
     if (!automation->timer()->isActive() || automation->restart())
