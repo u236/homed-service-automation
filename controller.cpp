@@ -12,8 +12,6 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     connect(m_timer, &QTimer::timeout, this, &Controller::updateTime);
 
     m_automations->init();
-    m_automations->store();
-
     m_timer->start(1000);
 }
 
@@ -87,9 +85,6 @@ void Controller::checkConditions(AutomationObject *automation)
 {
     QDateTime now = QDateTime::currentDateTime();
 
-    logInfo << "Automation" << automation->name() << "triggered";
-    // TODO: publish "triggered" event here?
-
     for (int i = 0; i < automation->conditions().count(); i++)
     {
         const Condition &item = automation->conditions().at(i);
@@ -150,6 +145,18 @@ void Controller::checkConditions(AutomationObject *automation)
             }
         }
     }
+
+    if (now.currentMSecsSinceEpoch() < automation->debounce() * 1000 + automation->lastTriggered())
+    {
+        logInfo << "Automation" << automation->name() << "debounced";
+        return;
+    }
+
+    logInfo << "Automation" << automation->name() << "triggered";
+    // TODO: publish "triggered" event here?
+
+    automation->updateLastTriggered();
+    m_automations->store();
 
     if (!automation->delay())
     {
@@ -227,6 +234,8 @@ void Controller::mqttConnected(void)
         logInfo << "MQTT subscribed to" << m_subscriptions.at(i);
         mqttSubscribe(m_subscriptions.at(i));
     }
+
+    m_automations->store();
 }
 
 void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &topic)
@@ -289,7 +298,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         else
             return;
 
-        m_automations->store();
+        m_automations->store(true);
     }
     else if (subTopic.startsWith("service/"))
     {

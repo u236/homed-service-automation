@@ -1,8 +1,6 @@
 #ifndef AUTOMATION_H
 #define AUTOMATION_H
 
-#define STORE_DELAY     20
-
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -44,16 +42,20 @@ class AutomationObject : public QObject
 
 public:
 
-    AutomationObject(const QString &name, bool active, qint32 delay, bool restart) :
-        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_delay(delay), m_restart(restart) {}
+    AutomationObject(const QString &name, bool active, qint32 debounce, qint32 delay, bool restart, qint64 lastTriggered) :
+        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_debounce(debounce), m_delay(delay), m_restart(restart), m_lastTriggered(lastTriggered) {}
 
     inline QTimer *timer(void) { return m_timer; }
 
     inline QString name(void) { return m_name; }
     inline bool active(void) { return m_active; }
 
+    inline qint32 debounce(void) { return m_debounce; }
     inline qint32 delay(void) { return m_delay; }
     inline bool restart(void) { return m_restart; }
+
+    inline qint64 lastTriggered(void) { return m_lastTriggered; }
+    inline void updateLastTriggered(void) { m_lastTriggered = QDateTime::currentMSecsSinceEpoch(); }
 
     inline QList <Trigger> &triggers(void) { return m_triggers; }
     inline QList <Condition> &conditions(void) { return m_conditions; }
@@ -66,8 +68,10 @@ private:
     QString m_name;
     bool m_active;
 
-    qint32 m_delay;
+    qint32 m_debounce, m_delay;
     bool m_restart;
+
+    qint64 m_lastTriggered;
 
     QList <Trigger> m_triggers;
     QList <Condition> m_conditions;
@@ -85,14 +89,12 @@ public:
     ~AutomationList(void);
 
     void init(void);
-    void store(void);
+    void store(bool sync = false);
 
     Automation byName(const QString &name, int *index = nullptr);
     Automation parse(const QJsonObject &json);
 
 private:
-
-    QTimer *m_timer;
 
     QMetaEnum m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
     QFile m_file;
@@ -100,10 +102,6 @@ private:
 
     void unserialize(const QJsonArray &automations);
     QJsonArray serialize(void);
-
-private slots:
-
-    void write(void);
 
 signals:
 
