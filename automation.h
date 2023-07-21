@@ -42,8 +42,8 @@ class AutomationObject : public QObject
 
 public:
 
-    AutomationObject(const QString &name, bool active, qint32 debounce, qint32 delay, bool restart, qint64 lastTriggered) :
-        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_debounce(debounce), m_delay(delay), m_restart(restart), m_lastTriggered(lastTriggered) {}
+    AutomationObject(const QString &name, bool active, qint32 debounce, qint32 delay, bool restart, bool anyCondition, qint64 lastTriggered) :
+        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_debounce(debounce), m_delay(delay), m_restart(restart), m_anyCondition(anyCondition), m_lastTriggered(lastTriggered) {}
 
     inline QTimer *timer(void) { return m_timer; }
 
@@ -53,6 +53,7 @@ public:
     inline qint32 debounce(void) { return m_debounce; }
     inline qint32 delay(void) { return m_delay; }
     inline bool restart(void) { return m_restart; }
+    inline bool anyCondition(void) { return m_anyCondition; }
 
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
     inline void updateLastTriggered(void) { m_lastTriggered = QDateTime::currentMSecsSinceEpoch(); }
@@ -69,7 +70,7 @@ private:
     bool m_active;
 
     qint32 m_debounce, m_delay;
-    bool m_restart;
+    bool m_restart, m_anyCondition;
 
     qint64 m_lastTriggered;
 

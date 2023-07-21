@@ -83,7 +83,7 @@ Automation AutomationList::byName(const QString &name, int *index)
 Automation AutomationList::parse(const QJsonObject &json)
 {
     QJsonArray triggers = json.value("triggers").toArray(), conditions = json.value("conditions").toArray(), actions = json.value("actions").toArray();
-    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("delay").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
+    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("delay").toInt(), json.value("restart").toBool(), json.value("anyCondition").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
     {
@@ -354,6 +354,9 @@ QJsonArray AutomationList::serialize(void)
 
         if (automation->restart())
             json.insert("restart", automation->restart());
+
+        if (automation->anyCondition())
+            json.insert("anyCondition", automation->anyCondition());
 
         if (automation->lastTriggered())
             json.insert("lastTriggered", automation->lastTriggered());

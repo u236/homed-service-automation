@@ -85,6 +85,7 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
 void Controller::checkConditions(AutomationObject *automation)
 {
     QDateTime now = QDateTime::currentDateTime();
+    quint16 count = 0;
 
     for (int i = 0; i < automation->conditions().count(); i++)
     {
@@ -97,11 +98,8 @@ void Controller::checkConditions(AutomationObject *automation)
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
                 auto it = m_endpoints.find(condition->endpoint());
 
-                if (it == m_endpoints.end() || !condition->match(it.value()->properties().value(condition->property())))
-                {
-                    logInfo << "Automation" << automation->name() << "properties mismatch";
-                    return;
-                }
+                if (it != m_endpoints.end() && condition->match(it.value()->properties().value(condition->property())))
+                    count++;
 
                 break;
             }
@@ -110,11 +108,8 @@ void Controller::checkConditions(AutomationObject *automation)
             {
                 DateCondition *condition = reinterpret_cast <DateCondition*> (item.data());
 
-                if (!condition->match(QDate(1900, now.date().month(), now.date().day())))
-                {
-                    logInfo << "Automation" << automation->name() << "date mismatch";
-                    return;
-                }
+                if (condition->match(QDate(1900, now.date().month(), now.date().day())))
+                    count++;
 
                 break;
             }
@@ -123,11 +118,8 @@ void Controller::checkConditions(AutomationObject *automation)
             {
                 TimeCondition *condition = reinterpret_cast <TimeCondition*> (item.data());
 
-                if (!condition->match(QTime(now.time().hour(), now.time().minute())))
-                {
-                    logInfo << "Automation" << automation->name() << "time mismatch";
-                    return;
-                }
+                if (condition->match(QTime(now.time().hour(), now.time().minute())))
+                    count++;
 
                 break;
             }
@@ -136,15 +128,18 @@ void Controller::checkConditions(AutomationObject *automation)
             {
                 WeekCondition *condition = reinterpret_cast <WeekCondition*> (item.data());
 
-                if (!condition->match(QDate::currentDate().dayOfWeek()))
-                {
-                    logInfo << "Automation" << automation->name() << "day of week mismatch";
-                    return;
-                }
+                if (condition->match(QDate::currentDate().dayOfWeek()))
+                    count++;
 
                 break;
             }
         }
+    }
+
+    if ((automation->anyCondition() && automation->conditions().count() && !count) || (!automation->anyCondition() && automation->conditions().count() > count))
+    {
+        logInfo << "Automation" << automation->name() << "conditions mismatch";
+        return;
     }
 
     if (now.currentMSecsSinceEpoch() < automation->debounce() * 1000 + automation->lastTriggered())
