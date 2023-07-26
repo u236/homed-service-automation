@@ -447,14 +447,14 @@ QJsonArray AutomationList::serialize(void)
                 case ConditionObject::Type::date:
                 {
                     DateCondition *condition = reinterpret_cast <DateCondition*> (automation->conditions().at(j).data());
-                    item.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), condition->value().toString());
+                    item.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
                     break;
                 }
 
                 case ConditionObject::Type::time:
                 {
                     TimeCondition *condition = reinterpret_cast <TimeCondition*> (automation->conditions().at(j).data());
-                    item.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), condition->value().toString());
+                    item.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
                     break;
                 }
 
