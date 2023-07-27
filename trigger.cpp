@@ -11,7 +11,7 @@ bool PropertyTrigger::match(const QVariant &oldValue, const QVariant &newValue)
         case Statement::between:
         {
             QList <QVariant> list = m_value.toList();
-            double check = oldValue.toDouble(), value = newValue.toDouble(), min = list.value(0).toDouble(), max = list.value(1).toDouble();
+            double check = oldValue.toDouble(), value = newValue.toDouble(), min = qMin(list.value(0).toDouble(), list.value(1).toDouble()), max = qMax(list.value(0).toDouble(), list.value(1).toDouble());
             return (check < min || check > max) && value >= min && value <= max;
         }
     }

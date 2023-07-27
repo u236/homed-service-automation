@@ -12,7 +12,7 @@ bool PropertyCondition::match(const QVariant &value)
         case Statement::between:
         {
             QList <QVariant> list = m_value.toList();
-            return value.toDouble() >= list.value(0).toDouble() && value.toDouble() <= list.value(1).toDouble();
+            return value.toDouble() >= qMin(list.value(0).toDouble(), list.value(1).toDouble()) && value.toDouble() <= qMax(list.value(0).toDouble(), list.value(1).toDouble());
         }
     }
 
@@ -31,7 +31,8 @@ bool DateCondition::match(const QDate &value)
         case Statement::between:
         {
             QList <QVariant> list = m_value.toList();
-            return value >= QDate::fromString(list.value(0).toString(), "dd.MM") && value <= QDate::fromString(list.value(1).toString(), "dd.MM");
+            QDate start = QDate::fromString(list.value(0).toString(), "dd.MM"), end = QDate::fromString(list.value(1).toString(), "dd.MM");
+            return start > end ? value >= start || value <= end : value >= start && value <= end;
         }
     }
 
@@ -50,7 +51,8 @@ bool TimeCondition::match(const QTime &value)
         case Statement::between:
         {
             QList <QVariant> list = m_value.toList();
-            return value >= QTime::fromString(list.value(0).toString(), "hh:mm") && value <= QTime::fromString(list.value(1).toString(), "hh:mm");
+            QTime start = QTime::fromString(list.value(0).toString(), "hh:mm"), end = QTime::fromString(list.value(1).toString(), "hh:mm");
+            return start > end ? value >= start || value <= end : value >= start && value <= end;
         }
     }
 
