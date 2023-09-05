@@ -3,6 +3,9 @@
 
 Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
 {
+    logInfo << "Starting version" << SERVICE_VERSION;
+    logInfo << "Configuration file is" << getConfig()->fileName();
+
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
     updateSun();
 
@@ -250,7 +253,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             QString name = data.value("name").toString();
             Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
 
-            if (!other.isNull() && other != automation)
+            if (automation != other && !other.isNull())
             {
                 logWarning << "Automation" << name << "update failed, name already in use";
                 publishEvent(name, Event::nameDuplicate);
@@ -282,7 +285,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         else if (action == "removeAutomation")
         {
             int index = -1;
-            Automation automation = m_automations->byName(json.value("automation").toString(), &index);
+            const Automation &automation = m_automations->byName(json.value("automation").toString(), &index);
 
             if (index < 0)
                 return;
