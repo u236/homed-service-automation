@@ -301,9 +301,10 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     }
     else if (subTopic.startsWith("service/"))
     {
+        QList <QString> list = {"automation", "web"};
         QString service = subTopic.split('/').value(1);
 
-        if (service == "automation") // TODO: make it smarter
+        if (list.contains(service))
             return;
 
         if (json.value("status").toString() == "online")

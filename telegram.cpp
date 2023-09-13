@@ -13,7 +13,9 @@ Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_proc
     if (m_token.isEmpty() || !m_chat)
         return;
 
+    connect(m_process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
     connect(m_process, &QProcess::readyReadStandardOutput, this, &Telegram::readyRead);
+    connect(m_process, &QProcess::readyReadStandardError, this, &Telegram::pollError);
     getUpdates();
 }
 
@@ -45,13 +47,21 @@ void Telegram::getUpdates(void)
     m_process->start("curl", {"-X", "POST", "-H", "Content-Type: application/json", "-d", QJsonDocument(QJsonObject {{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), "-s", QString("https://api.telegram.org/bot%1/getUpdates").arg(m_token)});
 }
 
+void Telegram::finished(int, QProcess::ExitStatus)
+{
+    getUpdates();
+}
+
 void Telegram::readyRead(void)
 {
     QJsonObject json = QJsonDocument::fromJson(m_process->readAllStandardOutput()).object();
     QJsonArray array = json.value("result").toArray();
 
     if (!json.value("ok").toBool())
-        logWarning << "Telegram getUpdate request error, description:" << json.value("description").toString();
+    {
+        logWarning << "Telegram getUpdates request error, description:" << json.value("description").toString();
+        return;
+    }
 
     for (auto it = array.begin(); it != array.end(); it++)
     {
@@ -59,7 +69,9 @@ void Telegram::readyRead(void)
         emit messageReceived(message.value("text").toString(), message.value("chat").toObject().value("id").toVariant().toLongLong());
         m_offset = item.value("update_id").toVariant().toLongLong() + 1;
     }
+}
 
-    m_process->close();
-    getUpdates();
+void Telegram::pollError(void)
+{
+    logWarning << "Telegram getUpdates process error:" << m_process->readAllStandardError();
 }

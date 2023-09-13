@@ -27,7 +27,9 @@ private:
 
 private slots:
 
+    void finished(int exitCode, QProcess::ExitStatus exitStatus);
     void readyRead(void);
+    void pollError(void);
 
 signals:
 
