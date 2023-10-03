@@ -19,20 +19,28 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     m_timer->start(1000);
 }
 
-QString Controller::composeString(QString string)
+QString Controller::composeString(QString string, const Trigger &trigger)
 {
     QRegularExpressionMatchIterator match = QRegularExpression("{{(.+?)}}").globalMatch(string);
 
     while (match.hasNext())
     {
-        QString item = match.next().captured(), value;
+        QString item = match.next().captured(), name, value;
         QList <QString> list = item.mid(2, item.length() - 4).split('|');
-        auto it = m_endpoints.find(list.value(0).trimmed());
 
-        if (it != m_endpoints.end())
-            value = it.value()->properties().value(list.value(1).trimmed()).toString();
+        name = list.value(0).trimmed();
 
-        string.replace(item, value.isEmpty() ? "_unknown_" : value);
+        if (name != "triggerName")
+        {
+            auto it = m_endpoints.find(name);
+
+            if (it != m_endpoints.end())
+                value = it.value()->properties().value(list.value(1).trimmed()).toString();
+        }
+        else
+            value = trigger->name();
+
+        string.replace(item, value.isEmpty() ? "[unknown]" : value);
     }
 
     return string;
@@ -77,7 +85,7 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
                 if (trigger->type() != TriggerObject::Type::property || trigger->endpoint() != endpoint->name() || trigger->property() != it.key() || !trigger->match(value, it.value()))
                     continue;
 
-                checkConditions(automation.data());
+                checkConditions(automation.data(), automation->triggers().at(j));
             }
         }
     }
@@ -85,7 +93,7 @@ void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVa
     endpoint->properties() = properties;
 }
 
-void Controller::checkConditions(AutomationObject *automation)
+void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
@@ -154,6 +162,7 @@ void Controller::checkConditions(AutomationObject *automation)
     logInfo << "Automation" << automation->name() << "triggered";
     // TODO: publish "triggered" event here?
 
+    automation->setLastTrigger(trigger);
     automation->updateLastTriggered();
     m_automations->store();
 
@@ -195,21 +204,21 @@ void Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(composeString(action->message()), action->silent(), action->chats());
+                m_telegram->sendMessage(composeString(action->message(), automation->lastTrigger()), action->silent(), action->chats());
                 break;
             }
 
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), composeString(action->message()), action->retain());
+                mqttPublishString(action->topic(), composeString(action->message(), automation->lastTrigger()), action->retain());
                 break;
             }
 
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                system(QString("sh -c \"%1\" > /dev/null &").arg(composeString(action->command())).toUtf8().constData());
+                system(QString("sh -c \"%1\" > /dev/null &").arg(composeString(action->command(), automation->lastTrigger())).toUtf8().constData());
                 break;
             }
         }
@@ -364,7 +373,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 if (trigger->type() != TriggerObject::Type::mqtt || !trigger->match(topic.name(), message))
                     continue;
 
-                checkConditions(automation.data());
+                checkConditions(automation.data(), automation->triggers().at(j));
             }
         }
     }
@@ -399,7 +408,7 @@ void Controller::telegramReceived(const QString &message, qint64 chat)
             if (trigger->type() != TriggerObject::Type::telegram || !trigger->match(message, chat))
                 continue;
 
-            checkConditions(automation.data());
+            checkConditions(automation.data(), automation->triggers().at(j));
         }
     }
 }
@@ -434,21 +443,21 @@ void Controller::updateTime(void)
                 case TriggerObject::Type::sunrise:
 
                     if (reinterpret_cast <SunriseTrigger*> (trigger.data())->match(m_sunrise, time))
-                        checkConditions(automation.data());
+                        checkConditions(automation.data(), trigger);
 
                     break;
 
                 case TriggerObject::Type::sunset:
 
                     if (reinterpret_cast <SunsetTrigger*> (trigger.data())->match(m_sunset, time))
-                        checkConditions(automation.data());
+                        checkConditions(automation.data(), trigger);
 
                     break;
 
                 case TriggerObject::Type::time:
 
                     if (reinterpret_cast <TimeTrigger*> (trigger.data())->match(time))
-                        checkConditions(automation.data());
+                        checkConditions(automation.data(), trigger);
 
                     break;
 

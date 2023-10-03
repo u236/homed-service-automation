@@ -55,6 +55,9 @@ public:
     inline bool restart(void) { return m_restart; }
     inline bool anyCondition(void) { return m_anyCondition; }
 
+    inline Trigger lastTrigger(void) { return m_lastTrigger; }
+    inline void setLastTrigger(const Trigger &value) { m_lastTrigger = value; }
+
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
     inline void updateLastTriggered(void) { m_lastTriggered = QDateTime::currentMSecsSinceEpoch(); }
 
@@ -72,6 +75,7 @@ private:
     qint32 m_debounce, m_delay;
     bool m_restart, m_anyCondition;
 
+    QWeakPointer <TriggerObject> m_lastTrigger;
     qint64 m_lastTriggered;
 
     QList <Trigger> m_triggers;

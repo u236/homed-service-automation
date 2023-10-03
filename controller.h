@@ -42,12 +42,12 @@ private:
     QList <QString> m_subscriptions;
     QMap <QString, Endpoint> m_endpoints;
 
-    QString composeString(QString string);
+    QString composeString(QString string, const Trigger &trigger);
 
     void updateSun(void);
     void updateStatus(const Endpoint &endpoint, const QMap<QString, QVariant> &data);
 
-    void checkConditions(AutomationObject *automation);
+    void checkConditions(AutomationObject *automation, const Trigger &trigger);
     void runActions(AutomationObject *automation);
 
     void publishEvent(const QString &name, Event event);

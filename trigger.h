@@ -37,12 +37,16 @@ public:
 
     inline Type type(void) { return m_type; }
 
+    inline QString name(void) { return m_name; }
+    inline void setName(const QString &value) { m_name = value; }
+
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
 private:
 
     Type m_type;
+    QString m_name;
 
 };
 

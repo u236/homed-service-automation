@@ -89,6 +89,7 @@ Automation AutomationList::parse(const QJsonObject &json)
     {
         QJsonObject item = it->toObject();
         TriggerObject::Type type = static_cast <TriggerObject::Type> (m_triggerTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+        Trigger trigger;
 
         switch (type)
         {
@@ -106,7 +107,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                     if (!value.isValid())
                         continue;
 
-                    automation->triggers().append(Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value)));
+                    trigger = Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value));
                     break;
                 }
 
@@ -128,7 +129,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                 if (chats.isEmpty())
                     chats.append(m_telegramChat);
 
-                automation->triggers().append(Trigger(new TelegramTrigger(message, chats)));
+                trigger = Trigger(new TelegramTrigger(message, chats));
                 break;
             }
 
@@ -139,29 +140,35 @@ Automation AutomationList::parse(const QJsonObject &json)
                 if (topic.isEmpty() || message.isEmpty())
                     continue;
 
-                automation->triggers().append(Trigger(new MqttTrigger(topic, message)));
+                trigger = Trigger(new MqttTrigger(topic, message));
                 emit addSubscription(topic);
                 break;
             }
 
             case TriggerObject::Type::sunrise:
             {
-                automation->triggers().append(Trigger(new SunriseTrigger(static_cast <qint32> (item.value("offset").toInt()))));
+                trigger = Trigger(new SunriseTrigger(static_cast <qint32> (item.value("offset").toInt())));
                 break;
             }
 
             case TriggerObject::Type::sunset:
             {
-                automation->triggers().append(Trigger(new SunsetTrigger(static_cast <qint32> (item.value("offset").toInt()))));
+                trigger = Trigger(new SunsetTrigger(static_cast <qint32> (item.value("offset").toInt())));
                 break;
             }
 
             case TriggerObject::Type::time:
             {
-                automation->triggers().append(Trigger(new TimeTrigger(QTime::fromString(item.value("time").toString()))));
+                trigger = Trigger(new TimeTrigger(QTime::fromString(item.value("time").toString())));
                 break;
             }
         }
+
+        if (trigger.isNull())
+            continue;
+
+        trigger->setName(item.value("name").toString());
+        automation->triggers().append(trigger);
     }
 
     for (auto it = conditions.begin(); it != conditions.end(); it++)
@@ -424,6 +431,9 @@ QJsonArray AutomationList::serialize(void)
                     break;
                 }
             }
+
+            if (!automation->triggers().at(j)->name().isEmpty())
+                item.insert("name", automation->triggers().at(j)->name());
 
             triggers.append(item);
         }
