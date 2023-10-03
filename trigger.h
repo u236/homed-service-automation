@@ -1,9 +1,9 @@
 #ifndef TRIGGER_H
 #define TRIGGER_H
 
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSharedPointer>
-#include <QTime>
-#include <QVariant>
 
 class TriggerObject;
 typedef QSharedPointer <TriggerObject> Trigger;
@@ -17,8 +17,8 @@ public:
     enum class Type
     {
         property,
-        telegram,
         mqtt,
+        telegram,
         sunrise,
         sunset,
         time
@@ -44,6 +44,10 @@ public:
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
+protected:
+
+    bool match(const QVariant &oldValue, const QVariant &newValue, Statement statement, const QVariant &value);
+
 private:
 
     Type m_type;
@@ -64,13 +68,38 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    bool match(const QVariant &oldValue, const QVariant &newValue);
+    inline bool match(const QVariant &oldValue, const QVariant &newValue) {{ return TriggerObject::match(oldValue, newValue, m_statement, m_value); }}
 
 private:
 
     QString m_endpoint, m_property;
     Statement m_statement;
     QVariant m_value;
+
+};
+
+class MqttTrigger : public TriggerObject
+{
+
+public:
+
+    MqttTrigger(const QString &topic, const QString &property, Statement statement, const QVariant &value) :
+        TriggerObject(Type::mqtt), m_topic(topic), m_property(property), m_statement(statement), m_value(value) {}
+
+    inline QString topic(void) { return m_topic; }
+    inline QString property(void) { return m_property; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
+
+    inline bool match(const QByteArray &oldMessage, const QByteArray &newMessage) {{ return TriggerObject::match(parse(oldMessage), parse(newMessage), m_statement, m_value); }}
+
+private:
+
+    QString m_topic, m_property;
+    Statement m_statement;
+    QVariant m_value;
+
+    inline QVariant parse(const QByteArray &message) { return m_property.isEmpty() ? message : QJsonDocument::fromJson(message).object().value(m_property).toVariant(); }
 
 };
 
@@ -91,25 +120,6 @@ private:
 
     QString m_message;
     QList <qint64> m_chats;
-
-};
-
-class MqttTrigger : public TriggerObject
-{
-
-public:
-
-    MqttTrigger(const QString &topic, const QString &message) :
-        TriggerObject(Type::mqtt), m_topic(topic), m_message(message) {}
-
-    inline QString topic(void) { return m_topic; }
-    inline QString message(void) { return m_message; }
-
-    inline bool match(const QString &topic, const QString &message) { return topic == m_topic && message == m_message; }
-
-private:
-
-    QString m_topic, m_message;
 
 };
 

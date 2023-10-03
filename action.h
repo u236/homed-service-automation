@@ -16,8 +16,8 @@ public:
     enum class Type
     {
         property,
-        telegram,
         mqtt,
+        telegram,
         shell
     };
 
@@ -65,6 +65,25 @@ private:
 
 };
 
+class MqttAction : public ActionObject
+{
+
+public:
+
+    MqttAction(const QString &topic, const QString &message, bool retain) :
+        ActionObject(Type::mqtt), m_topic(topic), m_message(message), m_retain(retain) {}
+
+    inline QString topic(void) { return m_topic; }
+    inline QString message(void) { return m_message; }
+    inline bool retain(void) { return m_retain; }
+
+private:
+
+    QString m_topic, m_message;
+    bool m_retain;
+
+};
+
 class TelegramAction : public ActionObject
 {
 
@@ -83,25 +102,6 @@ private:
     bool m_silent;
 
     QList <qint64> m_chats;
-};
-
-class MqttAction : public ActionObject
-{
-
-public:
-
-    MqttAction(const QString &topic, const QString &message, bool retain) :
-        ActionObject(Type::mqtt), m_topic(topic), m_message(message), m_retain(retain) {}
-
-    inline QString topic(void) { return m_topic; }
-    inline QString message(void) { return m_message; }
-    inline bool retain(void) { return m_retain; }
-
-private:
-
-    QString m_topic, m_message;
-    bool m_retain;
-
 };
 
 class ShellAction : public ActionObject

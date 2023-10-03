@@ -114,6 +114,32 @@ Automation AutomationList::parse(const QJsonObject &json)
                 break;
             }
 
+            case TriggerObject::Type::mqtt:
+            {
+                QString topic = item.value("topic").toString(), property = item.value("property").toString();
+
+                if (topic.isEmpty())
+                    continue;
+
+                // TODO: remove this few versions later
+                if (item.contains("message"))
+                    item.insert("equals", item.value("message"));
+
+                for (int i = 0; i < m_triggerStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_triggerStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    trigger = Trigger(new MqttTrigger(topic, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value));
+                    emit addSubscription(topic);
+                    break;
+                }
+
+                break;
+            }
+
             case TriggerObject::Type::telegram:
             {
                 QString message = item.value("message").toString();
@@ -130,18 +156,6 @@ Automation AutomationList::parse(const QJsonObject &json)
                     chats.append(m_telegramChat);
 
                 trigger = Trigger(new TelegramTrigger(message, chats));
-                break;
-            }
-
-            case TriggerObject::Type::mqtt:
-            {
-                QString topic = item.value("topic").toString(), message = item.value("message").toString();
-
-                if (topic.isEmpty() || message.isEmpty())
-                    continue;
-
-                trigger = Trigger(new MqttTrigger(topic, message));
-                emit addSubscription(topic);
                 break;
             }
 
@@ -272,6 +286,17 @@ Automation AutomationList::parse(const QJsonObject &json)
                 break;
             }
 
+            case ActionObject::Type::mqtt:
+            {
+                QString topic = item.value("topic").toString(), message = item.value("message").toString();
+
+                if (topic.isEmpty() || message.isEmpty())
+                    continue;
+
+                automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
+                break;
+            }
+
             case ActionObject::Type::telegram:
             {
                 QString message = item.value("message").toString();
@@ -285,17 +310,6 @@ Automation AutomationList::parse(const QJsonObject &json)
                     chats.append(it->toVariant().toLongLong());
 
                 automation->actions().append(Action(new TelegramAction(message, item.value("silent").toBool(), chats)));
-                break;
-            }
-
-            case ActionObject::Type::mqtt:
-            {
-                QString topic = item.value("topic").toString(), message = item.value("message").toString();
-
-                if (topic.isEmpty() || message.isEmpty())
-                    continue;
-
-                automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
                 break;
             }
 
@@ -384,6 +398,19 @@ QJsonArray AutomationList::serialize(void)
                     break;
                 }
 
+                case TriggerObject::Type::mqtt:
+                {
+                    MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
+
+                    item.insert("topic", trigger->topic());
+                    item.insert(m_triggerStatements.valueToKey(static_cast <int> (trigger->statement())), QJsonValue::fromVariant(trigger->value()));
+
+                    if (!trigger->property().isEmpty())
+                        item.insert("property", trigger->property());
+
+                    break;
+                }
+
                 case TriggerObject::Type::telegram:
                 {
                     TelegramTrigger *trigger = reinterpret_cast <TelegramTrigger*> (automation->triggers().at(j).data());
@@ -398,14 +425,6 @@ QJsonArray AutomationList::serialize(void)
                     if (!chats.isEmpty())
                         item.insert("chats", QJsonArray::fromVariantList(chats));
 
-                    break;
-                }
-
-                case TriggerObject::Type::mqtt:
-                {
-                    MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
-                    item.insert("topic", trigger->topic());
-                    item.insert("message", trigger->message());
                     break;
                 }
 
@@ -496,6 +515,15 @@ QJsonArray AutomationList::serialize(void)
                     break;
                 }
 
+                case ActionObject::Type::mqtt:
+                {
+                    MqttAction *action = reinterpret_cast <MqttAction*> (automation->actions().at(j).data());
+                    item.insert("topic", action->topic());
+                    item.insert("message", action->message());
+                    item.insert("retain", action->retain());
+                    break;
+                }
+
                 case ActionObject::Type::telegram:
                 {
                     TelegramAction *action = reinterpret_cast <TelegramAction*> (automation->actions().at(j).data());
@@ -510,15 +538,6 @@ QJsonArray AutomationList::serialize(void)
                     if (!chats.isEmpty())
                         item.insert("chats", QJsonArray::fromVariantList(chats));
 
-                    break;
-                }
-
-                case ActionObject::Type::mqtt:
-                {
-                    MqttAction *action = reinterpret_cast <MqttAction*> (automation->actions().at(j).data());
-                    item.insert("topic", action->topic());
-                    item.insert("message", action->message());
-                    item.insert("retain", action->retain());
                     break;
                 }
 

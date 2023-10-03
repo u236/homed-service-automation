@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.0.13"
+#define SERVICE_VERSION     "1.1.0"
 
 #include "automation.h"
 #include "homed.h"
@@ -41,11 +41,12 @@ private:
 
     QList <QString> m_subscriptions;
     QMap <QString, Endpoint> m_endpoints;
+    QMap <QString, QByteArray> m_topics;
 
     QString composeString(QString string, const Trigger &trigger);
 
     void updateSun(void);
-    void updateStatus(const Endpoint &endpoint, const QMap<QString, QVariant> &data);
+    void updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data);
 
     void checkConditions(AutomationObject *automation, const Trigger &trigger);
     void runActions(AutomationObject *automation);

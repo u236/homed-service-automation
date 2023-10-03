@@ -57,7 +57,7 @@ void Controller::updateSun(void)
     logInfo << "Sunrise set to" << m_sunrise.toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sunset.toString("hh:mm").toUtf8().constData();
 }
 
-void Controller::updateStatus(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
+void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
 {
     QMap <QString, QVariant> properties;
 
@@ -201,17 +201,17 @@ void Controller::runActions(AutomationObject *automation)
                 break;
             }
 
-            case ActionObject::Type::telegram:
-            {
-                TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(composeString(action->message(), automation->lastTrigger()), action->silent(), action->chats());
-                break;
-            }
-
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
                 mqttPublishString(action->topic(), composeString(action->message(), automation->lastTrigger()), action->retain());
+                break;
+            }
+
+            case ActionObject::Type::telegram:
+            {
+                TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
+                m_telegram->sendMessage(composeString(action->message(), automation->lastTrigger()), action->silent(), action->chats());
                 break;
             }
 
@@ -355,7 +355,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         if (it == m_endpoints.end())
             it = m_endpoints.insert(endpoint, Endpoint(new EndpointObject(endpoint)));
 
-        updateStatus(it.value(), json.toVariantMap());
+        updateEndpoint(it.value(), json.toVariantMap());
     }
     else if (m_subscriptions.contains(topic.name()))
     {
@@ -370,12 +370,14 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             {
                 MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
 
-                if (trigger->type() != TriggerObject::Type::mqtt || !trigger->match(topic.name(), message))
+                if (trigger->type() != TriggerObject::Type::mqtt || trigger->topic() != topic.name() || !trigger->match(m_topics.value(topic.name()), message))
                     continue;
 
                 checkConditions(automation.data(), automation->triggers().at(j));
             }
         }
+
+        m_topics.insert(topic.name(), message);
     }
 }
 

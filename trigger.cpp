@@ -1,24 +1,24 @@
 #include "trigger.h"
 
-bool PropertyTrigger::match(const QVariant &oldValue, const QVariant &newValue)
+bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, Statement statement, const QVariant &value)
 {
-    switch (m_statement)
+    switch (statement)
     {
-        case Statement::equals: return oldValue != m_value && newValue == m_value;
-        case Statement::above:  return oldValue.toDouble() < m_value.toDouble() && newValue.toDouble() >= m_value.toDouble();
-        case Statement::below:  return oldValue.toDouble() > m_value.toDouble() && newValue.toDouble() <= m_value.toDouble();
+        case Statement::equals: return oldValue != value && newValue == value;
+        case Statement::above:  return oldValue.toDouble() < value.toDouble() && newValue.toDouble() >= value.toDouble();
+        case Statement::below:  return oldValue.toDouble() > value.toDouble() && newValue.toDouble() <= value.toDouble();
 
         case Statement::between:
         {
-            QList <QVariant> list = m_value.toList();
-            double check = oldValue.toDouble(), value = newValue.toDouble(), min = qMin(list.value(0).toDouble(), list.value(1).toDouble()), max = qMax(list.value(0).toDouble(), list.value(1).toDouble());
-            return (check < min || check > max) && value >= min && value <= max;
+            QList <QVariant> list = value.toList();
+            double a = oldValue.toDouble(), b = newValue.toDouble(), min = qMin(list.value(0).toDouble(), list.value(1).toDouble()), max = qMax(list.value(0).toDouble(), list.value(1).toDouble());
+            return (a < min || a > max) && b >= min && b <= max;
         }
 
         case Statement::changes:
         {
-            double check = oldValue.toDouble(), value = newValue.toDouble(), change = m_value.toDouble();
-            return value != check && (value <= check - change || value >= check + change);
+            double a = oldValue.toDouble(), b = newValue.toDouble(), change = value.toDouble();
+            return b != a && (b <= a - change || b >= a + change);
         }
     }
 
