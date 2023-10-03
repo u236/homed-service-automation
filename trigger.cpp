@@ -14,6 +14,12 @@ bool PropertyTrigger::match(const QVariant &oldValue, const QVariant &newValue)
             double check = oldValue.toDouble(), value = newValue.toDouble(), min = qMin(list.value(0).toDouble(), list.value(1).toDouble()), max = qMax(list.value(0).toDouble(), list.value(1).toDouble());
             return (check < min || check > max) && value >= min && value <= max;
         }
+
+        case Statement::changes:
+        {
+            double check = oldValue.toDouble(), value = newValue.toDouble(), change = m_value.toDouble();
+            return value != check && (value <= check - change || value >= check + change);
+        }
     }
 
     return false;
