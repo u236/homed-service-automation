@@ -357,7 +357,8 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
         updateEndpoint(it.value(), json.toVariantMap());
     }
-    else if (m_subscriptions.contains(topic.name()))
+
+    if (m_subscriptions.contains(topic.name()))
     {
         for (int i = 0; i < m_automations->count(); i++)
         {
