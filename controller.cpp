@@ -251,6 +251,29 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     QString subTopic = topic.name().replace(mqttTopic(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
 
+    if (m_subscriptions.contains(topic.name()))
+    {
+        for (int i = 0; i < m_automations->count(); i++)
+        {
+            const Automation &automation = m_automations->at(i);
+
+            if (!automation->active())
+                continue;
+
+            for (int j = 0; j < automation->triggers().count(); j++)
+            {
+                MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
+
+                if (trigger->type() != TriggerObject::Type::mqtt || trigger->topic() != topic.name() || !trigger->match(m_topics.value(topic.name()), message))
+                    continue;
+
+                checkConditions(automation.data(), automation->triggers().at(j));
+            }
+        }
+
+        m_topics.insert(topic.name(), message);
+    }
+
     if (subTopic == "command/automation")
     {
         QString action = json.value("action").toString();
@@ -327,12 +350,16 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             logWarning << "Service" << service << "is offline";
             mqttUnsubscribe(mqttTopic("status/").append(service));
             mqttUnsubscribe(mqttTopic("fd/%1/#").arg(service));
+            m_services.removeAll(service);
         }
     }
     else if (subTopic.startsWith("status/"))
     {
         QString service = subTopic.split('/').value(1);
         QJsonArray array = json.value("devices").toArray();
+
+        if (!m_services.contains(service))
+            return;
 
         for (auto it = array.begin(); it != array.end(); it++)
         {
@@ -341,11 +368,11 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             if (item.value("removed").toBool() || (service == "zigbee" && !item.value("logicalType").toInt()))
                 continue;
 
-            if (service == "zigbee" && item.value("logicalType").toInt())
+            if (service == "zigbee")
                 mqttPublish(mqttTopic("command/zigbee"), {{"action", "getProperties"}, {"device", item.value("ieeeAddress")}});
         }
 
-        mqttUnsubscribe(topic.name());
+        m_services.append(service);
     }
     else if (subTopic.startsWith("fd/"))
     {
@@ -356,29 +383,6 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             it = m_endpoints.insert(endpoint, Endpoint(new EndpointObject(endpoint)));
 
         updateEndpoint(it.value(), json.toVariantMap());
-    }
-
-    if (m_subscriptions.contains(topic.name()))
-    {
-        for (int i = 0; i < m_automations->count(); i++)
-        {
-            const Automation &automation = m_automations->at(i);
-
-            if (!automation->active())
-                continue;
-
-            for (int j = 0; j < automation->triggers().count(); j++)
-            {
-                MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
-
-                if (trigger->type() != TriggerObject::Type::mqtt || trigger->topic() != topic.name() || !trigger->match(m_topics.value(topic.name()), message))
-                    continue;
-
-                checkConditions(automation.data(), automation->triggers().at(j));
-            }
-        }
-
-        m_topics.insert(topic.name(), message);
     }
 }
 

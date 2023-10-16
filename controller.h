@@ -39,7 +39,7 @@ private:
     QTime m_sunrise, m_sunset;
     QDate m_date;
 
-    QList <QString> m_subscriptions;
+    QList <QString> m_services, m_subscriptions;
     QMap <QString, Endpoint> m_endpoints;
     QMap <QString, QByteArray> m_topics;
 
