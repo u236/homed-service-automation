@@ -393,6 +393,12 @@ void Controller::addSubscription(const QString &topic)
         return;
 
     m_subscriptions.append(topic);
+
+    if (mqttStatus())
+    {
+        logInfo << "MQTT subscribed to" << topic;
+        mqttSubscribe(topic);
+    }
 }
 
 void Controller::telegramReceived(const QString &message, qint64 chat)
