@@ -262,6 +262,7 @@ Automation AutomationList::parse(const QJsonObject &json)
     {
         QJsonObject item = it->toObject();
         ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+        Action action;
 
         switch (type)
         {
@@ -279,7 +280,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                     if (!value.isValid())
                         continue;
 
-                    automation->actions().append(Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value)));
+                    action = Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value));
                     break;
                 }
 
@@ -293,7 +294,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                 if (topic.isEmpty() || message.isEmpty())
                     continue;
 
-                automation->actions().append(Action(new MqttAction(topic, message, item.value("retain").toBool())));
+                action = Action(new MqttAction(topic, message, item.value("retain").toBool()));
                 break;
             }
 
@@ -309,7 +310,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                 for (auto it = array.begin(); it != array.end(); it++)
                     chats.append(it->toVariant().toLongLong());
 
-                automation->actions().append(Action(new TelegramAction(message, item.value("silent").toBool(), chats)));
+                action = Action(new TelegramAction(message, item.value("silent").toBool(), chats));
                 break;
             }
 
@@ -320,10 +321,16 @@ Automation AutomationList::parse(const QJsonObject &json)
                 if (command.isEmpty())
                     continue;
 
-                automation->actions().append(Action(new ShellAction(command)));
+                action = Action(new ShellAction(command));
                 break;
             }
         }
+
+        if (action.isNull())
+            continue;
+
+        action->setTriggerName(item.value("triggerName").toString());
+        automation->actions().append(action);
     }
 
     if (automation->name().isEmpty() || automation->triggers().isEmpty() || automation->actions().isEmpty())
@@ -548,6 +555,9 @@ QJsonArray AutomationList::serialize(void)
                     break;
                 }
             }
+
+            if (!automation->actions().at(j)->triggerName().isEmpty())
+                item.insert("triggerName", automation->triggers().at(j)->name());
 
             actions.append(item);
         }

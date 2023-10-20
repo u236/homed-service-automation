@@ -191,6 +191,9 @@ void Controller::runActions(AutomationObject *automation)
     {
         const Action &item = automation->actions().at(i);
 
+        if (!item->triggerName().isEmpty() && item->triggerName() != automation->lastTrigger()->name())
+            continue;
+
         switch (item->type())
         {
             case ActionObject::Type::property:

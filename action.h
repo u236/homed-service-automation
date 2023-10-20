@@ -33,12 +33,16 @@ public:
 
     inline Type type(void) { return m_type; }
 
+    inline QString triggerName(void) { return m_triggerName; }
+    inline void setTriggerName(const QString &value) { m_triggerName = value; }
+
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
 private:
 
     Type m_type;
+    QString m_triggerName;
 
 };
 
