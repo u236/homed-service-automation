@@ -18,7 +18,8 @@ public:
         property,
         mqtt,
         telegram,
-        shell
+        shell,
+        delay
     };
 
     enum class Statement
@@ -121,6 +122,22 @@ public:
 private:
 
     QString m_command;
+
+};
+
+class DelayAction : public ActionObject
+{
+
+public:
+
+    DelayAction(quint32 delay) :
+        ActionObject(Type::delay), m_delay(delay) {}
+
+    inline quint32 delay(void) { return m_delay; }
+
+private:
+
+    quint32 m_delay;
 
 };
 

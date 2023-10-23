@@ -189,28 +189,19 @@ void Controller::checkConditions(AutomationObject *automation, const Trigger &tr
     automation->updateLastTriggered();
     m_automations->store();
 
-    if (!automation->delay())
+    if (automation->timer()->isActive() && !automation->restart())
     {
-        runActions(automation);
+        logWarning << "Automation" << automation->name() << "timer already started";
         return;
     }
 
-    connect(automation->timer(), &QTimer::timeout, this, &Controller::automationTimeout, Qt::UniqueConnection);
-    automation->timer()->setSingleShot(true);
-
-    if (!automation->timer()->isActive() || automation->restart())
-    {
-        logInfo << "Automation" << automation->name() << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
-        automation->timer()->start(automation->delay() * 1000);
-        return;
-    }
-
-    logWarning << "Automation" << automation->name() << "timer already started";
+    automation->setActionIndex(0);
+    runActions(automation);
 }
 
 void Controller::runActions(AutomationObject *automation)
 {
-    for (int i = 0; i < automation->actions().count(); i++)
+    for (int i = automation->actionIndex(); i < automation->actions().count(); i++)
     {
         const Action &item = automation->actions().at(i);
 
@@ -246,6 +237,20 @@ void Controller::runActions(AutomationObject *automation)
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
                 system(QString("sh -c \"%1\" > /dev/null &").arg(composeString(action->command(), automation->lastTrigger())).toUtf8().constData());
                 break;
+            }
+
+            case ActionObject::Type::delay:
+            {
+                DelayAction *action = reinterpret_cast <DelayAction*> (item.data());
+
+                connect(automation->timer(), &QTimer::timeout, this, &Controller::automationTimeout, Qt::UniqueConnection);
+                automation->timer()->setSingleShot(true);
+
+                automation->timer()->start(action->delay() * 1000);
+                automation->setActionIndex(++i);
+
+                logInfo << "Automation" << automation->name() << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
+                return;
             }
         }
     }

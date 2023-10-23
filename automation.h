@@ -42,8 +42,8 @@ class AutomationObject : public QObject
 
 public:
 
-    AutomationObject(const QString &name, bool active, qint32 debounce, qint32 delay, bool restart, qint64 lastTriggered) :
-        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_debounce(debounce), m_delay(delay), m_restart(restart), m_lastTriggered(lastTriggered) {}
+    AutomationObject(const QString &name, bool active, qint32 debounce, bool restart, qint64 lastTriggered) :
+        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_debounce(debounce), m_restart(restart), m_lastTriggered(lastTriggered) {}
 
     inline QTimer *timer(void) { return m_timer; }
 
@@ -51,7 +51,6 @@ public:
     inline bool active(void) { return m_active; }
 
     inline qint32 debounce(void) { return m_debounce; }
-    inline qint32 delay(void) { return m_delay; }
     inline bool restart(void) { return m_restart; }
 
     inline Trigger lastTrigger(void) { return m_lastTrigger; }
@@ -59,6 +58,9 @@ public:
 
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
     inline void updateLastTriggered(void) { m_lastTriggered = QDateTime::currentMSecsSinceEpoch(); }
+
+    inline quint32 actionIndex(void) { return m_actionIndex; }
+    inline void setActionIndex(quint32 value) { m_actionIndex = value; }
 
     inline QList <Trigger> &triggers(void) { return m_triggers; }
     inline QList <Condition> &conditions(void) { return m_conditions; }
@@ -71,11 +73,12 @@ private:
     QString m_name;
     bool m_active;
 
-    qint32 m_debounce, m_delay;
+    qint32 m_debounce;
     bool m_restart;
 
     QWeakPointer <TriggerObject> m_lastTrigger;
     qint64 m_lastTriggered;
+    quint32 m_actionIndex;
 
     QList <Trigger> m_triggers;
     QList <Condition> m_conditions;

@@ -83,7 +83,7 @@ Automation AutomationList::byName(const QString &name, int *index)
 Automation AutomationList::parse(const QJsonObject &json)
 {
     QJsonArray triggers = json.value("triggers").toArray(), actions = json.value("actions").toArray();
-    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("delay").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
+    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
     {
@@ -249,6 +249,12 @@ Automation AutomationList::parse(const QJsonObject &json)
                     continue;
 
                 action = Action(new ShellAction(command));
+                break;
+            }
+
+            case ActionObject::Type::delay:
+            {
+                action = Action(new DelayAction(static_cast <quint32> (item.value("delay").toInt())));
                 break;
             }
         }
@@ -448,9 +454,6 @@ QJsonArray AutomationList::serialize(void)
         if (automation->debounce())
             json.insert("debounce", automation->debounce());
 
-        if (automation->delay())
-            json.insert("delay", automation->delay());
-
         if (automation->restart())
             json.insert("restart", automation->restart());
 
@@ -579,6 +582,13 @@ QJsonArray AutomationList::serialize(void)
                 {
                     ShellAction *action = reinterpret_cast <ShellAction*> (automation->actions().at(j).data());
                     item.insert("command", action->command());
+                    break;
+                }
+
+                case ActionObject::Type::delay:
+                {
+                    DelayAction *action = reinterpret_cast <DelayAction*> (automation->actions().at(j).data());
+                    item.insert("delay", QJsonValue::fromVariant(action->delay()));
                     break;
                 }
             }
