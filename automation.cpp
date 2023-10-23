@@ -584,7 +584,7 @@ QJsonArray AutomationList::serialize(void)
             }
 
             if (!automation->actions().at(j)->triggerName().isEmpty())
-                item.insert("triggerName", automation->triggers().at(j)->name());
+                item.insert("triggerName", automation->actions().at(j)->triggerName());
 
             actions.append(item);
         }
