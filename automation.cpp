@@ -82,8 +82,8 @@ Automation AutomationList::byName(const QString &name, int *index)
 
 Automation AutomationList::parse(const QJsonObject &json)
 {
-    QJsonArray triggers = json.value("triggers").toArray(), conditions = json.value("conditions").toArray(), actions = json.value("actions").toArray();
-    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("delay").toInt(), json.value("restart").toBool(), json.value("anyCondition").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
+    QJsonArray triggers = json.value("triggers").toArray(), actions = json.value("actions").toArray();
+    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("delay").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
     {
@@ -185,79 +185,6 @@ Automation AutomationList::parse(const QJsonObject &json)
         automation->triggers().append(trigger);
     }
 
-    for (auto it = conditions.begin(); it != conditions.end(); it++)
-    {
-        QJsonObject item = it->toObject();
-        ConditionObject::Type type = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
-
-        switch (type)
-        {
-            case ConditionObject::Type::property:
-            {
-                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
-
-                if (endpoint.isEmpty() || property.isEmpty())
-                    continue;
-
-                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
-                {
-                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
-
-                    if (!value.isValid())
-                        continue;
-
-                    automation->conditions().append(Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                    break;
-                }
-
-                break;
-            }
-
-            case ConditionObject::Type::date:
-            {
-                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
-                {
-                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
-
-                    if (!value.isValid())
-                        continue;
-
-                    automation->conditions().append(Condition(new DateCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                    break;
-                }
-
-                break;
-            }
-
-            case ConditionObject::Type::time:
-            {
-                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
-                {
-                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
-
-                    if (!value.isValid())
-                        continue;
-
-                    automation->conditions().append(Condition(new TimeCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                    break;
-                }
-
-                break;
-            }
-
-            case ConditionObject::Type::week:
-            {
-                QVariant value = item.value("days").toVariant();
-
-                if (!value.isValid())
-                    continue;
-
-                automation->conditions().append(Condition(new WeekCondition(value)));
-                break;
-            }
-        }
-    }
-
     for (auto it = actions.begin(); it != actions.end(); it++)
     {
         QJsonObject item = it->toObject();
@@ -336,7 +263,151 @@ Automation AutomationList::parse(const QJsonObject &json)
     if (automation->name().isEmpty() || automation->triggers().isEmpty() || automation->actions().isEmpty())
         return Automation();
 
+    unserializeConditions(automation->conditions(), json.value("conditions").toArray());
     return automation;
+}
+
+void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonArray &conditions)
+{
+    for (auto it = conditions.begin(); it != conditions.end(); it++)
+    {
+        QJsonObject item = it->toObject();
+        ConditionObject::Type type = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+
+        switch (type)
+        {
+            case ConditionObject::Type::property:
+            {
+                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+
+                if (endpoint.isEmpty() || property.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    list.append(Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::date:
+            {
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    list.append(Condition(new DateCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::time:
+            {
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    list.append(Condition(new TimeCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    break;
+                }
+
+                break;
+            }
+
+            case ConditionObject::Type::week:
+            {
+                QVariant value = item.value("days").toVariant();
+
+                if (!value.isValid())
+                    continue;
+
+                list.append(Condition(new WeekCondition(value)));
+                break;
+            }
+
+            case ConditionObject::Type::AND:
+            case ConditionObject::Type::OR:
+            case ConditionObject::Type::NOT:
+            {
+                Condition condition(new NestedCondition(type));
+                unserializeConditions(reinterpret_cast <NestedCondition*> (condition.data())->conditions(), item.value("conditions").toArray());
+                list.append(condition);
+                break;
+            }
+        }
+    }
+}
+
+QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
+{
+    QJsonArray array;
+
+    for (int j = 0; j < list.count(); j++)
+    {
+        ConditionObject::Type type = list.at(j)->type();
+        QJsonObject json = {{"type", m_conditionTypes.valueToKey(static_cast <int> (type))}};
+
+        switch (type)
+        {
+            case ConditionObject::Type::property:
+            {
+                PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (list.at(j).data());
+                json.insert("endpoint", condition->endpoint());
+                json.insert("property", condition->property());
+                json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
+                break;
+            }
+
+            case ConditionObject::Type::date:
+            {
+                DateCondition *condition = reinterpret_cast <DateCondition*> (list.at(j).data());
+                json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
+                break;
+            }
+
+            case ConditionObject::Type::time:
+            {
+                TimeCondition *condition = reinterpret_cast <TimeCondition*> (list.at(j).data());
+                json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
+                break;
+            }
+
+            case ConditionObject::Type::week:
+            {
+                WeekCondition *condition = reinterpret_cast <WeekCondition*> (list.at(j).data());
+                json.insert("days", QJsonValue::fromVariant(condition->value()));
+                break;
+            }
+
+            case ConditionObject::Type::AND:
+            case ConditionObject::Type::OR:
+            case ConditionObject::Type::NOT:
+            {
+                NestedCondition *condition = reinterpret_cast <NestedCondition*> (list.at(j).data());
+                json.insert("conditions", serializeConditions(condition->conditions()));
+                break;
+            }
+        }
+
+        array.append(json);
+    }
+
+    return array;
 }
 
 void AutomationList::unserialize(const QJsonArray &automations)
@@ -372,7 +443,7 @@ QJsonArray AutomationList::serialize(void)
     {
         const Automation &automation = at(i);
         QJsonObject json = {{"name", automation->name()}, {"active", automation->active()}};
-        QJsonArray triggers, conditions, actions;
+        QJsonArray triggers, actions;
 
         if (automation->debounce())
             json.insert("debounce", automation->debounce());
@@ -382,9 +453,6 @@ QJsonArray AutomationList::serialize(void)
 
         if (automation->restart())
             json.insert("restart", automation->restart());
-
-        if (automation->anyCondition())
-            json.insert("anyCondition", automation->anyCondition());
 
         if (automation->lastTriggered())
             json.insert("lastTriggered", automation->lastTriggered());
@@ -464,47 +532,6 @@ QJsonArray AutomationList::serialize(void)
             triggers.append(item);
         }
 
-        for (int j = 0; j < automation->conditions().count(); j++)
-        {
-            ConditionObject::Type type = automation->conditions().at(j)->type();
-            QJsonObject item = {{"type", m_conditionTypes.valueToKey(static_cast <int> (type))}};
-
-            switch (type)
-            {
-                case ConditionObject::Type::property:
-                {
-                    PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (automation->conditions().at(j).data());
-                    item.insert("endpoint", condition->endpoint());
-                    item.insert("property", condition->property());
-                    item.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
-                    break;
-                }
-
-                case ConditionObject::Type::date:
-                {
-                    DateCondition *condition = reinterpret_cast <DateCondition*> (automation->conditions().at(j).data());
-                    item.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
-                    break;
-                }
-
-                case ConditionObject::Type::time:
-                {
-                    TimeCondition *condition = reinterpret_cast <TimeCondition*> (automation->conditions().at(j).data());
-                    item.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
-                    break;
-                }
-
-                case ConditionObject::Type::week:
-                {
-                    WeekCondition *condition = reinterpret_cast <WeekCondition*> (automation->conditions().at(j).data());
-                    item.insert("days", QJsonValue::fromVariant(condition->value()));
-                    break;
-                }
-            }
-
-            conditions.append(item);
-        }
-
         for (int j = 0; j < automation->actions().count(); j++)
         {
             ActionObject::Type type = automation->actions().at(j)->type();
@@ -565,11 +592,11 @@ QJsonArray AutomationList::serialize(void)
         if (!triggers.isEmpty())
             json.insert("triggers", triggers);
 
-        if (!conditions.isEmpty())
-            json.insert("conditions", conditions);
-
         if (!actions.isEmpty())
             json.insert("actions", actions);
+
+        if (!automation->conditions().isEmpty())
+            json.insert("conditions", serializeConditions(automation->conditions()));
 
         array.append(json);
     }

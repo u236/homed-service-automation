@@ -19,7 +19,10 @@ public:
         property,
         date,
         time,
-        week
+        week,
+        AND,
+        OR,
+        NOT
     };
 
     enum class Statement
@@ -122,6 +125,23 @@ public:
 private:
 
     QVariant m_value;
+
+};
+
+class NestedCondition : public ConditionObject
+{
+
+public:
+
+    NestedCondition(Type type) :
+        ConditionObject(type) {}
+
+    inline QList <Condition> &conditions(void) { return m_conditions; }
+
+
+private:
+
+    QList <Condition> m_conditions;
 
 };
 

@@ -48,6 +48,7 @@ private:
     void updateSun(void);
     void updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data);
 
+    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type = ConditionObject::Type::AND);
     void checkConditions(AutomationObject *automation, const Trigger &trigger);
     void runActions(AutomationObject *automation);
 

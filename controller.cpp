@@ -93,14 +93,14 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
     endpoint->properties() = properties;
 }
 
-void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
+bool Controller::checkConditions(const QList<Condition> &conditions, ConditionObject::Type type)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
 
-    for (int i = 0; i < automation->conditions().count(); i++)
+    for (int i = 0; i < conditions.count(); i++)
     {
-        const Condition &item = automation->conditions().at(i);
+        const Condition &item = conditions.at(i);
 
         switch (item->type())
         {
@@ -144,16 +144,39 @@ void Controller::checkConditions(AutomationObject *automation, const Trigger &tr
 
                 break;
             }
+
+            case ConditionObject::Type::AND:
+            case ConditionObject::Type::OR:
+            case ConditionObject::Type::NOT:
+            {
+                NestedCondition *condition = reinterpret_cast <NestedCondition*> (item.data());
+
+                if (checkConditions(condition->conditions(), condition->type()))
+                    count++;
+
+                break;
+            }
         }
     }
 
-    if ((automation->anyCondition() && automation->conditions().count() && !count) || (!automation->anyCondition() && automation->conditions().count() > count))
+    switch (type)
+    {
+        case ConditionObject::Type::AND: return count == conditions.count();
+        case ConditionObject::Type::OR:  return count != 0;
+        case ConditionObject::Type::NOT: return count == 0;
+        default: return false;
+    }
+}
+
+void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
+{
+    if (!checkConditions(automation->conditions()))
     {
         logInfo << "Automation" << automation->name() << "conditions mismatch";
         return;
     }
 
-    if (now.currentMSecsSinceEpoch() < automation->debounce() * 1000 + automation->lastTriggered())
+    if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
     {
         logInfo << "Automation" << automation->name() << "debounced";
         return;
