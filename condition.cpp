@@ -39,22 +39,39 @@ bool DateCondition::match(const QDate &value)
     return false;
 }
 
-bool TimeCondition::match(const QTime &value)
+bool TimeCondition::match(const QTime &value, const QTime &sunrise, const QTime &sunset)
 {
     switch (m_statement)
     {
-        case Statement::equals:  return value == QTime::fromString(m_value.toString(), "hh:mm");
-        case Statement::differs: return value != QTime::fromString(m_value.toString(), "hh:mm");
-        case Statement::above:   return value >= QTime::fromString(m_value.toString(), "hh:mm");
-        case Statement::below:   return value <= QTime::fromString(m_value.toString(), "hh:mm");
+        case Statement::equals:  return value == time(m_value.toString(), sunrise, sunset);
+        case Statement::differs: return value != time(m_value.toString(), sunrise, sunset);
+        case Statement::above:   return value >= time(m_value.toString(), sunrise, sunset);
+        case Statement::below:   return value <= time(m_value.toString(), sunrise, sunset);
 
         case Statement::between:
         {
             QList <QVariant> list = m_value.toList();
-            QTime start = QTime::fromString(list.value(0).toString(), "hh:mm"), end = QTime::fromString(list.value(1).toString(), "hh:mm");
+            QTime start = time(list.value(0).toString(), sunrise, sunset), end = time(list.value(1).toString(), sunrise, sunset);
             return start > end ? value >= start || value <= end : value >= start && value <= end;
         }
     }
 
     return false;
+}
+
+QTime TimeCondition::time(const QString &string, const QTime &sunrise, const QTime &sunset)
+{
+    QList <QString> itemList = string.split(QRegExp("[(\\-|\\+)]")), valueList = {"sunrise", "sunset"};
+    QString value = itemList.value(0).trimmed();
+    qint32 offset = itemList.value(1).toInt();
+
+    if (string.mid(itemList.value(0).length(), 1) == "-")
+        offset *= -1;
+
+    switch (valueList.indexOf(value))
+    {
+        case 0:  return sunrise.addSecs(offset * 60);
+        case 1:  return sunset.addSecs(offset * 60);
+        default: return QTime::fromString(value, "hh:mm");
+    }
 }

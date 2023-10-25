@@ -129,7 +129,7 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
             {
                 TimeCondition *condition = reinterpret_cast <TimeCondition*> (item.data());
 
-                if (condition->match(QTime(now.time().hour(), now.time().minute())))
+                if (condition->match(QTime(now.time().hour(), now.time().minute()), m_sunrise, m_sunset))
                     count++;
 
                 break;

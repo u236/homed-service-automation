@@ -102,12 +102,14 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    bool match(const QTime &value);
+    bool match(const QTime &value, const QTime &sunrise, const QTime &sunset);
 
 private:
 
     Statement m_statement;
     QVariant m_value;
+
+    QTime time(const QString &string, const QTime &sunrise, const QTime &sunset);
 
 };
 
