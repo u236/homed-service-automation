@@ -93,6 +93,38 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
     endpoint->properties() = properties;
 }
 
+void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
+{
+    if (!checkConditions(automation->conditions()))
+    {
+        logInfo << "Automation" << automation->name() << "conditions mismatch";
+        return;
+    }
+
+    if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
+    {
+        logInfo << "Automation" << automation->name() << "debounced";
+        return;
+    }
+
+    logInfo << "Automation" << automation->name() << "triggered";
+    // TODO: publish "triggered" event here?
+
+    automation->setLastTrigger(trigger);
+    automation->updateLastTriggered();
+    m_automations->store();
+
+    if (automation->timer()->isActive() && !automation->restart())
+    {
+        logWarning << "Automation" << automation->name() << "timer already started";
+        return;
+    }
+
+    automation->setActionList(&automation->actions());
+    automation->actionList()->setIndex(0);
+    runActions(automation);
+}
+
 bool Controller::checkConditions(const QList<Condition> &conditions, ConditionObject::Type type)
 {
     QDateTime now = QDateTime::currentDateTime();
@@ -168,42 +200,11 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
     }
 }
 
-void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
+bool Controller::runActions(AutomationObject *automation)
 {
-    if (!checkConditions(automation->conditions()))
+    for (int i = automation->actionList()->index(); i < automation->actionList()->count(); i++)
     {
-        logInfo << "Automation" << automation->name() << "conditions mismatch";
-        return;
-    }
-
-    if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
-    {
-        logInfo << "Automation" << automation->name() << "debounced";
-        return;
-    }
-
-    logInfo << "Automation" << automation->name() << "triggered";
-    // TODO: publish "triggered" event here?
-
-    automation->setLastTrigger(trigger);
-    automation->updateLastTriggered();
-    m_automations->store();
-
-    if (automation->timer()->isActive() && !automation->restart())
-    {
-        logWarning << "Automation" << automation->name() << "timer already started";
-        return;
-    }
-
-    automation->setActionIndex(0);
-    runActions(automation);
-}
-
-void Controller::runActions(AutomationObject *automation)
-{
-    for (int i = automation->actionIndex(); i < automation->actions().count(); i++)
-    {
-        const Action &item = automation->actions().at(i);
+        const Action &item = automation->actionList()->at(i);
 
         if (!item->triggerName().isEmpty() && item->triggerName() != automation->lastTrigger()->name())
             continue;
@@ -239,21 +240,42 @@ void Controller::runActions(AutomationObject *automation)
                 break;
             }
 
+            case ActionObject::Type::condition:
+            {
+                ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
+
+                automation->actionList()->setIndex(++i);
+                automation->setActionList(&action->actions(checkConditions(action->conditions())));
+                automation->actionList()->setIndex(0);
+
+                if (runActions(automation))
+                    break;
+
+                return false;
+            }
+
             case ActionObject::Type::delay:
             {
                 DelayAction *action = reinterpret_cast <DelayAction*> (item.data());
 
                 connect(automation->timer(), &QTimer::timeout, this, &Controller::automationTimeout, Qt::UniqueConnection);
                 automation->timer()->setSingleShot(true);
-
-                automation->timer()->start(action->delay() * 1000);
-                automation->setActionIndex(++i);
+                automation->actionList()->setIndex(++i);
 
                 logInfo << "Automation" << automation->name() << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
-                return;
+                automation->timer()->start(action->delay() * 1000);
+                return false;
             }
         }
     }
+
+    if (automation->actionList()->parent())
+    {
+        automation->setActionList(automation->actionList()->parent());
+        runActions(automation);
+    }
+
+    return true;
 }
 
 void Controller::publishEvent(const QString &name, Event event)

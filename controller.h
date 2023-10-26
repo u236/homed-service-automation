@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.2.0"
+#define SERVICE_VERSION     "1.2.1"
 
 #include "automation.h"
 #include "homed.h"
@@ -48,9 +48,9 @@ private:
     void updateSun(void);
     void updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data);
 
-    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type = ConditionObject::Type::AND);
     void checkConditions(AutomationObject *automation, const Trigger &trigger);
-    void runActions(AutomationObject *automation);
+    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type = ConditionObject::Type::AND);
+    bool runActions(AutomationObject *automation);
 
     void publishEvent(const QString &name, Event event);
 

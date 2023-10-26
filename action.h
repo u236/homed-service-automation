@@ -3,9 +3,30 @@
 
 #include <QSharedPointer>
 #include <QVariant>
+#include "condition.h"
 
 class ActionObject;
 typedef QSharedPointer <ActionObject> Action;
+
+class ActionList : public QList <Action>
+{
+
+public:
+
+    ActionList(void) : m_parent(nullptr) {}
+
+    inline ActionList *parent(void) { return m_parent; }
+    inline void setParent(ActionList *value) { m_parent = value; }
+
+    inline quint32 index(void) { return m_index; }
+    inline void setIndex(quint32 value) { m_index = value; }
+
+private:
+
+    ActionList *m_parent;
+    quint32 m_index;
+
+};
 
 class ActionObject : public QObject
 {
@@ -19,6 +40,7 @@ public:
         mqtt,
         telegram,
         shell,
+        condition,
         delay
     };
 
@@ -122,6 +144,24 @@ public:
 private:
 
     QString m_command;
+
+};
+
+class ConditionAction : public ActionObject
+{
+
+public:
+
+    ConditionAction(ActionList *parent) :
+        ActionObject(Type::condition) { m_then.setParent(parent); m_else.setParent(parent); }
+
+    inline QList <Condition> &conditions(void) { return m_conditions; }
+    inline ActionList &actions(bool match) { return match ? m_then : m_else; }
+
+private:
+
+    QList <Condition> m_conditions;
+    ActionList m_then, m_else;
 
 };
 

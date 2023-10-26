@@ -59,12 +59,12 @@ public:
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
     inline void updateLastTriggered(void) { m_lastTriggered = QDateTime::currentMSecsSinceEpoch(); }
 
-    inline quint32 actionIndex(void) { return m_actionIndex; }
-    inline void setActionIndex(quint32 value) { m_actionIndex = value; }
+    inline ActionList *actionList(void) { return m_actionList; }
+    inline void setActionList(ActionList *value) { m_actionList = value; }
 
     inline QList <Trigger> &triggers(void) { return m_triggers; }
     inline QList <Condition> &conditions(void) { return m_conditions; }
-    inline QList <Action> &actions(void) { return m_actions; }
+    inline ActionList &actions(void) { return m_actions; }
 
 private:
 
@@ -78,11 +78,11 @@ private:
 
     QWeakPointer <TriggerObject> m_lastTrigger;
     qint64 m_lastTriggered;
-    quint32 m_actionIndex;
+    ActionList *m_actionList;
 
     QList <Trigger> m_triggers;
     QList <Condition> m_conditions;
-    QList <Action> m_actions;
+    ActionList m_actions;
 
 };
 
@@ -109,6 +109,9 @@ private:
 
     void unserializeConditions(QList <Condition> &list, const QJsonArray &conditions);
     QJsonArray serializeConditions(const QList <Condition> &list);
+
+    void unserializeActions(ActionList &list, const QJsonArray &actions);
+    QJsonArray serializeActions(const ActionList &list);
 
     void unserialize(const QJsonArray &automations);
     QJsonArray serialize(void);

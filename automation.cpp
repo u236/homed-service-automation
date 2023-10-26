@@ -185,91 +185,12 @@ Automation AutomationList::parse(const QJsonObject &json)
         automation->triggers().append(trigger);
     }
 
-    for (auto it = actions.begin(); it != actions.end(); it++)
-    {
-        QJsonObject item = it->toObject();
-        ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
-        Action action;
-
-        switch (type)
-        {
-            case ActionObject::Type::property:
-            {
-                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
-
-                if (endpoint.isEmpty() || property.isEmpty())
-                    continue;
-
-                for (int i = 0; i < m_actionStatements.keyCount(); i++)
-                {
-                    QVariant value = item.value(m_actionStatements.key(i)).toVariant();
-
-                    if (!value.isValid())
-                        continue;
-
-                    action = Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value));
-                    break;
-                }
-
-                break;
-            }
-
-            case ActionObject::Type::mqtt:
-            {
-                QString topic = item.value("topic").toString(), message = item.value("message").toString();
-
-                if (topic.isEmpty() || message.isEmpty())
-                    continue;
-
-                action = Action(new MqttAction(topic, message, item.value("retain").toBool()));
-                break;
-            }
-
-            case ActionObject::Type::telegram:
-            {
-                QString message = item.value("message").toString();
-                QJsonArray array = item.value("chats").toArray();
-                QList <qint64> chats;
-
-                if (message.isEmpty())
-                    continue;
-
-                for (auto it = array.begin(); it != array.end(); it++)
-                    chats.append(it->toVariant().toLongLong());
-
-                action = Action(new TelegramAction(message, item.value("silent").toBool(), chats));
-                break;
-            }
-
-            case ActionObject::Type::shell:
-            {
-                QString command = item.value("command").toString();
-
-                if (command.isEmpty())
-                    continue;
-
-                action = Action(new ShellAction(command));
-                break;
-            }
-
-            case ActionObject::Type::delay:
-            {
-                action = Action(new DelayAction(static_cast <quint32> (item.value("delay").toInt())));
-                break;
-            }
-        }
-
-        if (action.isNull())
-            continue;
-
-        action->setTriggerName(item.value("triggerName").toString());
-        automation->actions().append(action);
-    }
+    unserializeConditions(automation->conditions(), json.value("conditions").toArray());
+    unserializeActions(automation->actions(), json.value("actions").toArray());
 
     if (automation->name().isEmpty() || automation->triggers().isEmpty() || automation->actions().isEmpty())
         return Automation();
 
-    unserializeConditions(automation->conditions(), json.value("conditions").toArray());
     return automation;
 }
 
@@ -416,6 +337,183 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
     return array;
 }
 
+void AutomationList::unserializeActions(ActionList &list, const QJsonArray &actions)
+{
+    for (auto it = actions.begin(); it != actions.end(); it++)
+    {
+        QJsonObject item = it->toObject();
+        ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+        Action action;
+
+        switch (type)
+        {
+            case ActionObject::Type::property:
+            {
+                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+
+                if (endpoint.isEmpty() || property.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_actionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_actionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    action = Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value));
+                    break;
+                }
+
+                break;
+            }
+
+            case ActionObject::Type::mqtt:
+            {
+                QString topic = item.value("topic").toString(), message = item.value("message").toString();
+
+                if (topic.isEmpty() || message.isEmpty())
+                    continue;
+
+                action = Action(new MqttAction(topic, message, item.value("retain").toBool()));
+                break;
+            }
+
+            case ActionObject::Type::telegram:
+            {
+                QString message = item.value("message").toString();
+                QJsonArray array = item.value("chats").toArray();
+                QList <qint64> chats;
+
+                if (message.isEmpty())
+                    continue;
+
+                for (auto it = array.begin(); it != array.end(); it++)
+                    chats.append(it->toVariant().toLongLong());
+
+                action = Action(new TelegramAction(message, item.value("silent").toBool(), chats));
+                break;
+            }
+
+            case ActionObject::Type::shell:
+            {
+                QString command = item.value("command").toString();
+
+                if (command.isEmpty())
+                    continue;
+
+                action = Action(new ShellAction(command));
+                break;
+            }
+
+            case ActionObject::Type::condition:
+            {
+                action = Action(new ConditionAction(&list));
+                unserializeConditions(reinterpret_cast <ConditionAction*> (action.data())->conditions(), item.value("conditions").toArray());
+                unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(true), item.value("then").toArray());
+                unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(false), item.value("else").toArray());
+                break;
+            }
+
+            case ActionObject::Type::delay:
+            {
+                quint32 delay = static_cast <quint32> (item.value("delay").toInt());
+
+                if (!delay)
+                    continue;
+
+                action = Action(new DelayAction(delay));
+                break;
+            }
+        }
+
+        if (action.isNull())
+            continue;
+
+        action->setTriggerName(item.value("triggerName").toString());
+        list.append(action);
+    }
+}
+
+QJsonArray AutomationList::serializeActions(const ActionList &list)
+{
+    QJsonArray array;
+
+    for (int j = 0; j < list.count(); j++)
+    {
+        ActionObject::Type type = list.at(j)->type();
+        QJsonObject json = {{"type", m_actionTypes.valueToKey(static_cast <int> (type))}};
+
+        switch (type)
+        {
+            case ActionObject::Type::property:
+            {
+                PropertyAction *action = reinterpret_cast <PropertyAction*> (list.at(j).data());
+                json.insert("endpoint", action->endpoint());
+                json.insert("property", action->property());
+                json.insert(m_actionStatements.valueToKey(static_cast <int> (action->statement())), QJsonValue::fromVariant(action->value()));
+                break;
+            }
+
+            case ActionObject::Type::mqtt:
+            {
+                MqttAction *action = reinterpret_cast <MqttAction*> (list.at(j).data());
+                json.insert("topic", action->topic());
+                json.insert("message", action->message());
+                json.insert("retain", action->retain());
+                break;
+            }
+
+            case ActionObject::Type::telegram:
+            {
+                TelegramAction *action = reinterpret_cast <TelegramAction*> (list.at(j).data());
+                QList <QVariant> chats;
+
+                json.insert("message", action->message());
+                json.insert("silent", action->silent());
+
+                for (int k = 0; k < action->chats().count(); k++)
+                    chats.append(action->chats().at(k));
+
+                if (!chats.isEmpty())
+                    json.insert("chats", QJsonArray::fromVariantList(chats));
+
+                break;
+            }
+
+            case ActionObject::Type::shell:
+            {
+                ShellAction *action = reinterpret_cast <ShellAction*> (list.at(j).data());
+                json.insert("command", action->command());
+                break;
+            }
+
+            case ActionObject::Type::condition:
+            {
+                ConditionAction *action = reinterpret_cast <ConditionAction*> (list.at(j).data());
+                json.insert("conditions", serializeConditions(action->conditions()));
+                json.insert("then", serializeActions(action->actions(true)));
+                json.insert("else", serializeActions(action->actions(false)));
+                break;
+            }
+
+            case ActionObject::Type::delay:
+            {
+                DelayAction *action = reinterpret_cast <DelayAction*> (list.at(j).data());
+                json.insert("delay", QJsonValue::fromVariant(action->delay()));
+                break;
+            }
+        }
+
+        if (!list.at(j)->triggerName().isEmpty())
+            json.insert("triggerName", list.at(j)->triggerName());
+
+        array.append(json);
+    }
+
+    return array;
+}
+
 void AutomationList::unserialize(const QJsonArray &automations)
 {
     quint16 count = 0;
@@ -449,7 +547,7 @@ QJsonArray AutomationList::serialize(void)
     {
         const Automation &automation = at(i);
         QJsonObject json = {{"name", automation->name()}, {"active", automation->active()}};
-        QJsonArray triggers, actions;
+        QJsonArray triggers;
 
         if (automation->debounce())
             json.insert("debounce", automation->debounce());
@@ -535,78 +633,14 @@ QJsonArray AutomationList::serialize(void)
             triggers.append(item);
         }
 
-        for (int j = 0; j < automation->actions().count(); j++)
-        {
-            ActionObject::Type type = automation->actions().at(j)->type();
-            QJsonObject item = {{"type", m_actionTypes.valueToKey(static_cast <int> (type))}};
-
-            switch (type)
-            {
-
-                case ActionObject::Type::property:
-                {
-                    PropertyAction *action = reinterpret_cast <PropertyAction*> (automation->actions().at(j).data());
-                    item.insert("endpoint", action->endpoint());
-                    item.insert("property", action->property());
-                    item.insert(m_actionStatements.valueToKey(static_cast <int> (action->statement())), QJsonValue::fromVariant(action->value()));
-                    break;
-                }
-
-                case ActionObject::Type::mqtt:
-                {
-                    MqttAction *action = reinterpret_cast <MqttAction*> (automation->actions().at(j).data());
-                    item.insert("topic", action->topic());
-                    item.insert("message", action->message());
-                    item.insert("retain", action->retain());
-                    break;
-                }
-
-                case ActionObject::Type::telegram:
-                {
-                    TelegramAction *action = reinterpret_cast <TelegramAction*> (automation->actions().at(j).data());
-                    QList <QVariant> chats;
-
-                    item.insert("message", action->message());
-                    item.insert("silent", action->silent());
-
-                    for (int k = 0; k < action->chats().count(); k++)
-                        chats.append(action->chats().at(k));
-
-                    if (!chats.isEmpty())
-                        item.insert("chats", QJsonArray::fromVariantList(chats));
-
-                    break;
-                }
-
-                case ActionObject::Type::shell:
-                {
-                    ShellAction *action = reinterpret_cast <ShellAction*> (automation->actions().at(j).data());
-                    item.insert("command", action->command());
-                    break;
-                }
-
-                case ActionObject::Type::delay:
-                {
-                    DelayAction *action = reinterpret_cast <DelayAction*> (automation->actions().at(j).data());
-                    item.insert("delay", QJsonValue::fromVariant(action->delay()));
-                    break;
-                }
-            }
-
-            if (!automation->actions().at(j)->triggerName().isEmpty())
-                item.insert("triggerName", automation->actions().at(j)->triggerName());
-
-            actions.append(item);
-        }
-
         if (!triggers.isEmpty())
             json.insert("triggers", triggers);
 
-        if (!actions.isEmpty())
-            json.insert("actions", actions);
-
         if (!automation->conditions().isEmpty())
             json.insert("conditions", serializeConditions(automation->conditions()));
+
+        if (!automation->actions().isEmpty())
+            json.insert("actions", serializeActions(automation->actions()));
 
         array.append(json);
     }
