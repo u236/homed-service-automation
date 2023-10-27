@@ -147,6 +147,17 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
                 break;
             }
 
+            case ConditionObject::Type::mqtt:
+            {
+                MqttCondition *condition = reinterpret_cast <MqttCondition*> (item.data());
+                auto it = m_topics.find(condition->topic());
+
+                if (it != m_topics.end() && condition->match(it.value()))
+                    count++;
+
+                break;
+            }
+
             case ConditionObject::Type::date:
             {
                 DateCondition *condition = reinterpret_cast <DateCondition*> (item.data());

@@ -82,8 +82,8 @@ Automation AutomationList::byName(const QString &name, int *index)
 
 Automation AutomationList::parse(const QJsonObject &json)
 {
-    QJsonArray triggers = json.value("triggers").toArray(), actions = json.value("actions").toArray();
     Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
+    QJsonArray triggers = json.value("triggers").toArray();
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
     {
@@ -120,10 +120,6 @@ Automation AutomationList::parse(const QJsonObject &json)
 
                 if (topic.isEmpty())
                     continue;
-
-                // TODO: remove this few versions later
-                if (item.contains("message"))
-                    item.insert("equals", item.value("message"));
 
                 for (int i = 0; i < m_triggerStatements.keyCount(); i++)
                 {
@@ -212,6 +208,28 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                 break;
             }
 
+            case ConditionObject::Type::mqtt:
+            {
+                QString topic = item.value("topic").toString(), property = item.value("property").toString();
+
+                if (topic.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    list.append(Condition(new MqttCondition(topic, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    emit addSubscription(topic);
+                    break;
+                }
+
+                break;
+            }
+
             case ConditionObject::Type::date:
             {
                 for (int i = 0; i < m_conditionStatements.keyCount(); i++)
@@ -285,6 +303,19 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
                 json.insert("endpoint", condition->endpoint());
                 json.insert("property", condition->property());
                 json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
+                break;
+            }
+
+            case ConditionObject::Type::mqtt:
+            {
+                MqttCondition *condition = reinterpret_cast <MqttCondition*> (list.at(j).data());
+
+                json.insert("topic", condition->topic());
+                json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
+
+                if (!condition->property().isEmpty())
+                    json.insert("property", condition->property());
+
                 break;
             }
 

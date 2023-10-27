@@ -1,18 +1,18 @@
 #include "condition.h"
 
-bool PropertyCondition::match(const QVariant &value)
+bool ConditionObject::match(const QVariant &newValue, Statement statement, const QVariant &value)
 {
-    switch (m_statement)
+    switch (statement)
     {
-        case Statement::equals:  return value == m_value;
-        case Statement::differs: return value != m_value;
-        case Statement::above:   return value.toDouble() >= m_value.toDouble();
-        case Statement::below:   return value.toDouble() <= m_value.toDouble();
+        case Statement::equals:  return newValue == value;
+        case Statement::differs: return newValue != value;
+        case Statement::above:   return newValue.toDouble() >= value.toDouble();
+        case Statement::below:   return newValue.toDouble() <= value.toDouble();
 
         case Statement::between:
         {
-            QList <QVariant> list = m_value.toList();
-            return value.toDouble() >= qMin(list.value(0).toDouble(), list.value(1).toDouble()) && value.toDouble() <= qMax(list.value(0).toDouble(), list.value(1).toDouble());
+            QList <QVariant> list = value.toList();
+            return newValue.toDouble() >= qMin(list.value(0).toDouble(), list.value(1).toDouble()) && newValue.toDouble() <= qMax(list.value(0).toDouble(), list.value(1).toDouble());
         }
     }
 

@@ -2,6 +2,8 @@
 #define CONDITION_H
 
 #include <QDateTime>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QSharedPointer>
 #include <QVariant>
 #include "sun.h"
@@ -18,6 +20,7 @@ public:
     enum class Type
     {
         property,
+        mqtt,
         date,
         time,
         week,
@@ -43,6 +46,10 @@ public:
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
+protected:
+
+    bool match(const QVariant &newValue, Statement statement, const QVariant &value);
+
 private:
 
     Type m_type;
@@ -62,11 +69,34 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    bool match(const QVariant &value);
+    inline bool match(const QVariant &value) {{ return ConditionObject::match(value, m_statement, m_value); }}
 
 private:
 
     QString m_endpoint, m_property;
+    Statement m_statement;
+    QVariant m_value;
+
+};
+
+class MqttCondition : public ConditionObject
+{
+
+public:
+
+    MqttCondition(const QString &topic, const QString &property, Statement statement, const QVariant &value) :
+        ConditionObject(Type::mqtt), m_topic(topic), m_property(property), m_statement(statement), m_value(value) {}
+
+    inline QString topic(void) { return m_topic; }
+    inline QString property(void) { return m_property; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
+
+    inline bool match(const QByteArray &message) {{ return ConditionObject::match(m_property.isEmpty() ? message : QJsonDocument::fromJson(message).object().value(m_property).toVariant(), m_statement, m_value); }}
+
+private:
+
+    QString m_topic, m_property;
     Statement m_statement;
     QVariant m_value;
 
