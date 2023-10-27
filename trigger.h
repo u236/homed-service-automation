@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSharedPointer>
+#include "sun.h"
 
 class TriggerObject;
 typedef QSharedPointer <TriggerObject> Trigger;
@@ -19,8 +20,6 @@ public:
         property,
         mqtt,
         telegram,
-        sunrise,
-        sunset,
         time
     };
 
@@ -123,54 +122,20 @@ private:
 
 };
 
-class SunriseTrigger : public TriggerObject
-{
-
-public:
-
-    SunriseTrigger(qint32 offset) :
-        TriggerObject(Type::sunrise), m_offset(offset * 60) {}
-
-    inline qint32 offset(void) { return m_offset / 60; }
-    inline bool match(const QTime &sunrise, const QTime &value) { return value == sunrise.addSecs(m_offset); }
-
-private:
-
-    qint32 m_offset;
-
-};
-
-class SunsetTrigger : public TriggerObject
-{
-
-public:
-
-    SunsetTrigger(qint32 offset) :
-        TriggerObject(Type::sunset), m_offset(offset * 60) {}
-
-    inline qint32 offset(void) { return m_offset / 60; }
-    inline bool match(const QTime &sunset, const QTime &value) { return value == sunset.addSecs(m_offset); }
-
-private:
-
-    qint32 m_offset;
-
-};
-
 class TimeTrigger : public TriggerObject
 {
 
 public:
 
-    TimeTrigger(const QTime &time) :
-        TriggerObject(Type::time), m_time(time) {}
+    TimeTrigger(const QVariant &value) :
+        TriggerObject(Type::time), m_value(value) {}
 
-    inline QTime time(void) { return m_time; }
-    inline bool match(const QTime &value) { return value == m_time; }
+    inline QVariant value(void) { return m_value; }
+    inline bool match(const QTime &value, Sun *sun) { return value == sun->fromString(m_value.toString()); }
 
 private:
 
-    QTime m_time;
+    QVariant m_value;
 
 };
 

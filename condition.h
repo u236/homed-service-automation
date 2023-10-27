@@ -4,6 +4,7 @@
 #include <QDateTime>
 #include <QSharedPointer>
 #include <QVariant>
+#include "sun.h"
 
 class ConditionObject;
 typedef QSharedPointer <ConditionObject> Condition;
@@ -102,14 +103,12 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    bool match(const QTime &value, const QTime &sunrise, const QTime &sunset);
+    bool match(const QTime &value, Sun *sun);
 
 private:
 
     Statement m_statement;
     QVariant m_value;
-
-    QTime time(const QString &string, const QTime &sunrise, const QTime &sunset);
 
 };
 

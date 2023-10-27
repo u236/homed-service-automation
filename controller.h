@@ -35,8 +35,6 @@ private:
     QTimer *m_timer;
 
     QMetaEnum m_events;
-
-    QTime m_sunrise, m_sunset;
     QDate m_date;
 
     QList <QString> m_services, m_subscriptions;

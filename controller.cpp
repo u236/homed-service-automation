@@ -51,10 +51,10 @@ void Controller::updateSun(void)
     m_sun->setDate(QDate::currentDate());
     m_sun->setOffset(QDateTime::currentDateTime().offsetFromUtc());
 
-    m_sunrise = m_sun->sunrise();
-    m_sunset = m_sun->sunset();
+    m_sun->updateSunrise();
+    m_sun->updateSunset();
 
-    logInfo << "Sunrise set to" << m_sunrise.toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sunset.toString("hh:mm").toUtf8().constData();
+    logInfo << "Sunrise set to" << m_sun->sunrise().toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sun->sunset().toString("hh:mm").toUtf8().constData();
 }
 
 void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
@@ -161,7 +161,7 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
             {
                 TimeCondition *condition = reinterpret_cast <TimeCondition*> (item.data());
 
-                if (condition->match(QTime(now.time().hour(), now.time().minute()), m_sunrise, m_sunset))
+                if (condition->match(QTime(now.time().hour(), now.time().minute()), m_sun))
                     count++;
 
                 break;
@@ -501,35 +501,13 @@ void Controller::updateTime(void)
 
         for (int j = 0; j < automation->triggers().count(); j++)
         {
-            const Trigger &trigger = automation->triggers().at(j);
+            TimeTrigger *trigger = reinterpret_cast <TimeTrigger*> (automation->triggers().at(j).data());
             QTime time = QTime(now.time().hour(), now.time().minute());
 
-            switch (trigger->type())
-            {
-                case TriggerObject::Type::sunrise:
+            if (trigger->type() != TriggerObject::Type::time || !trigger->match(time, m_sun))
+                continue;
 
-                    if (reinterpret_cast <SunriseTrigger*> (trigger.data())->match(m_sunrise, time))
-                        checkConditions(automation.data(), trigger);
-
-                    break;
-
-                case TriggerObject::Type::sunset:
-
-                    if (reinterpret_cast <SunsetTrigger*> (trigger.data())->match(m_sunset, time))
-                        checkConditions(automation.data(), trigger);
-
-                    break;
-
-                case TriggerObject::Type::time:
-
-                    if (reinterpret_cast <TimeTrigger*> (trigger.data())->match(time))
-                        checkConditions(automation.data(), trigger);
-
-                    break;
-
-                default:
-                    break;
-            }
+            checkConditions(automation.data(), automation->triggers().at(j));
         }
     }
 }

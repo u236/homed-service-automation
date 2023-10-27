@@ -159,21 +159,9 @@ Automation AutomationList::parse(const QJsonObject &json)
                 break;
             }
 
-            case TriggerObject::Type::sunrise:
-            {
-                trigger = Trigger(new SunriseTrigger(static_cast <qint32> (item.value("offset").toInt())));
-                break;
-            }
-
-            case TriggerObject::Type::sunset:
-            {
-                trigger = Trigger(new SunsetTrigger(static_cast <qint32> (item.value("offset").toInt())));
-                break;
-            }
-
             case TriggerObject::Type::time:
             {
-                trigger = Trigger(new TimeTrigger(QTime::fromString(item.value("time").toString())));
+                trigger = Trigger(new TimeTrigger(item.value("time").toVariant()));
                 break;
             }
         }
@@ -604,25 +592,10 @@ QJsonArray AutomationList::serialize(void)
                     break;
                 }
 
-                case TriggerObject::Type::sunrise:
-                {
-                    SunriseTrigger *trigger = reinterpret_cast <SunriseTrigger*> (automation->triggers().at(j).data());
-                    item.insert("offset", QJsonValue::fromVariant(trigger->offset()));
-
-                    break;
-                }
-
-                case TriggerObject::Type::sunset:
-                {
-                    SunsetTrigger *trigger = reinterpret_cast <SunsetTrigger*> (automation->triggers().at(j).data());
-                    item.insert("offset", QJsonValue::fromVariant(trigger->offset()));
-                    break;
-                }
-
                 case TriggerObject::Type::time:
                 {
                     TimeTrigger *trigger = reinterpret_cast <TimeTrigger*> (automation->triggers().at(j).data());
-                    item.insert("time", trigger->time().toString("hh:mm"));
+                    item.insert("time", QJsonValue::fromVariant(trigger->value()));
                     break;
                 }
             }
