@@ -83,12 +83,7 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
     QMap <QString, QVariant> properties, check = endpoint->properties();
 
     for (auto it = data.begin(); it != data.end(); it++)
-    {
-        if (it.key() == "action" || it.key() == "scene")
-            continue;
-
         properties.insert(it.key(), it.value());
-    }
 
     endpoint->properties() = properties;
 
@@ -112,6 +107,9 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
             }
         }
     }
+
+    endpoint->properties().remove("action");
+    endpoint->properties().remove("scene");
 }
 
 void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
@@ -445,7 +443,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         QString service = subTopic.split('/').value(1);
         QJsonArray array = json.value("devices").toArray();
 
-        if (!m_services.contains(service))
+        if (m_services.contains(service))
             return;
 
         for (auto it = array.begin(); it != array.end(); it++)
