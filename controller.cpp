@@ -22,23 +22,44 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
 QString Controller::composeString(QString string, const Trigger &trigger)
 {
     QRegularExpressionMatchIterator match = QRegularExpression("{{(.+?)}}").globalMatch(string);
+    QList <QString> valueList = {"property", "mqtt", "triggerName"};
 
     while (match.hasNext())
     {
-        QString item = match.next().captured(), name, value;
-        QList <QString> list = item.mid(2, item.length() - 4).split('|');
+        QString item = match.next().captured(), value;
+        QList <QString> itemList = item.mid(2, item.length() - 4).split('|');
 
-        name = list.value(0).trimmed();
-
-        if (name != "triggerName")
+        switch (valueList.lastIndexOf(itemList.value(0).trimmed()))
         {
-            auto it = m_endpoints.find(name);
+            case 0:
+            {
+                auto it = m_endpoints.find(itemList.value(1).trimmed());
 
-            if (it != m_endpoints.end())
-                value = it.value()->properties().value(list.value(1).trimmed()).toString();
+                if (it != m_endpoints.end())
+                    value = it.value()->properties().value(itemList.value(2).trimmed()).toString();
+
+                break;
+            }
+
+            case 1:
+            {
+                auto it = m_topics.find(itemList.value(1).trimmed());
+
+                if (it != m_topics.end())
+                {
+                    QString property = itemList.value(2).trimmed();
+                    value = property.isEmpty() ? it.value() : QJsonDocument::fromJson(it.value()).object().value(property).toString();
+                }
+
+                break;
+            }
+
+            case 2:
+            {
+                value = trigger->name();
+                break;
+            }
         }
-        else
-            value = trigger->name();
 
         string.replace(item, value.isEmpty() ? "[unknown]" : value);
     }
@@ -59,18 +80,20 @@ void Controller::updateSun(void)
 
 void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
 {
-    QMap <QString, QVariant> properties;
+    QMap <QString, QVariant> properties, check = endpoint->properties();
 
     for (auto it = data.begin(); it != data.end(); it++)
     {
-        const QVariant &value = endpoint->properties().value(it.key());
-
-        if (it.key() != "action" && it.key() != "scene")
-            properties.insert(it.key(), it.value());
-
-        if (value == it.value())
+        if (it.key() == "action" || it.key() == "scene")
             continue;
 
+        properties.insert(it.key(), it.value());
+    }
+
+    endpoint->properties() = properties;
+
+    for (auto it = endpoint->properties().begin(); it != endpoint->properties().end(); it++)
+    {
         for (int i = 0; i < m_automations->count(); i++)
         {
             const Automation &automation = m_automations->at(i);
@@ -82,15 +105,13 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
             {
                 PropertyTrigger *trigger = reinterpret_cast <PropertyTrigger*> (automation->triggers().at(j).data());
 
-                if (trigger->type() != TriggerObject::Type::property || trigger->endpoint() != endpoint->name() || trigger->property() != it.key() || !trigger->match(value, it.value()))
+                if (trigger->type() != TriggerObject::Type::property || trigger->endpoint() != endpoint->name() || trigger->property() != it.key() || !trigger->match(check.value(it.key()), it.value()))
                     continue;
 
                 checkConditions(automation.data(), automation->triggers().at(j));
             }
         }
     }
-
-    endpoint->properties() = properties;
 }
 
 void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
@@ -317,6 +338,10 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
     if (m_subscriptions.contains(topic.name()))
     {
+        QByteArray check = m_topics.value(topic.name());
+
+        m_topics.insert(topic.name(), message);
+
         for (int i = 0; i < m_automations->count(); i++)
         {
             const Automation &automation = m_automations->at(i);
@@ -328,14 +353,12 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             {
                 MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
 
-                if (trigger->type() != TriggerObject::Type::mqtt || trigger->topic() != topic.name() || !trigger->match(m_topics.value(topic.name()), message))
+                if (trigger->type() != TriggerObject::Type::mqtt || trigger->topic() != topic.name() || !trigger->match(check, message))
                     continue;
 
                 checkConditions(automation.data(), automation->triggers().at(j));
             }
         }
-
-        m_topics.insert(topic.name(), message);
     }
 
     if (subTopic == "command/automation")
