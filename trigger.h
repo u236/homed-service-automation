@@ -29,7 +29,8 @@ public:
         above,
         below,
         between,
-        changes
+        changes,
+        updates
     };
 
     TriggerObject(Type type) :

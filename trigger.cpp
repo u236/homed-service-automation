@@ -4,9 +4,9 @@ bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, St
 {
     switch (statement)
     {
-        case Statement::equals: return oldValue != value && newValue == value;
-        case Statement::above:  return oldValue.toDouble() < value.toDouble() && newValue.toDouble() >= value.toDouble();
-        case Statement::below:  return oldValue.toDouble() > value.toDouble() && newValue.toDouble() <= value.toDouble();
+        case Statement::equals:  return oldValue != value && newValue == value;
+        case Statement::above:   return oldValue.toDouble() < value.toDouble() && newValue.toDouble() >= value.toDouble();
+        case Statement::below:   return oldValue.toDouble() > value.toDouble() && newValue.toDouble() <= value.toDouble();
 
         case Statement::between:
         {
@@ -20,6 +20,8 @@ bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, St
             double a = oldValue.toDouble(), b = newValue.toDouble(), change = value.toDouble();
             return b != a && (b <= a - change || b >= a + change);
         }
+
+        case Statement::updates: return newValue.isValid();
     }
 
     return false;
