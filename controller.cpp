@@ -177,6 +177,17 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
                 break;
             }
 
+            case ConditionObject::Type::state:
+            {
+                StateCondition *condition = reinterpret_cast <StateCondition*> (item.data());
+                auto it = m_automations->states().find(condition->name());
+
+                if (it != m_automations->states().end() && condition->match(it.value()))
+                    count++;
+
+                break;
+            }
+
             case ConditionObject::Type::date:
             {
                 DateCondition *condition = reinterpret_cast <DateCondition*> (item.data());
@@ -253,6 +264,19 @@ bool Controller::runActions(AutomationObject *automation)
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
                 mqttPublishString(action->topic(), composeString(action->message(), automation->lastTrigger()), action->retain());
+                break;
+            }
+
+            case ActionObject::Type::state:
+            {
+                StateAction *action = reinterpret_cast <StateAction*> (item.data());
+
+                if (action->value().isValid() && !action->value().isNull())
+                    m_automations->states().insert(action->name(), action->value().type() == QVariant::String ? composeString(action->value().toString(), automation->lastTrigger()) : action->value());
+                else
+                    m_automations->states().remove(action->name());
+
+                m_automations->store();
                 break;
             }
 

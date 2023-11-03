@@ -38,6 +38,7 @@ public:
     {
         property,
         mqtt,
+        state,
         telegram,
         shell,
         condition,
@@ -108,6 +109,24 @@ private:
 
     QString m_topic, m_message;
     bool m_retain;
+
+};
+
+class StateAction : public ActionObject
+{
+
+public:
+
+    StateAction(const QString &name, const QVariant &value) :
+        ActionObject(Type::state), m_name(name), m_value(value) {}
+
+    inline QString name(void) { return m_name; }
+    inline QVariant value(void) { return m_value; }
+
+private:
+
+    QString m_name;
+    QVariant m_value;
 
 };
 

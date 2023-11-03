@@ -21,6 +21,7 @@ public:
     {
         property,
         mqtt,
+        state,
         date,
         time,
         week,
@@ -97,6 +98,28 @@ public:
 private:
 
     QString m_topic, m_property;
+    Statement m_statement;
+    QVariant m_value;
+
+};
+
+class StateCondition : public ConditionObject
+{
+
+public:
+
+    StateCondition(const QString &name, Statement statement, const QVariant &value) :
+        ConditionObject(Type::state), m_name(name), m_statement(statement), m_value(value) {}
+
+    inline QString name(void) { return m_name; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
+
+    inline bool match(const QVariant &value) {{ return ConditionObject::match(value, m_statement, m_value); }}
+
+private:
+
+    QString m_name;
     Statement m_statement;
     QVariant m_value;
 

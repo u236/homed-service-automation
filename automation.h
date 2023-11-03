@@ -95,6 +95,8 @@ public:
     AutomationList(QSettings *config, QObject *parent);
     ~AutomationList(void);
 
+    inline QMap <QString, QVariant> &states(void) { return m_states; }
+
     void init(void);
     void store(bool sync = false);
 
@@ -107,13 +109,14 @@ private:
     QFile m_file;
     qint64 m_telegramChat;
 
+    QMap <QString, QVariant> m_states;
+
     void unserializeConditions(QList <Condition> &list, const QJsonArray &conditions);
-    QJsonArray serializeConditions(const QList <Condition> &list);
-
     void unserializeActions(ActionList &list, const QJsonArray &actions);
-    QJsonArray serializeActions(const ActionList &list);
-
     void unserialize(const QJsonArray &automations);
+
+    QJsonArray serializeConditions(const QList <Condition> &list);    
+    QJsonArray serializeActions(const ActionList &list);
     QJsonArray serialize(void);
 
 signals:
