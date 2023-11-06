@@ -169,9 +169,8 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
             case ConditionObject::Type::mqtt:
             {
                 MqttCondition *condition = reinterpret_cast <MqttCondition*> (item.data());
-                auto it = m_topics.find(condition->topic());
 
-                if (it != m_topics.end() && condition->match(it.value()))
+                if (condition->match(m_topics.value(condition->topic())))
                     count++;
 
                 break;
@@ -180,9 +179,8 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
             case ConditionObject::Type::state:
             {
                 StateCondition *condition = reinterpret_cast <StateCondition*> (item.data());
-                auto it = m_automations->states().find(condition->name());
 
-                if (it != m_automations->states().end() && condition->match(it.value()))
+                if (condition->match(m_automations->states().value(condition->name())))
                     count++;
 
                 break;

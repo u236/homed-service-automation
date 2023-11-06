@@ -29,6 +29,7 @@ void AutomationList::init(void)
         return;
 
     json = QJsonDocument::fromJson(m_file.readAll()).object();
+    m_states = json.value("states").toObject().toVariantMap();
     unserialize(json.value("automations").toArray());
     m_file.close();
 }
