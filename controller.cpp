@@ -22,7 +22,7 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
 QString Controller::composeString(QString string, const Trigger &trigger)
 {
     QRegularExpressionMatchIterator match = QRegularExpression("{{(.+?)}}").globalMatch(string);
-    QList <QString> valueList = {"property", "mqtt", "triggerName"};
+    QList <QString> valueList = {"property", "mqtt", "timestamp", "triggerName"};
 
     while (match.hasNext())
     {
@@ -55,6 +55,13 @@ QString Controller::composeString(QString string, const Trigger &trigger)
             }
 
             case 2:
+            {
+                QString format = itemList.value(1).trimmed();
+                value = QDateTime::currentDateTime().toString(format.isEmpty() ? "hh:mm:ss" : format);
+                break;
+            }
+
+            case 3:
             {
                 value = trigger->name();
                 break;
