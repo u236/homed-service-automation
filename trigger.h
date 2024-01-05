@@ -20,7 +20,8 @@ public:
         property,
         mqtt,
         telegram,
-        time
+        time,
+        interval
     };
 
     enum class Statement
@@ -137,6 +138,23 @@ public:
 private:
 
     QVariant m_value;
+
+};
+
+class IntervalTrigger : public TriggerObject
+{
+
+public:
+
+    IntervalTrigger(int value) :
+        TriggerObject(Type::interval), m_value(value) {}
+
+    inline int value(void) { return m_value; }
+    inline bool match(int value) { return !m_value || value % m_value ? false : true; }
+
+private:
+
+    int m_value;
 
 };
 

@@ -161,6 +161,12 @@ Automation AutomationList::parse(const QJsonObject &json)
                 trigger = Trigger(new TimeTrigger(item.value("time").toVariant()));
                 break;
             }
+
+            case TriggerObject::Type::interval:
+            {
+                trigger = Trigger(new IntervalTrigger(item.value("interval").toInt()));
+                break;
+            }
         }
 
         if (trigger.isNull())
@@ -679,6 +685,13 @@ QJsonArray AutomationList::serialize(void)
                 {
                     TimeTrigger *trigger = reinterpret_cast <TimeTrigger*> (automation->triggers().at(j).data());
                     item.insert("time", QJsonValue::fromVariant(trigger->value()));
+                    break;
+                }
+
+                case TriggerObject::Type::interval:
+                {
+                    IntervalTrigger *trigger = reinterpret_cast <IntervalTrigger*> (automation->triggers().at(j).data());
+                    item.insert("interval", QJsonValue::fromVariant(trigger->value()));
                     break;
                 }
             }

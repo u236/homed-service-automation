@@ -555,13 +555,35 @@ void Controller::updateTime(void)
 
         for (int j = 0; j < automation->triggers().count(); j++)
         {
-            TimeTrigger *trigger = reinterpret_cast <TimeTrigger*> (automation->triggers().at(j).data());
+            const Trigger item = automation->triggers().at(j);
             QTime time = QTime(now.time().hour(), now.time().minute());
 
-            if (trigger->type() != TriggerObject::Type::time || !trigger->match(time, m_sun))
-                continue;
+            switch (item->type())
+            {
+                case TriggerObject::Type::time:
+                {
+                    TimeTrigger *trigger = reinterpret_cast <TimeTrigger*> (item.data());
 
-            checkConditions(automation.data(), automation->triggers().at(j));
+                    if (trigger->match(time, m_sun))
+                        checkConditions(automation.data(), automation->triggers().at(j));
+
+                    break;
+                }
+
+                case TriggerObject::Type::interval:
+
+                {
+                    IntervalTrigger *trigger = reinterpret_cast <IntervalTrigger*> (item.data());
+
+                    if (trigger->match(time.msecsSinceStartOfDay() / 60000))
+                        checkConditions(automation.data(), automation->triggers().at(j));
+
+                    break;
+                }
+
+                default:
+                    break;
+            }
         }
     }
 }
