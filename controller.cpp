@@ -396,7 +396,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         {
             int index = -1;
             QJsonObject data = json.value("data").toObject();
-            QString name = data.value("name").toString();
+            QString name = data.value("name").toString().trimmed();
             Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
 
             if (automation != other && !other.isNull())
