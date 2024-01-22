@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.2.6"
+#define SERVICE_VERSION     "1.2.7"
 
 #include "automation.h"
 #include "homed.h"
@@ -41,6 +41,7 @@ private:
     QMap <QString, Endpoint> m_endpoints;
     QMap <QString, QByteArray> m_topics;
 
+    void parseProperty(QString &endpointName, QString &property);
     QString composeString(QString string, const Trigger &trigger);
 
     void updateSun(void);

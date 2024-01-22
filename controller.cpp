@@ -19,9 +19,38 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     m_timer->start(1000);
 }
 
+void Controller::parseProperty(QString &endpointName, QString &property)
+{
+    QList <QString> list = property.split(0x20);
+    int number = list.last().toInt();
+
+    if (number)
+    {
+        endpointName.append(QString("/%1").arg(number));
+        list.removeLast();
+    }
+
+    if (list.isEmpty())
+        return;
+
+    property.clear();
+
+    for (int i = 0; i < list.count(); i++)
+    {
+        QString item = list.at(i).toLower();
+
+        if (i)
+            item.front() = item.front().toUpper();
+
+        property.append(item);
+    }
+}
+
 QString Controller::composeString(QString string, const Trigger &trigger)
 {
-    QRegularExpressionMatchIterator match = QRegularExpression("{{(.+?)}}").globalMatch(string);
+    static QRegularExpression regex("{{(.+?)}}");
+
+    QRegularExpressionMatchIterator match = regex.globalMatch(string);
     QList <QString> valueList = {"property", "mqtt", "timestamp", "triggerName"};
 
     while (match.hasNext())
@@ -107,10 +136,17 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
             {
                 PropertyTrigger *trigger = reinterpret_cast <PropertyTrigger*> (automation->triggers().at(j).data());
 
-                if (trigger->type() != TriggerObject::Type::property || trigger->endpoint() != endpoint->name() || trigger->property() != it.key() || !trigger->match(check.value(it.key()), it.value()))
-                    continue;
+                if (trigger->type() == TriggerObject::Type::property)
+                {
+                    QString endpointName = trigger->endpoint(), property = trigger->property();
 
-                checkConditions(automation.data(), automation->triggers().at(j));
+                    parseProperty(endpointName, property);
+
+                    if (endpoint->name() != endpointName || it.key() != property || !trigger->match(check.value(it.key()), it.value()))
+                        continue;
+
+                    checkConditions(automation.data(), automation->triggers().at(j));
+                }
             }
         }
     }
@@ -165,9 +201,13 @@ bool Controller::checkConditions(const QList<Condition> &conditions, ConditionOb
             case ConditionObject::Type::property:
             {
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
-                auto it = m_endpoints.find(condition->endpoint());
+                QString endpointName = condition->endpoint(), property = condition->property();
+                Endpoint endpoint;
 
-                if (it != m_endpoints.end() && condition->match(it.value()->properties().value(condition->property())))
+                parseProperty(endpointName, property);
+                endpoint = m_endpoints.value(endpointName);
+
+                if (!endpoint.isNull() && condition->match(endpoint->properties().value(property)))
                     count++;
 
                 break;
@@ -260,8 +300,13 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::property:
             {
                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
-                auto it = m_endpoints.find(action->endpoint());
-                mqttPublish(mqttTopic("td/").append(action->endpoint()), {{action->property(), QJsonValue::fromVariant(action->value(it != m_endpoints.end() ? it.value()->properties().value(action->property()) : QVariant()))}});
+                QString endpointName = action->endpoint(), property = action->property();
+                Endpoint endpoint;
+
+                parseProperty(endpointName, property);
+                endpoint = m_endpoints.value(endpointName);
+
+                mqttPublish(mqttTopic("td/").append(endpointName), {{property, QJsonValue::fromVariant(action->value(endpoint.isNull() ? QVariant() : endpoint->properties().value(property)))}});
                 break;
             }
 
@@ -447,7 +492,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     }
     else if (subTopic.startsWith("service/"))
     {
-        QList <QString> list = {"automation", "web"};
+        QList <QString> list = {"automation", "cloud", "web"};
         QString service = subTopic.split('/').value(1);
 
         if (list.contains(service))
