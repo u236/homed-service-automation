@@ -30,8 +30,11 @@ void Controller::parseProperty(QString &endpointName, QString &property)
         list.removeLast();
     }
 
-    if (list.isEmpty())
-        return;
+    switch (list.count())
+    {
+        case 0: return;
+        case 1: property = list.value(0); return;
+    }
 
     property.clear();
 
