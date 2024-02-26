@@ -392,8 +392,6 @@ void Controller::publishEvent(const QString &name, Event event)
 
 void Controller::mqttConnected(void)
 {
-    logInfo << "MQTT connected";
-
     mqttSubscribe(mqttTopic("command/automation"));
     mqttSubscribe(mqttTopic("service/#"));
 
@@ -404,6 +402,7 @@ void Controller::mqttConnected(void)
     }
 
     m_automations->store();
+    mqttPublishStatus();
 }
 
 void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &topic)
