@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.2.8"
+#define SERVICE_VERSION     "1.2.9"
 
 #include "automation.h"
 #include "homed.h"
@@ -16,6 +16,13 @@ public:
 
     Controller(const QString &configFile);
 
+    enum class Command
+    {
+        restartService,
+        updateAutomation,
+        removeAutomation
+    };
+
     enum class Event
     {
         nameDuplicate,
@@ -25,6 +32,7 @@ public:
         removed
     };
 
+    Q_ENUM(Command)
     Q_ENUM(Event)
 
 private:
@@ -34,7 +42,7 @@ private:
     Sun *m_sun;
     QTimer *m_timer;
 
-    QMetaEnum m_events;
+    QMetaEnum m_commands, m_events;
     QDate m_date;
 
     QList <QString> m_services, m_subscriptions;

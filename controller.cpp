@@ -1,7 +1,7 @@
 #include "controller.h"
 #include "logger.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
+Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
 {
     logInfo << "Starting version" << SERVICE_VERSION;
     logInfo << "Configuration file is" << getConfig()->fileName();
@@ -437,60 +437,72 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
     if (subTopic == "command/automation")
     {
-        QString action = json.value("action").toString();
-
-        if (action == "updateAutomation")
+        switch (static_cast <Command> (m_commands.keyToValue(json.value("action").toString().toUtf8().constData())))
         {
-            int index = -1;
-            QJsonObject data = json.value("data").toObject();
-            QString name = data.value("name").toString().trimmed();
-            Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
-
-            if (automation != other && !other.isNull())
+            case Command::restartService:
             {
-                logWarning << "Automation" << name << "update failed, name already in use";
-                publishEvent(name, Event::nameDuplicate);
-                return;
+                logWarning << "Restart request received...";
+                mqttPublish(mqttTopic("command/automation"), QJsonObject(), true);
+                QCoreApplication::exit(EXIT_RESTART);
+                break;
             }
 
-            automation = m_automations->parse(data);
-
-            if (automation.isNull())
+            case Command::updateAutomation:
             {
-                logWarning << "Automation" << name << "update failed, data is incomplete";
-                publishEvent(name, Event::incompleteData);
-                return;
+                int index = -1;
+                QJsonObject data = json.value("data").toObject();
+                QString name = data.value("name").toString().trimmed();
+                Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
+
+                if (automation != other && !other.isNull())
+                {
+                    logWarning << "Automation" << name << "update failed, name already in use";
+                    publishEvent(name, Event::nameDuplicate);
+                    break;
+                }
+
+                automation = m_automations->parse(data);
+
+                if (automation.isNull())
+                {
+                    logWarning << "Automation" << name << "update failed, data is incomplete";
+                    publishEvent(name, Event::incompleteData);
+                    break;
+                }
+
+                if (index >= 0)
+                {
+                    m_automations->replace(index, automation);
+                    logInfo << "Automation" << automation->name() << "successfully updated";
+                    publishEvent(automation->name(), Event::updated);
+                }
+                else
+                {
+                    m_automations->append(automation);
+                    logInfo << "Automation" << automation->name() << "successfully added";
+                    publishEvent(automation->name(), Event::added);
+                }
+
+                m_automations->store(true);
+                break;
             }
 
-            if (index < 0)
+            case Command::removeAutomation:
             {
-                m_automations->append(automation);
-                logInfo << "Automation" << automation->name() << "successfully added";
-                publishEvent(automation->name(), Event::added);
-            }
-            else
-            {
-                m_automations->replace(index, automation);
-                logInfo << "Automation" << automation->name() << "successfully updated";
-                publishEvent(automation->name(), Event::updated);
+                int index = -1;
+                const Automation &automation = m_automations->byName(json.value("automation").toString(), &index);
+
+                if (index >= 0)
+                {
+                    m_automations->removeAt(index);
+                    logInfo << "Automation" << automation->name() << "removed";
+                    publishEvent(automation->name(), Event::removed);
+                    m_automations->store(true);
+                }
+
+                break;
             }
         }
-        else if (action == "removeAutomation")
-        {
-            int index = -1;
-            const Automation &automation = m_automations->byName(json.value("automation").toString(), &index);
-
-            if (index < 0)
-                return;
-
-            m_automations->removeAt(index);
-            logInfo << "Automation" << automation->name() << "removed";
-            publishEvent(automation->name(), Event::removed);
-        }
-        else
-            return;
-
-        m_automations->store(true);
     }
     else if (subTopic.startsWith("service/"))
     {

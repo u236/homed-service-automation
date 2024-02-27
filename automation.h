@@ -1,6 +1,8 @@
 #ifndef AUTOMATION_H
 #define AUTOMATION_H
 
+#define STORE_DATABASE_DELAY    20
+
 #include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -105,9 +107,12 @@ public:
 
 private:
 
+    QTimer *m_timer;
+
     QMetaEnum m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
     QFile m_file;
     qint64 m_telegramChat;
+    bool m_sync;
 
     QMap <QString, QVariant> m_states;
 
@@ -118,6 +123,10 @@ private:
     QJsonArray serializeConditions(const QList <Condition> &list);    
     QJsonArray serializeActions(const ActionList &list);
     QJsonArray serialize(void);
+
+private slots:
+
+    void writeDatabase(void);
 
 signals:
 

@@ -2,23 +2,27 @@
 #include "controller.h"
 #include "logger.h"
 
-AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(parent)
+AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(parent), m_timer(new QTimer(this)), m_sync(false)
 {
-    m_triggerTypes        = QMetaEnum::fromType <TriggerObject::Type> ();
-    m_conditionTypes      = QMetaEnum::fromType <ConditionObject::Type> ();
-    m_actionTypes         = QMetaEnum::fromType <ActionObject::Type> ();
+    m_triggerTypes = QMetaEnum::fromType <TriggerObject::Type> ();
+    m_conditionTypes = QMetaEnum::fromType <ConditionObject::Type> ();
+    m_actionTypes = QMetaEnum::fromType <ActionObject::Type> ();
 
-    m_triggerStatements   = QMetaEnum::fromType <TriggerObject::Statement> ();
+    m_triggerStatements = QMetaEnum::fromType <TriggerObject::Statement> ();
     m_conditionStatements = QMetaEnum::fromType <ConditionObject::Statement> ();
-    m_actionStatements    = QMetaEnum::fromType <ActionObject::Statement> ();
+    m_actionStatements = QMetaEnum::fromType <ActionObject::Statement> ();
 
     m_file.setFileName(config->value("automation/database", "/opt/homed-automation/database.json").toString());
     m_telegramChat = config->value("telegram/chat").toLongLong();
+
+    connect(m_timer, &QTimer::timeout, this, &AutomationList::writeDatabase);
+    m_timer->setSingleShot(true);
 }
 
 AutomationList::~AutomationList(void)
 {
-    store(true);
+    m_sync = true;
+    writeDatabase();
 }
 
 void AutomationList::init(void)
@@ -36,33 +40,8 @@ void AutomationList::init(void)
 
 void AutomationList::store(bool sync)
 {
-    QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}};
-    QByteArray data = QJsonDocument(json).toJson(QJsonDocument::Compact);
-    bool check = true;
-
-    emit statusUpdated(json);
-
-    if (!sync)
-        return;
-
-    if (!m_file.open(QFile::WriteOnly))
-    {
-        logWarning << "Database not stored, file" << m_file.fileName() << "open error:" << m_file.errorString();
-        return;
-    }
-
-    if (m_file.write(data) != data.length())
-    {
-        logWarning << "Database not stored, file" << m_file.fileName() << "open error:" << m_file.errorString();
-        check = false;
-    }
-
-    m_file.close();
-
-    if (!check)
-        return;
-
-    system("sync");
+    m_sync = sync;
+    m_timer->start(STORE_DATABASE_DELAY);
 }
 
 Automation AutomationList::byName(const QString &name, int *index)
@@ -715,4 +694,37 @@ QJsonArray AutomationList::serialize(void)
     }
 
     return array;
+}
+
+void AutomationList::writeDatabase(void)
+{
+    QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}};
+    QByteArray data = QJsonDocument(json).toJson(QJsonDocument::Compact);
+    bool check = true;
+
+    emit statusUpdated(json);
+
+    if (!m_sync)
+        return;
+
+    m_sync = false;
+
+    if (!m_file.open(QFile::WriteOnly))
+    {
+        logWarning << "Database not stored, file" << m_file.fileName() << "open error:" << m_file.errorString();
+        return;
+    }
+
+    if (m_file.write(data) != data.length())
+    {
+        logWarning << "Database not stored, file" << m_file.fileName() << "open error:" << m_file.errorString();
+        check = false;
+    }
+
+    m_file.close();
+
+    if (!check)
+        return;
+
+    system("sync");
 }
