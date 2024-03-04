@@ -50,7 +50,7 @@ private:
     QMap <QString, QByteArray> m_topics;
 
     void parseProperty(QString &endpointName, QString &property);
-    QString composeString(QString string, const Trigger &trigger);
+    QString parseTemplate(QString string, const Trigger &trigger);
 
     void updateSun(void);
     void updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data);

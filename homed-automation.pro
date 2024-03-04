@@ -16,3 +16,5 @@ SOURCES += \
     controller.cpp \
     telegram.cpp \
     trigger.cpp
+
+QT += script

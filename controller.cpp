@@ -1,3 +1,4 @@
+#include <QScriptEngine>
 #include "controller.h"
 #include "logger.h"
 
@@ -49,12 +50,25 @@ void Controller::parseProperty(QString &endpointName, QString &property)
     }
 }
 
-QString Controller::composeString(QString string, const Trigger &trigger)
+QString Controller::parseTemplate(QString string, const Trigger &trigger)
 {
-    static QRegularExpression regex("{{(.+?)}}");
+    static QRegularExpression scriptExpression("\\[\\[(.+?)\\]\\]"), stringExpression("{{(.+?)}}");
+    QRegularExpressionMatchIterator match = scriptExpression.globalMatch(string);
+    QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
+    bool script = false;
 
-    QRegularExpressionMatchIterator match = regex.globalMatch(string);
-    QList <QString> valueList = {"property", "mqtt", "timestamp", "triggerName"};
+    while (match.hasNext())
+    {
+        QString item = match.next().captured();
+        QScriptEngine engine;
+        string.replace(item, engine.evaluate(parseTemplate(item.mid(2, item.length() - 4), trigger)).toString());
+        script = true;
+    }
+
+    if (script)
+        return string;
+
+    match = stringExpression.globalMatch(string);
 
     while (match.hasNext())
     {
@@ -63,7 +77,7 @@ QString Controller::composeString(QString string, const Trigger &trigger)
 
         switch (valueList.lastIndexOf(itemList.value(0).trimmed()))
         {
-            case 0:
+            case 0: // property
             {
                 auto it = m_endpoints.find(itemList.value(1).trimmed());
 
@@ -73,7 +87,7 @@ QString Controller::composeString(QString string, const Trigger &trigger)
                 break;
             }
 
-            case 1:
+            case 1: // mqtt
             {
                 auto it = m_topics.find(itemList.value(1).trimmed());
 
@@ -86,14 +100,20 @@ QString Controller::composeString(QString string, const Trigger &trigger)
                 break;
             }
 
-            case 2:
+            case 2: // state
+            {
+                value = m_automations->states().value(itemList.value(1).trimmed()).toString();
+                break;
+            }
+
+            case 3: // timestamp
             {
                 QString format = itemList.value(1).trimmed();
                 value = QDateTime::currentDateTime().toString(format.isEmpty() ? "hh:mm:ss" : format);
                 break;
             }
 
-            case 3:
+            case 4: // triggerName
             {
                 value = trigger->name();
                 break;
@@ -305,18 +325,20 @@ bool Controller::runActions(AutomationObject *automation)
                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
                 QString endpointName = action->endpoint(), property = action->property();
                 Endpoint endpoint;
+                QVariant value;
 
                 parseProperty(endpointName, property);
                 endpoint = m_endpoints.value(endpointName);
+                value = action->value(endpoint.isNull() ? QVariant() : endpoint->properties().value(property));
 
-                mqttPublish(mqttTopic("td/").append(endpointName), {{property, QJsonValue::fromVariant(action->value(endpoint.isNull() ? QVariant() : endpoint->properties().value(property)))}});
+                mqttPublish(mqttTopic("td/").append(endpointName), {{property, value.type() == QVariant::String ? parseTemplate(value.toString(), automation->lastTrigger()) : QJsonValue::fromVariant(value)}});
                 break;
             }
 
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), composeString(action->message(), automation->lastTrigger()), action->retain());
+                mqttPublishString(action->topic(), parseTemplate(action->message(), automation->lastTrigger()), action->retain());
                 break;
             }
 
@@ -325,7 +347,7 @@ bool Controller::runActions(AutomationObject *automation)
                 StateAction *action = reinterpret_cast <StateAction*> (item.data());
 
                 if (action->value().isValid() && !action->value().isNull())
-                    m_automations->states().insert(action->name(), action->value().type() == QVariant::String ? composeString(action->value().toString(), automation->lastTrigger()) : action->value());
+                    m_automations->states().insert(action->name(), action->value().type() == QVariant::String ? parseTemplate(action->value().toString(), automation->lastTrigger()) : action->value());
                 else
                     m_automations->states().remove(action->name());
 
@@ -336,14 +358,14 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(composeString(action->message(), automation->lastTrigger()), action->silent(), action->chats());
+                m_telegram->sendMessage(parseTemplate(action->message(), automation->lastTrigger()), action->silent(), action->chats());
                 break;
             }
 
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                system(QString("sh -c \"%1\" > /dev/null &").arg(composeString(action->command(), automation->lastTrigger())).toUtf8().constData());
+                system(QString("sh -c \"%1\" > /dev/null &").arg(parseTemplate(action->command(), automation->lastTrigger())).toUtf8().constData());
                 break;
             }
 
