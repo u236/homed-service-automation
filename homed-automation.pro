@@ -6,6 +6,7 @@ HEADERS += \
     automation.h \
     condition.h \
     controller.h \
+    expression.h \
     telegram.h \
     trigger.h
 
@@ -14,7 +15,6 @@ SOURCES += \
     automation.cpp \
     condition.cpp \
     controller.cpp \
+    expression.cpp \
     telegram.cpp \
     trigger.cpp
-
-QT += script

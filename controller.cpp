@@ -1,5 +1,5 @@
-#include <QScriptEngine>
 #include "controller.h"
+#include "expression.h"
 #include "logger.h"
 
 Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
@@ -50,25 +50,25 @@ void Controller::parseProperty(QString &endpointName, QString &property)
     }
 }
 
-QString Controller::parseTemplate(QString string, const Trigger &trigger)
+QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
-    static QRegularExpression scriptExpression("\\[\\[(.+?)\\]\\]"), stringExpression("{{(.+?)}}");
-    QRegularExpressionMatchIterator match = scriptExpression.globalMatch(string);
+    static QRegularExpression expression("\\[\\[(.+?)\\]\\]"), pattern("{{(.+?)}}"); // TODO: use QRegExp
+    QRegularExpressionMatchIterator match = expression.globalMatch(string);
     QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
     bool script = false;
 
     while (match.hasNext())
     {
         QString item = match.next().captured();
-        QScriptEngine engine;
-        string.replace(item, engine.evaluate(parseTemplate(item.mid(2, item.length() - 4), trigger)).toString());
+        Expression expression(parseTemplate(item.mid(2, item.length() - 4), trigger).toString());
+        string.replace(item, QString("%1").arg(expression.calculate()));
         script = true;
     }
 
     if (script)
         return string;
 
-    match = stringExpression.globalMatch(string);
+    match = pattern.globalMatch(string);
 
     while (match.hasNext())
     {
@@ -331,14 +331,14 @@ bool Controller::runActions(AutomationObject *automation)
                 endpoint = m_endpoints.value(endpointName);
                 value = action->value(endpoint.isNull() ? QVariant() : endpoint->properties().value(property));
 
-                mqttPublish(mqttTopic("td/").append(endpointName), {{property, value.type() == QVariant::String ? parseTemplate(value.toString(), automation->lastTrigger()) : QJsonValue::fromVariant(value)}});
+                mqttPublish(mqttTopic("td/").append(endpointName), {{property, QJsonValue::fromVariant(value.type() == QVariant::String ? parseTemplate(value.toString(), automation->lastTrigger()) : value)}});
                 break;
             }
 
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), parseTemplate(action->message(), automation->lastTrigger()), action->retain());
+                mqttPublishString(action->topic(), parseTemplate(action->message(), automation->lastTrigger()).toString(), action->retain());
                 break;
             }
 
@@ -358,14 +358,14 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(parseTemplate(action->message(), automation->lastTrigger()), action->silent(), action->chats());
+                m_telegram->sendMessage(parseTemplate(action->message(), automation->lastTrigger()).toString(), action->silent(), action->chats());
                 break;
             }
 
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                system(QString("sh -c \"%1\" > /dev/null &").arg(parseTemplate(action->command(), automation->lastTrigger())).toUtf8().constData());
+                system(QString("sh -c \"%1\" > /dev/null &").arg(parseTemplate(action->command(), automation->lastTrigger()).toString()).toUtf8().constData());
                 break;
             }
 
