@@ -52,27 +52,28 @@ void Controller::parseProperty(QString &endpointName, QString &property)
 
 QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
-    static QRegularExpression expression("\\[\\[(.+?)\\]\\]"), pattern("{{(.+?)}}"); // TODO: use QRegExp
-    QRegularExpressionMatchIterator match = expression.globalMatch(string);
+    QRegExp calculate("\\[\\[(.*)\\]\\]"), replace("\\{\\{(.*)\\}\\}");
     QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
-    bool script = false;
+    int position = 0;
+    bool check = false;
 
-    while (match.hasNext())
+    while ((position = calculate.indexIn(string, position)) != -1)
     {
-        QString item = match.next().captured();
+        QString item = calculate.cap();
         Expression expression(parseTemplate(item.mid(2, item.length() - 4), trigger).toString());
-        string.replace(item, QString("%1").arg(expression.calculate()));
-        script = true;
+        string.replace(position, item.length(), QString::number(expression.result()));
+        position += replace.matchedLength();
+        check = true;
     }
 
-    if (script)
+    if (check)
         return string;
 
-    match = pattern.globalMatch(string);
+    position = 0;
 
-    while (match.hasNext())
+    while ((position = replace.indexIn(string, position)) != -1)
     {
-        QString item = match.next().captured(), value;
+        QString item = replace.cap(), value;
         QList <QString> itemList = item.mid(2, item.length() - 4).split('|');
 
         switch (valueList.lastIndexOf(itemList.value(0).trimmed()))
@@ -120,7 +121,8 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
             }
         }
 
-        string.replace(item, value.isEmpty() ? "[unknown]" : value);
+        string.replace(position, item.length(), value);
+        position += replace.matchedLength();
     }
 
     return string;
