@@ -161,7 +161,7 @@ void Expression::calculate(void)
     {
         if (items.at(c) != Type::Empty && items.at(c) != Type::Number)
         {
-            switch(items.at(index.at(i++)))
+            switch (items.at(index.at(i++)))
             {
                 case Type::Add:      result.replace(a, result.at(a) + result.at(b)); items.replace(b, Type::Empty);     break;
                 case Type::Subtract: result.replace(a, result.at(a) - result.at(b)); items.replace(b, Type::Empty);     break;

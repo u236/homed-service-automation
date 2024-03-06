@@ -347,13 +347,16 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::state:
             {
                 StateAction *action = reinterpret_cast <StateAction*> (item.data());
+                QVariant check = m_automations->states().value(action->name());
 
                 if (action->value().isValid() && !action->value().isNull())
                     m_automations->states().insert(action->name(), action->value().type() == QVariant::String ? parseTemplate(action->value().toString(), automation->lastTrigger()) : action->value());
                 else
                     m_automations->states().remove(action->name());
 
-                m_automations->store();
+                if (check != m_automations->states().value(action->name()))
+                    m_automations->store(true);
+
                 break;
             }
 
