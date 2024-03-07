@@ -52,28 +52,27 @@ void Controller::parseProperty(QString &endpointName, QString &property)
 
 QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
-    QRegExp calculate("\\[\\[(.*)\\]\\]"), replace("\\{\\{(.*)\\}\\}");
+    static QRegularExpression calculate("\\[\\[(.+?)\\]\\]"), replace("\\{\\{(.+?)\\}\\}");
+    QRegularExpressionMatchIterator match = calculate.globalMatch(string);
     QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
-    int position = 0;
     bool check = false;
 
-    while ((position = calculate.indexIn(string, position)) != -1)
+    while (match.hasNext())
     {
-        QString item = calculate.cap();
+        QString item = match.next().captured();
         Expression expression(parseTemplate(item.mid(2, item.length() - 4), trigger).toString());
-        string.replace(position, item.length(), QString::number(expression.result()));
-        position += replace.matchedLength();
+        string.replace(item, QString::number(expression.result()));
         check = true;
     }
 
     if (check)
         return string;
 
-    position = 0;
+    match = replace.globalMatch(string);
 
-    while ((position = replace.indexIn(string, position)) != -1)
+    while (match.hasNext())
     {
-        QString item = replace.cap(), value;
+        QString item = match.next().captured(), value;
         QList <QString> itemList = item.mid(2, item.length() - 4).split('|');
 
         switch (valueList.lastIndexOf(itemList.value(0).trimmed()))
@@ -95,7 +94,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                 if (it != m_topics.end())
                 {
                     QString property = itemList.value(2).trimmed();
-                    value = property.isEmpty() ? it.value() : QJsonDocument::fromJson(it.value()).object().value(property).toString();
+                    value = property.isEmpty() ? it.value() : QJsonDocument::fromJson(it.value()).object().value(property).toVariant().toString();
                 }
 
                 break;
@@ -121,8 +120,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
             }
         }
 
-        string.replace(position, item.length(), value);
-        position += replace.matchedLength();
+        string.replace(item, value);
     }
 
     return string;
