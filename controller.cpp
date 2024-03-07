@@ -149,70 +149,116 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
     endpoint->properties() = properties;
 
     for (auto it = endpoint->properties().begin(); it != endpoint->properties().end(); it++)
-    {
-        for (int i = 0; i < m_automations->count(); i++)
-        {
-            const Automation &automation = m_automations->at(i);
-
-            if (!automation->active())
-                continue;
-
-            for (int j = 0; j < automation->triggers().count(); j++)
-            {
-                PropertyTrigger *trigger = reinterpret_cast <PropertyTrigger*> (automation->triggers().at(j).data());
-
-                if (trigger->type() == TriggerObject::Type::property)
-                {
-                    QString endpointName = trigger->endpoint(), property = trigger->property();
-
-                    parseProperty(endpointName, property);
-
-                    if (endpoint->name() != endpointName || it.key() != property || !trigger->match(check.value(it.key()), it.value()))
-                        continue;
-
-                    checkConditions(automation.data(), automation->triggers().at(j));
-                }
-            }
-        }
-    }
+        handleTrigger(TriggerObject::Type::property, endpoint->name(), it.key(), check.value(it.key()), it.value());
 
     endpoint->properties().remove("action");
     endpoint->properties().remove("scene");
 }
 
-void Controller::checkConditions(AutomationObject *automation, const Trigger &trigger)
+void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
 {
-    if (!checkConditions(automation->conditions()))
+    for (int i = 0; i < m_automations->count(); i++)
     {
-        logInfo << "Automation" << automation->name() << "conditions mismatch";
-        return;
+        const Automation &automation = m_automations->at(i);
+
+        if (!automation->active())
+            continue;
+
+        for (int j = 0; j < automation->triggers().count(); j++)
+        {
+            const Trigger &trigger = automation->triggers().at(j);
+
+            if (trigger->type() != type)
+                continue;
+
+            switch (type)
+            {
+                case TriggerObject::Type::property:
+                {
+                    PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
+                    QString endpointName = item->endpoint(), property = item->property();
+
+                    parseProperty(endpointName, property);
+
+                    if (endpointName != a.toString() || property != b.toString() || !item->match(c, d))
+                        continue;
+
+                    break;
+                }
+
+                case TriggerObject::Type::mqtt:
+                {
+                    MqttTrigger *item = reinterpret_cast <MqttTrigger*> (trigger.data());
+
+                    if (item->topic() != a.toString() || !item->match(b.toByteArray(), c.toByteArray()))
+                        continue;
+
+                    break;
+                }
+
+                case TriggerObject::Type::telegram:
+                {
+                    TelegramTrigger *item = reinterpret_cast <TelegramTrigger*> (trigger.data());
+
+                    if (!item->match(a.toString(), b.toLongLong()))
+                        continue;
+
+                    break;
+                }
+
+                case TriggerObject::Type::time:
+                {
+                    TimeTrigger *item = reinterpret_cast <TimeTrigger*> (trigger.data());
+
+                    if (!item->match(a.toTime(), m_sun))
+                        continue;
+
+                    break;
+                }
+
+                case TriggerObject::Type::interval:
+                {
+                    IntervalTrigger *item = reinterpret_cast <IntervalTrigger*> (trigger.data());
+
+                    if (!item->match(a.toTime().msecsSinceStartOfDay() / 60000))
+                        continue;
+
+                    break;
+                }
+            }
+
+            if (!checkConditions(automation->conditions()))
+            {
+                logInfo << "Automation" << automation->name() << "conditions mismatch";
+                continue;
+            }
+
+            if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
+            {
+                logInfo << "Automation" << automation->name() << "debounced";
+                continue;
+            }
+
+            logInfo << "Automation" << automation->name() << "triggered";
+
+            automation->setLastTrigger(trigger);
+            automation->updateLastTriggered();
+            m_automations->store();
+
+            if (automation->timer()->isActive() && !automation->restart())
+            {
+                logWarning << "Automation" << automation->name() << "timer already started";
+                continue;
+            }
+
+            automation->setActionList(&automation->actions());
+            automation->actionList()->setIndex(0);
+            runActions(automation.data());
+        }
     }
-
-    if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
-    {
-        logInfo << "Automation" << automation->name() << "debounced";
-        return;
-    }
-
-    logInfo << "Automation" << automation->name() << "triggered";
-    // TODO: publish "triggered" event here?
-
-    automation->setLastTrigger(trigger);
-    automation->updateLastTriggered();
-    m_automations->store();
-
-    if (automation->timer()->isActive() && !automation->restart())
-    {
-        logWarning << "Automation" << automation->name() << "timer already started";
-        return;
-    }
-
-    automation->setActionList(&automation->actions());
-    automation->actionList()->setIndex(0);
-    runActions(automation);
 }
 
-bool Controller::checkConditions(const QList<Condition> &conditions, ConditionObject::Type type)
+bool Controller::checkConditions(const QList <Condition> &conditions, ConditionObject::Type type)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
@@ -440,26 +486,8 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     if (m_subscriptions.contains(topic.name()))
     {
         QByteArray check = m_topics.value(topic.name());
-
         m_topics.insert(topic.name(), message);
-
-        for (int i = 0; i < m_automations->count(); i++)
-        {
-            const Automation &automation = m_automations->at(i);
-
-            if (!automation->active())
-                continue;
-
-            for (int j = 0; j < automation->triggers().count(); j++)
-            {
-                MqttTrigger *trigger = reinterpret_cast <MqttTrigger*> (automation->triggers().at(j).data());
-
-                if (trigger->type() != TriggerObject::Type::mqtt || trigger->topic() != topic.name() || !trigger->match(check, message))
-                    continue;
-
-                checkConditions(automation.data(), automation->triggers().at(j));
-            }
-        }
+        handleTrigger(TriggerObject::Type::mqtt, topic.name(), check, message);
     }
 
     if (subTopic == "command/automation")
@@ -607,23 +635,7 @@ void Controller::addSubscription(const QString &topic)
 
 void Controller::telegramReceived(const QString &message, qint64 chat)
 {
-    for (int i = 0; i < m_automations->count(); i++)
-    {
-        const Automation &automation = m_automations->at(i);
-
-        if (!automation->active())
-            continue;
-
-        for (int j = 0; j < automation->triggers().count(); j++)
-        {
-            TelegramTrigger *trigger = reinterpret_cast <TelegramTrigger*> (automation->triggers().at(j).data());
-
-            if (trigger->type() != TriggerObject::Type::telegram || !trigger->match(message, chat))
-                continue;
-
-            checkConditions(automation.data(), automation->triggers().at(j));
-        }
-    }
+    handleTrigger(TriggerObject::Type::telegram, message, chat);
 }
 
 void Controller::updateTime(void)
@@ -636,48 +648,11 @@ void Controller::updateTime(void)
         m_date = now.date();
     }
 
-    if (now.time().second())
-        return;
-
-    for (int i = 0; i < m_automations->count(); i++)
+    if (!now.time().second())
     {
-        const Automation &automation = m_automations->at(i);
-
-        if (!automation->active())
-            continue;
-
-        for (int j = 0; j < automation->triggers().count(); j++)
-        {
-            const Trigger item = automation->triggers().at(j);
-            QTime time = QTime(now.time().hour(), now.time().minute());
-
-            switch (item->type())
-            {
-                case TriggerObject::Type::time:
-                {
-                    TimeTrigger *trigger = reinterpret_cast <TimeTrigger*> (item.data());
-
-                    if (trigger->match(time, m_sun))
-                        checkConditions(automation.data(), automation->triggers().at(j));
-
-                    break;
-                }
-
-                case TriggerObject::Type::interval:
-
-                {
-                    IntervalTrigger *trigger = reinterpret_cast <IntervalTrigger*> (item.data());
-
-                    if (trigger->match(time.msecsSinceStartOfDay() / 60000))
-                        checkConditions(automation.data(), automation->triggers().at(j));
-
-                    break;
-                }
-
-                default:
-                    break;
-            }
-        }
+        QTime time = QTime(now.time().hour(), now.time().minute());
+        handleTrigger(TriggerObject::Type::time, time);
+        handleTrigger(TriggerObject::Type::interval, time);
     }
 }
 
