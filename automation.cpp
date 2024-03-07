@@ -62,7 +62,7 @@ Automation AutomationList::byName(const QString &name, int *index)
 
 Automation AutomationList::parse(const QJsonObject &json)
 {
-    Automation automation(new AutomationObject(json.value("name").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
+    Automation automation(new AutomationObject(json.value("name").toString().trimmed(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
     QJsonArray triggers = json.value("triggers").toArray();
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
@@ -75,7 +75,7 @@ Automation AutomationList::parse(const QJsonObject &json)
         {
             case TriggerObject::Type::property:
             {
-                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+                QString endpoint = item.value("endpoint").toString().trimmed(), property = item.value("property").toString().trimmed();
 
                 if (endpoint.isEmpty() || property.isEmpty())
                     continue;
@@ -96,7 +96,7 @@ Automation AutomationList::parse(const QJsonObject &json)
 
             case TriggerObject::Type::mqtt:
             {
-                QString topic = item.value("topic").toString(), property = item.value("property").toString();
+                QString topic = item.value("topic").toString().trimmed(), property = item.value("property").toString().trimmed();
 
                 if (topic.isEmpty())
                     continue;
@@ -118,7 +118,7 @@ Automation AutomationList::parse(const QJsonObject &json)
 
             case TriggerObject::Type::telegram:
             {
-                QString message = item.value("message").toString();
+                QString message = item.value("message").toString().trimmed();
                 QJsonArray array = item.value("chats").toArray();
                 QList <qint64> chats;
 
@@ -151,7 +151,7 @@ Automation AutomationList::parse(const QJsonObject &json)
         if (trigger.isNull())
             continue;
 
-        trigger->setName(item.value("name").toString());
+        trigger->setName(item.value("name").toString().trimmed());
         automation->triggers().append(trigger);
     }
 
@@ -175,7 +175,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
         {
             case ConditionObject::Type::property:
             {
-                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+                QString endpoint = item.value("endpoint").toString().trimmed(), property = item.value("property").toString().trimmed();
 
                 if (endpoint.isEmpty() || property.isEmpty())
                     continue;
@@ -196,7 +196,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
 
             case ConditionObject::Type::mqtt:
             {
-                QString topic = item.value("topic").toString(), property = item.value("property").toString();
+                QString topic = item.value("topic").toString().trimmed(), property = item.value("property").toString().trimmed();
 
                 if (topic.isEmpty())
                     continue;
@@ -218,7 +218,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
 
             case ConditionObject::Type::state:
             {
-                QString name = item.value("name").toString();
+                QString name = item.value("name").toString().trimmed();
 
                 if (name.isEmpty())
                     continue;
@@ -305,7 +305,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
         {
             case ActionObject::Type::property:
             {
-                QString endpoint = item.value("endpoint").toString(), property = item.value("property").toString();
+                QString endpoint = item.value("endpoint").toString().trimmed(), property = item.value("property").toString().trimmed();
 
                 if (endpoint.isEmpty() || property.isEmpty())
                     continue;
@@ -326,7 +326,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::mqtt:
             {
-                QString topic = item.value("topic").toString(), message = item.value("message").toString();
+                QString topic = item.value("topic").toString().trimmed(), message = item.value("message").toString().trimmed();
 
                 if (topic.isEmpty() || message.isEmpty())
                     continue;
@@ -337,7 +337,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::state:
             {
-                QString name = item.value("name").toString();
+                QString name = item.value("name").toString().trimmed();
 
                 if (name.isEmpty())
                     continue;
@@ -348,7 +348,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::telegram:
             {
-                QString message = item.value("message").toString();
+                QString message = item.value("message").toString().trimmed();
                 QJsonArray array = item.value("chats").toArray();
                 QList <qint64> chats;
 
@@ -364,7 +364,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::shell:
             {
-                QString command = item.value("command").toString();
+                QString command = item.value("command").toString().trimmed();
 
                 if (command.isEmpty())
                     continue;
@@ -397,7 +397,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
         if (action.isNull())
             continue;
 
-        action->setTriggerName(item.value("triggerName").toString());
+        action->setTriggerName(item.value("triggerName").toString().trimmed());
         list.append(action);
     }
 }
@@ -409,7 +409,7 @@ void AutomationList::unserialize(const QJsonArray &automations)
     for (auto it = automations.begin(); it != automations.end(); it++)
     {
         QJsonObject json = it->toObject();
-        Automation automation = byName(json.value("name").toString());
+        Automation automation = byName(json.value("name").toString().trimmed());
 
         if (!automation.isNull())
             continue;
