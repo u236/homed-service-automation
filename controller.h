@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.3.1"
+#define SERVICE_VERSION     "1.4.0"
 
 #include "automation.h"
 #include "homed.h"
@@ -46,8 +46,11 @@ private:
     QDate m_date;
 
     QList <QString> m_services, m_subscriptions;
+    QMap <QString, QString> m_devices;
     QMap <QString, Endpoint> m_endpoints;
     QMap <QString, QByteArray> m_topics;
+
+    QString endpointName(const QString &endpoint);
 
     void parseProperty(QString &endpointName, QString &property);
     QVariant parseTemplate(QString string, const Trigger &trigger);

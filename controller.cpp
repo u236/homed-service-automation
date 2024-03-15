@@ -8,6 +8,8 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     logInfo << "Configuration file is" << getConfig()->fileName();
 
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
+    m_services = {"zigbee", "modbus", "custom"};
+
     updateSun();
 
     connect(m_automations, &AutomationList::statusUpdated, this, &Controller::statusUpdated);
@@ -18,6 +20,30 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
 
     m_automations->init();
     m_timer->start(1000);
+}
+
+QString Controller::endpointName(const QString &endpoint)
+{
+    QList <QString> search = endpoint.split('/');
+
+    for (auto it = m_devices.begin(); it != m_devices.end(); it++)
+    {
+        QList <QString> list = it.key().split('/');
+
+        if (list.value(0) != search.value(0))
+            continue;
+
+        if (list.value(1) == search.value(1))
+            return endpoint;
+
+        if (it.value() == search.value(1))
+        {
+            search.replace(1, list.value(1));
+            return search.join('/');
+        }
+    }
+
+    return QString();
 }
 
 void Controller::parseProperty(QString &endpointName, QString &property)
@@ -139,12 +165,9 @@ void Controller::updateSun(void)
 
 void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
 {
-    QMap <QString, QVariant> properties, check = endpoint->properties();
+    QMap <QString, QVariant> check = endpoint->properties();
 
-    for (auto it = data.begin(); it != data.end(); it++)
-        properties.insert(it.key(), it.value());
-
-    endpoint->properties() = properties;
+    endpoint->properties() = data;
 
     for (auto it = endpoint->properties().begin(); it != endpoint->properties().end(); it++)
         handleTrigger(TriggerObject::Type::property, endpoint->name(), it.key(), check.value(it.key()), it.value());
@@ -174,11 +197,11 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 case TriggerObject::Type::property:
                 {
                     PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
-                    QString endpointName = item->endpoint(), property = item->property();
+                    QString endpoint = item->endpoint(), property = item->property();
 
-                    parseProperty(endpointName, property);
+                    parseProperty(endpoint, property);
 
-                    if (endpointName != a.toString() || property != b.toString() || !item->match(c, d))
+                    if (endpointName(endpoint) != a.toString() || property != b.toString() || !item->match(c, d))
                         continue;
 
                     break;
@@ -464,7 +487,7 @@ void Controller::publishEvent(const QString &name, Event event)
 void Controller::mqttConnected(void)
 {
     mqttSubscribe(mqttTopic("command/automation"));
-    mqttSubscribe(mqttTopic("service/#"));
+    mqttSubscribe(mqttTopic("status/#"));
 
     for (int i = 0; i < m_subscriptions.count(); i++)
     {
@@ -557,58 +580,59 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             }
         }
     }
-    else if (subTopic.startsWith("service/"))
-    {
-        QList <QString> list = {"automation", "cloud", "web"};
-        QString service = subTopic.split('/').value(1);
-
-        if (list.contains(service))
-            return;
-
-        if (json.value("status").toString() == "online")
-        {
-            logInfo << "Service" << service << "is online";
-            mqttSubscribe(mqttTopic("status/").append(service));
-            mqttSubscribe(mqttTopic("fd/%1/#").arg(service));
-        }
-        else
-        {
-            logWarning << "Service" << service << "is offline";
-            mqttUnsubscribe(mqttTopic("status/").append(service));
-            mqttUnsubscribe(mqttTopic("fd/%1/#").arg(service));
-            m_services.removeAll(service);
-        }
-    }
     else if (subTopic.startsWith("status/"))
     {
         QString service = subTopic.split('/').value(1);
-        QJsonArray array = json.value("devices").toArray();
+        QJsonArray devices = json.value("devices").toArray();
 
-        if (m_services.contains(service))
-            return;
-
-        for (auto it = array.begin(); it != array.end(); it++)
+        for (auto it = devices.begin(); it != devices.end(); it++)
         {
-            QJsonObject item = it->toObject();
+            QJsonObject device = it->toObject();
+            QString name = device.value("name").toString(), id, key, item;
+            bool names = json.value("names").toBool();
 
-            if (item.value("removed").toBool() || (service == "zigbee" && !item.value("logicalType").toInt()))
-                continue;
+            switch (m_services.indexOf(service))
+            {
+                case 0: id = device.value("ieeeAddress").toString(); break; // zigbee
+                case 1: id = QString("%1.%2").arg(device.value("portId").toInt()).arg(device.value("slaveId").toInt()); break; // modbus
+                case 2: id = device.value("id").toString(); break; // custom
+            }
 
-            if (service == "zigbee")
-                mqttPublish(mqttTopic("command/zigbee"), {{"action", "getProperties"}, {"device", item.value("ieeeAddress")}});
+            if (name.isEmpty())
+                name = id;
+
+            key = QString("%1/%2").arg(service, id);
+            item =  names ? name : id;
+
+            if (m_devices.contains(key) && m_devices.value(key) != name)
+            {
+                mqttUnsubscribe(mqttTopic("fd/%1/%2").arg(service, item));
+                mqttUnsubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
+                m_devices.remove(key);
+            }
+
+            if (!m_devices.contains(key))
+            {
+                mqttSubscribe(mqttTopic("fd/%1/%2").arg(service, item));
+                mqttSubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
+                mqttPublish(mqttTopic("command/%1").arg(service), {{"action", "getProperties"}, {"device", item}, {"service", "automation"}});
+                m_devices.insert(key, name);
+            }
         }
-
-        m_services.append(service);
     }
     else if (subTopic.startsWith("fd/"))
     {
-        QString endpoint = subTopic.split('/').mid(1).join('/');
-        auto it = m_endpoints.find(endpoint);
+        QString endpoint = endpointName(subTopic.mid(subTopic.indexOf('/') + 1));
 
-        if (it == m_endpoints.end())
-            it = m_endpoints.insert(endpoint, Endpoint(new EndpointObject(endpoint)));
+        if (!endpoint.isEmpty())
+        {
+            auto it = m_endpoints.find(endpoint);
 
-        updateEndpoint(it.value(), json.toVariantMap());
+            if (it == m_endpoints.end())
+                it = m_endpoints.insert(endpoint, Endpoint(new EndpointObject(endpoint)));
+
+            updateEndpoint(it.value(), json.toVariantMap());
+        }
     }
 }
 
