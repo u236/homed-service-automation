@@ -57,12 +57,6 @@ void Controller::parseProperty(QString &endpointName, QString &property)
         list.removeLast();
     }
 
-    switch (list.count())
-    {
-        case 0: return;
-        case 1: property = list.value(0); return;
-    }
-
     property.clear();
 
     for (int i = 0; i < list.count(); i++)
