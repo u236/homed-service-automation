@@ -97,7 +97,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
         {
             case 0: // property
             {
-                auto it = m_endpoints.find(itemList.value(1).trimmed());
+                auto it = m_endpoints.find(endpointName(itemList.value(1).trimmed()));
 
                 if (it != m_endpoints.end())
                     value = it.value()->properties().value(itemList.value(2).trimmed()).toString();
@@ -495,7 +495,9 @@ void Controller::mqttConnected(void)
         mqttSubscribe(m_subscriptions.at(i));
     }
 
+    m_devices.clear();
     m_automations->store();
+
     mqttPublishStatus();
 }
 
