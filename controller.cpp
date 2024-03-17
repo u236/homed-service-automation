@@ -74,8 +74,9 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{([^\\}]*)\\}\\}");
     QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
-    int position = 0;
     bool check = false;
+    int position = 0;
+    double value;
 
     while ((position = calculate.indexIn(string, position)) != -1)
     {
@@ -84,9 +85,6 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
         string.replace(position, item.length(), QString::number(expression.result()));
         check = true;
     }
-
-    if (check)
-        return string;
 
     position = 0;
 
@@ -143,7 +141,15 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
         string.replace(position, item.length(), value);
     }
 
-    return string;
+    value = string.toDouble(&check);
+
+    if (check)
+        return value;
+
+    if (string != "true" && string != "false")
+        return string;
+
+    return string == "true" ? true : false;
 }
 
 void Controller::updateSun(void)
@@ -162,9 +168,6 @@ void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, Q
     QMap <QString, QVariant> check = endpoint->properties();
 
     endpoint->properties() = data;
-
-    if (endpoint->properties() != check)
-        logInfo << "Endpoint" << endpoint->name() << "updated";
 
     for (auto it = endpoint->properties().begin(); it != endpoint->properties().end(); it++)
         handleTrigger(TriggerObject::Type::property, endpoint->name(), it.key(), check.value(it.key()), it.value());
@@ -603,7 +606,6 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
             if (m_devices.contains(key) && m_devices.value(key) != name)
             {
-                logInfo << "Device" << QString("%1 (%2)").arg(key, m_devices.value(key)).toUtf8().constData() << "removed";
                 mqttUnsubscribe(mqttTopic("fd/%1/%2").arg(service, item));
                 mqttUnsubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
                 m_devices.remove(key);
@@ -611,7 +613,6 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
             if (!m_devices.contains(key))
             {
-                logInfo << "Device" << QString("%1 (%2)").arg(key, name).toUtf8().constData() << "added";
                 mqttSubscribe(mqttTopic("fd/%1/%2").arg(service, item));
                 mqttSubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
                 mqttPublish(mqttTopic("command/%1").arg(service), {{"action", "getProperties"}, {"device", item}, {"service", "automation"}});
@@ -631,10 +632,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 it = m_endpoints.insert(endpoint, Endpoint(new EndpointObject(endpoint)));
 
             updateEndpoint(it.value(), json.toVariantMap());
-            return;
         }
-
-        logWarning << "No device found for" << subTopic;
     }
 }
 
