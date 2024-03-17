@@ -97,10 +97,13 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
         {
             case 0: // property
             {
-                auto it = m_endpoints.find(endpointName(itemList.value(1).trimmed()));
+                QString endpoint = itemList.value(1).trimmed(), property = itemList.value(2).trimmed();
 
-                if (it != m_endpoints.end())
-                    value = it.value()->properties().value(itemList.value(2).trimmed()).toString();
+                parseProperty(endpoint, property);
+                endpoint = endpointName(endpoint);
+
+                if (m_endpoints.contains(endpoint))
+                    value = m_endpoints.value(endpoint)->properties().value(property).toString();
 
                 break;
             }
