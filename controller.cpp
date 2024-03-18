@@ -46,28 +46,18 @@ QString Controller::endpointName(const QString &endpoint)
     return QString();
 }
 
-void Controller::parseProperty(QString &endpointName, QString &property)
+void Controller::parseProperty(QString &name, QString &property)
 {
     QList <QString> list = property.split(0x20);
     int number = list.last().toInt();
 
     if (number)
     {
-        endpointName.append(QString("/%1").arg(number));
+        name.append(QString("/%1").arg(number));
         list.removeLast();
     }
 
-    property.clear();
-
-    for (int i = 0; i < list.count(); i++)
-    {
-        QString item = list.at(i).toLower();
-
-        if (i)
-            item.front() = item.front().toUpper();
-
-        property.append(item);
-    }
+    property = list.join(QString()).toLower();
 }
 
 QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
@@ -97,13 +87,14 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
         {
             case 0: // property
             {
-                QString endpoint = itemList.value(1).trimmed(), property = itemList.value(2).trimmed();
+                QString name = itemList.value(1).trimmed(), property = itemList.value(2).trimmed();
+                Endpoint endpoint;
 
-                parseProperty(endpoint, property);
-                endpoint = endpointName(endpoint);
+                parseProperty(name, property);
+                endpoint = m_endpoints.value(endpointName(name));
 
-                if (m_endpoints.contains(endpoint))
-                    value = m_endpoints.value(endpoint)->properties().value(property).toString();
+                if (!endpoint.isNull())
+                    value = endpoint->properties().value(property).toString();
 
                 break;
             }
@@ -168,9 +159,12 @@ void Controller::updateSun(void)
 
 void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
 {
-    QMap <QString, QVariant> check = endpoint->properties();
+    QMap <QString, QVariant> properties, check = endpoint->properties();
 
-    endpoint->properties() = data;
+    for (auto it = data.begin(); it != data.end(); it++)
+        properties.insert(it.key().toLower(), it.value());
+
+    endpoint->properties() = properties;
 
     for (auto it = endpoint->properties().begin(); it != endpoint->properties().end(); it++)
         handleTrigger(TriggerObject::Type::property, endpoint->name(), it.key(), check.value(it.key()), it.value());
@@ -296,11 +290,11 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             case ConditionObject::Type::property:
             {
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
-                QString endpointName = condition->endpoint(), property = condition->property();
+                QString name = condition->endpoint(), property = condition->property();
                 Endpoint endpoint;
 
-                parseProperty(endpointName, property);
-                endpoint = m_endpoints.value(endpointName);
+                parseProperty(name, property);
+                endpoint = m_endpoints.value(endpointName(name));
 
                 if (!endpoint.isNull() && condition->match(endpoint->properties().value(property)))
                     count++;
@@ -395,15 +389,15 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::property:
             {
                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
-                QString endpointName = action->endpoint(), property = action->property();
+                QString name = action->endpoint(), property = action->property();
                 Endpoint endpoint;
                 QVariant value;
 
-                parseProperty(endpointName, property);
-                endpoint = m_endpoints.value(endpointName);
+                parseProperty(name, property);
+                endpoint = m_endpoints.value(endpointName(name));
                 value = action->value(endpoint.isNull() ? QVariant() : endpoint->properties().value(property));
 
-                mqttPublish(mqttTopic("td/").append(endpointName), {{property, QJsonValue::fromVariant(value.type() == QVariant::String ? parseTemplate(value.toString(), automation->lastTrigger()) : value)}});
+                mqttPublish(mqttTopic("td/").append(name), {{action->property(), QJsonValue::fromVariant(value.type() == QVariant::String ? parseTemplate(value.toString(), automation->lastTrigger()) : value)}});
                 break;
             }
 
