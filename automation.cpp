@@ -62,7 +62,7 @@ Automation AutomationList::byName(const QString &name, int *index)
 
 Automation AutomationList::parse(const QJsonObject &json)
 {
-    Automation automation(new AutomationObject(json.value("name").toString().trimmed(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
+    Automation automation(new AutomationObject(json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
     QJsonArray triggers = json.value("triggers").toArray();
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
@@ -602,14 +602,14 @@ QJsonArray AutomationList::serialize(void)
     for (int i = 0; i < count(); i++)
     {
         const Automation &automation = at(i);
-        QJsonObject json = {{"name", automation->name()}, {"active", automation->active()}};
+        QJsonObject json = {{"name", automation->name()}, {"active", automation->active()}, {"restart", automation->restart()}};
         QJsonArray triggers;
+
+        if (!automation->note().isEmpty())
+            json.insert("note", automation->note());
 
         if (automation->debounce())
             json.insert("debounce", automation->debounce());
-
-        if (automation->restart())
-            json.insert("restart", automation->restart());
 
         if (automation->lastTriggered())
             json.insert("lastTriggered", automation->lastTriggered());

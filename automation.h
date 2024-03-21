@@ -44,12 +44,13 @@ class AutomationObject : public QObject
 
 public:
 
-    AutomationObject(const QString &name, bool active, qint32 debounce, bool restart, qint64 lastTriggered) :
-        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_active(active), m_debounce(debounce), m_restart(restart), m_lastTriggered(lastTriggered) {}
+    AutomationObject(const QString &name, const QString &note, bool active, qint32 debounce, bool restart, qint64 lastTriggered) :
+        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_restart(restart), m_lastTriggered(lastTriggered) {}
 
     inline QTimer *timer(void) { return m_timer; }
 
     inline QString name(void) { return m_name; }
+    inline QString note(void) { return m_note; }
     inline bool active(void) { return m_active; }
 
     inline qint32 debounce(void) { return m_debounce; }
@@ -72,7 +73,7 @@ private:
 
     QTimer *m_timer;
 
-    QString m_name;
+    QString m_name, m_note;
     bool m_active;
 
     qint32 m_debounce;
