@@ -60,20 +60,32 @@ void Controller::parseProperty(QString &name, QString &property)
     property = list.join(QString()).toLower();
 }
 
+QVariant Controller::parseString(const QString &string)
+{
+    bool check;
+    double value = string.toDouble(&check);
+
+    if (check)
+        return value;
+
+    if (string != "true" && string != "false")
+        return string;
+
+    return string == "true" ? true : false;
+}
+
 QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{([^\\}]*)\\}\\}");
     QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
-    bool check = false;
+
     int position = 0;
-    double value;
 
     while ((position = calculate.indexIn(string, position)) != -1)
     {
         QString item = calculate.cap();
         Expression expression(parseTemplate(item.mid(2, item.length() - 4), trigger).toString());
         string.replace(position, item.length(), QString::number(expression.result()));
-        check = true;
     }
 
     position = 0;
@@ -135,15 +147,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
         string.replace(position, item.length(), value);
     }
 
-    value = string.toDouble(&check);
-
-    if (check)
-        return value;
-
-    if (string != "true" && string != "false")
-        return string;
-
-    return string == "true" ? true : false;
+    return parseString(string);
 }
 
 void Controller::updateSun(void)
@@ -392,12 +396,31 @@ bool Controller::runActions(AutomationObject *automation)
                 QString name = action->endpoint(), property = action->property();
                 Endpoint endpoint;
                 QVariant value;
+                QString string;
 
                 parseProperty(name, property);
                 endpoint = m_endpoints.value(endpointName(name));
                 value = action->value(endpoint.isNull() ? QVariant() : endpoint->properties().value(property));
 
-                mqttPublish(mqttTopic("td/").append(name), {{action->property(), QJsonValue::fromVariant(value.type() == QVariant::String ? parseTemplate(value.toString(), automation->lastTrigger()) : value)}});
+                if (value.type() == QVariant::String)
+                {
+                    value = parseTemplate(value.toString(), automation->lastTrigger());
+                    string = value.toString();
+                }
+
+                if (string.contains(','))
+                {
+                    QList <QString> list = string.split(',');
+                    QJsonArray array;
+
+                    for (int i = 0; i < list.count(); i++)
+                        array.append(QJsonValue::fromVariant(parseString(list.at(i))));
+
+                    mqttPublish(mqttTopic("td/").append(name), {{action->property(), array}});
+                }
+                else
+                    mqttPublish(mqttTopic("td/").append(name), {{action->property(), QJsonValue::fromVariant(value)}});
+
                 break;
             }
 

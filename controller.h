@@ -53,6 +53,7 @@ private:
     QString endpointName(const QString &endpoint);
 
     void parseProperty(QString &endpointName, QString &property);
+    QVariant parseString(const QString &string);
     QVariant parseTemplate(QString string, const Trigger &trigger);
 
     void updateSun(void);
