@@ -78,7 +78,6 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{([^\\}]*)\\}\\}");
     QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
-
     int position = 0;
 
     while ((position = calculate.indexIn(string, position)) != -1)
