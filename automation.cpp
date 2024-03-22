@@ -164,6 +164,23 @@ Automation AutomationList::parse(const QJsonObject &json)
     return automation;
 }
 
+void AutomationList::parseTemplate(const QString &string)
+{
+    QRegExp pattern("\\{\\{([^\\}]*)\\}\\}");
+    int position = 0;
+
+    while ((position = pattern.indexIn(string, position)) != -1)
+    {
+        QString item = pattern.cap();
+        QList <QString> list = item.mid(2, item.length() - 4).split('|');
+
+        if (list.value(0).trimmed() == "mqtt")
+            emit addSubscription(list.value(1).trimmed());
+
+        position += item.length();
+    }
+}
+
 void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonArray &conditions)
 {
     for (auto it = conditions.begin(); it != conditions.end(); it++)
@@ -318,6 +335,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                         continue;
 
                     action = Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value));
+                    parseTemplate(value.toString());
                     break;
                 }
 
@@ -332,17 +350,20 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                     continue;
 
                 action = Action(new MqttAction(topic, message, item.value("retain").toBool()));
+                parseTemplate(message);
                 break;
             }
 
             case ActionObject::Type::state:
             {
                 QString name = item.value("name").toString().trimmed();
+                QVariant value = item.value("value").toVariant();
 
                 if (name.isEmpty())
                     continue;
 
-                action = Action(new StateAction(name, item.value("value").toVariant()));
+                action = Action(new StateAction(name, value));
+                parseTemplate(value.toString());
                 break;
             }
 
@@ -359,6 +380,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                     chats.append(it->toVariant().toLongLong());
 
                 action = Action(new TelegramAction(message, item.value("silent").toBool(), chats));
+                parseTemplate(message);
                 break;
             }
 
@@ -370,6 +392,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                     continue;
 
                 action = Action(new ShellAction(command));
+                parseTemplate(command);
                 break;
             }
 
