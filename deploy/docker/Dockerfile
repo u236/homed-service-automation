@@ -6,4 +6,4 @@ RUN     mkdir /etc/homed
 RUN     ln -s /data/homed-automation.conf /etc/homed/homed-automation.conf
 RUN     ln -s /data/homed.log /var/log/homed.log
 COPY    homed-automation-$TARGETARCH /usr/bin/homed-automation
-CMD     ["/usr/bin/homed-automation"]
+CMD     /usr/bin/homed-automation

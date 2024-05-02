@@ -605,12 +605,18 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     {
         QString service = subTopic.split('/').value(1);
         QJsonArray devices = json.value("devices").toArray();
+        bool names = json.value("names").toBool();
+
+        if (!m_services.contains(service))
+            return;
 
         for (auto it = devices.begin(); it != devices.end(); it++)
         {
             QJsonObject device = it->toObject();
             QString name = device.value("name").toString(), id, key, item;
-            bool names = json.value("names").toBool();
+
+            if (device.value("removed").toBool())
+                continue;
 
             switch (m_services.indexOf(service))
             {
