@@ -84,7 +84,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
     {
         QString item = calculate.cap();
         Expression expression(parseTemplate(item.mid(2, item.length() - 4), trigger).toString());
-        string.replace(position, item.length(), QString::number(expression.result()));
+        string.replace(position, item.length(), QString::number(expression.result(), 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
     }
 
     position = 0;
@@ -132,7 +132,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
             case 3: // timestamp
             {
                 QString format = itemList.value(1).trimmed();
-                value = QDateTime::currentDateTime().toString(format.isEmpty() ? "hh:mm:ss" : format);
+                value = format.isEmpty() ? QString::number(QDateTime::currentSecsSinceEpoch()) : QDateTime::currentDateTime().toString(format);
                 break;
             }
 
