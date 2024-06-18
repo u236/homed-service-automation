@@ -629,9 +629,9 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 name = id;
 
             key = QString("%1/%2").arg(service, id);
-            item =  names ? name : id;
+            item = names ? name : id;
 
-            if (m_devices.contains(key) && m_devices.value(key) != name)
+            if (names && m_devices.contains(key) && m_devices.value(key) != name)
             {
                 mqttUnsubscribe(mqttTopic("fd/%1/%2").arg(service, item));
                 mqttUnsubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
@@ -643,8 +643,9 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 mqttSubscribe(mqttTopic("fd/%1/%2").arg(service, item));
                 mqttSubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
                 mqttPublish(mqttTopic("command/%1").arg(service), {{"action", "getProperties"}, {"device", item}, {"service", "automation"}});
-                m_devices.insert(key, name);
             }
+
+            m_devices.insert(key, name);
         }
     }
     else if (subTopic.startsWith("fd/"))
