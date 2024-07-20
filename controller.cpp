@@ -77,7 +77,7 @@ QVariant Controller::parseString(const QString &string)
 QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{([^\\}]*)\\}\\}");
-    QList <QString> valueList = {"property", "mqtt", "state", "timestamp", "triggerName"};
+    QList <QString> valueList = {"property", "mqtt", "file", "state", "timestamp", "triggerName"};
     int position = 0;
 
     while ((position = calculate.indexIn(string, position)) != -1)
@@ -123,20 +123,33 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                 break;
             }
 
-            case 2: // state
+            case 2: // file
+            {
+                QFile file(itemList.value(1).trimmed());
+
+                if (file.open(QFile::ReadOnly))
+                {
+                    value = QString(file.readAll());
+                    file.close();
+                }
+
+                break;
+            }
+
+            case 3: // state
             {
                 value = m_automations->states().value(itemList.value(1).trimmed()).toString();
                 break;
             }
 
-            case 3: // timestamp
+            case 4: // timestamp
             {
                 QString format = itemList.value(1).trimmed();
                 value = format.isEmpty() ? QString::number(QDateTime::currentSecsSinceEpoch()) : QDateTime::currentDateTime().toString(format);
                 break;
             }
 
-            case 4: // triggerName
+            case 5: // triggerName
             {
                 value = trigger->name();
                 break;
