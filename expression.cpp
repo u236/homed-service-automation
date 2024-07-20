@@ -10,6 +10,8 @@ Expression::Expression(QString string) : m_result(NAN)
     QStack <int> priorityStack;
     int position = 0, offset = 0;
 
+    string.remove(0x0A);
+    string.remove(0x0D);
     string.remove(0x20);
 
     if (string.isEmpty() || error.indexIn(string) != -1 || string.count("(") != string.count(")") || string.contains("()"))

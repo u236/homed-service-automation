@@ -127,7 +127,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
             {
                 QFile file(itemList.value(1).trimmed());
 
-                if (file.open(QFile::ReadOnly))
+                if (file.open(QFile::ReadOnly | QFile::Text))
                 {
                     value = QString(file.readAll());
                     file.close();
