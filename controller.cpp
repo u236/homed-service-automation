@@ -8,7 +8,7 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     logInfo << "Configuration file is" << getConfig()->fileName();
 
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
-    m_services = {"zigbee", "modbus", "custom"};
+    m_types = {"zigbee", "modbus", "custom"};
 
     updateSun();
 
@@ -22,42 +22,15 @@ Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automat
     m_timer->start(1000);
 }
 
-QString Controller::endpointName(const QString &endpoint)
+Device Controller::findDevice(const QString &search)
 {
-    QList <QString> search = endpoint.split('/');
+    QList <QString> list = search.split('/');
 
     for (auto it = m_devices.begin(); it != m_devices.end(); it++)
-    {
-        QList <QString> list = it.key().split('/');
+        if (search.startsWith(it.value()->key()) || search.startsWith(it.value()->topic()) || (it.value()->key().split('/').first() == list.value(0) && it.value()->name() == list.value(1)))
+            return it.value();
 
-        if (list.value(0) != search.value(0))
-            continue;
-
-        if (list.value(1) == search.value(1))
-            return endpoint;
-
-        if (it.value() == search.value(1))
-        {
-            search.replace(1, list.value(1));
-            return search.join('/');
-        }
-    }
-
-    return QString();
-}
-
-void Controller::parseProperty(QString &name, QString &property)
-{
-    QList <QString> list = property.split(0x20);
-    int number = list.last().toInt();
-
-    if (number)
-    {
-        name.append(QString("/%1").arg(number));
-        list.removeLast();
-    }
-
-    property = list.join(QString()).toLower();
+    return Device();
 }
 
 QVariant Controller::parseString(const QString &string)
@@ -98,14 +71,33 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
         {
             case 0: // property
             {
-                QString name = itemList.value(1).trimmed(), property = itemList.value(2).trimmed();
-                Endpoint endpoint;
+                QString endpoint = itemList.value(1).trimmed();
+                const Device &device = findDevice(endpoint);
 
-                parseProperty(name, property);
-                endpoint = m_endpoints.value(endpointName(name));
+                if (!device.isNull())
+                {
+                    QList <QString> list = itemList.value(2).trimmed().split(0x20);
+                    QMap <QString, QVariant> map;
+                    QString property;
+                    quint8 endpointId = static_cast <quint8> (list.last().toInt());
 
-                if (!endpoint.isNull())
-                    value = endpoint->properties().value(property).toString();
+                    if (!endpointId)
+                        endpointId = static_cast <quint8> (endpoint.split('/').last().toInt());
+                    else
+                        list.removeLast();
+
+                    map = device->properties().value(endpointId);
+                    property = list.join(QString());
+
+                    for (auto it = map.begin(); it != map.end(); it++)
+                    {
+                        if (it.key().compare(property, Qt::CaseInsensitive))
+                            continue;
+
+                        value = it.value().toString();
+                        break;
+                    }
+                }
 
                 break;
             }
@@ -173,22 +165,6 @@ void Controller::updateSun(void)
     logInfo << "Sunrise set to" << m_sun->sunrise().toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sun->sunset().toString("hh:mm").toUtf8().constData();
 }
 
-void Controller::updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data)
-{
-    QMap <QString, QVariant> properties, check = endpoint->properties();
-
-    for (auto it = data.begin(); it != data.end(); it++)
-        properties.insert(it.key().toLower(), it.value());
-
-    endpoint->properties() = properties;
-
-    for (auto it = endpoint->properties().begin(); it != endpoint->properties().end(); it++)
-        handleTrigger(TriggerObject::Type::property, endpoint->name(), it.key(), check.value(it.key()), it.value());
-
-    endpoint->properties().remove("action");
-    endpoint->properties().remove("scene");
-}
-
 void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
 {
     for (int i = 0; i < m_automations->count(); i++)
@@ -210,13 +186,10 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 case TriggerObject::Type::property:
                 {
                     PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
-                    QString endpoint = item->endpoint(), property = item->property();
 
-                    parseProperty(endpoint, property);
-
-                    if (endpointName(endpoint) != a.toString() || property != b.toString() || !item->match(c, d))
+                    if (item->endpoint() != a.toString() || item->property() != b.toString() || !item->match(c, d))
                         continue;
-
+                    
                     break;
                 }
 
@@ -306,13 +279,9 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             case ConditionObject::Type::property:
             {
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
-                QString name = condition->endpoint(), property = condition->property();
-                Endpoint endpoint;
+                const Device &device = findDevice(condition->endpoint());
 
-                parseProperty(name, property);
-                endpoint = m_endpoints.value(endpointName(name));
-
-                if (!endpoint.isNull() && condition->match(endpoint->properties().value(property)))
+                if (!device.isNull() && condition->match(device->properties().value(condition->endpoint().split('/').last().toInt()).value(condition->property())))
                     count++;
 
                 break;
@@ -404,36 +373,36 @@ bool Controller::runActions(AutomationObject *automation)
         {
             case ActionObject::Type::property:
             {
-                PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
-                QString name = action->endpoint(), property = action->property();
-                Endpoint endpoint;
-                QVariant value;
-                QString string;
+                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
+                 const Device &device = findDevice(action->endpoint());
 
-                parseProperty(name, property);
-                endpoint = m_endpoints.value(endpointName(name));
-                value = action->value(endpoint.isNull() ? QVariant() : endpoint->properties().value(property));
+                 if (!device.isNull())
+                 {
+                     quint8 endpointId = static_cast <quint8> (action->endpoint().split('/').last().toInt());
+                     QVariant value = action->value(device->properties().value(endpointId).value(action->property()));
+                     QString string;
 
-                if (value.type() == QVariant::String)
-                {
-                    value = parseTemplate(value.toString(), automation->lastTrigger());
-                    string = value.toString();
-                }
+                     if (value.type() == QVariant::String)
+                     {
+                         value = parseTemplate(value.toString(), automation->lastTrigger());
+                         string = value.toString();
+                     }
 
-                if (string.contains(','))
-                {
-                    QList <QString> list = string.split(',');
-                    QJsonArray array;
+                     if (string.contains(','))
+                     {
+                         QList <QString> list = string.split(',');
+                         QJsonArray array;
 
-                    for (int i = 0; i < list.count(); i++)
-                        array.append(QJsonValue::fromVariant(parseString(list.at(i))));
+                         for (int i = 0; i < list.count(); i++)
+                             array.append(QJsonValue::fromVariant(parseString(list.at(i))));
 
-                    mqttPublish(mqttTopic("td/").append(name), {{action->property(), array}});
-                }
-                else
-                    mqttPublish(mqttTopic("td/").append(name), {{action->property(), QJsonValue::fromVariant(value)}});
+                         value = array;
+                     }
 
-                break;
+                     mqttPublish(mqttTopic("td/").append(endpointId ? device->topic().append('/').append(endpointId) : device->topic()), {{action->property(), QJsonValue::fromVariant(value)}});
+                 }
+
+                 break;
             }
 
             case ActionObject::Type::mqtt:
@@ -616,22 +585,23 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     }
     else if (subTopic.startsWith("status/"))
     {
-        QString service = subTopic.split('/').value(1);
+        QString type = subTopic.split('/').value(1), service = subTopic.mid(subTopic.indexOf('/') + 1);
         QJsonArray devices = json.value("devices").toArray();
         bool names = json.value("names").toBool();
 
-        if (!m_services.contains(service))
-            return;
+        if (!m_types.contains(type))
+           return;
 
         for (auto it = devices.begin(); it != devices.end(); it++)
         {
             QJsonObject device = it->toObject();
-            QString name = device.value("name").toString(), id, key, item;
+            QString name = device.value("name").toString(), id, key, topic;
+            bool check = false;
 
-            if (device.value("removed").toBool())
+            if (type == "zigbee" && (device.value("removed").toBool() || !device.value("logicalType").toInt()))
                 continue;
 
-            switch (m_services.indexOf(service))
+            switch (m_types.indexOf(type))
             {
                 case 0: id = device.value("ieeeAddress").toString(); break; // zigbee
                 case 1: id = QString("%1.%2").arg(device.value("portId").toInt()).arg(device.value("slaveId").toInt()); break; // modbus
@@ -641,38 +611,49 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             if (name.isEmpty())
                 name = id;
 
-            key = QString("%1/%2").arg(service, id);
-            item = names ? name : id;
+            key = QString("%1/%2").arg(type, id);
+            topic = QString("%1/%2").arg(service, names ? name : id);
 
-            if (names && m_devices.contains(key) && m_devices.value(key) != name)
+            if (names && m_devices.contains(key) && m_devices.value(key)->topic() != topic)
             {
-                mqttUnsubscribe(mqttTopic("fd/%1/%2").arg(service, item));
-                mqttUnsubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
-                m_devices.remove(key);
+                const Device &device = m_devices.value(key);
+                mqttUnsubscribe(mqttTopic("fd/%1").arg(device->topic()));
+                mqttUnsubscribe(mqttTopic("fd/%1/#").arg(device->topic()));
+                device->setTopic(topic);
+                device->setName(name);
+                check = true;
             }
 
             if (!m_devices.contains(key))
             {
-                mqttSubscribe(mqttTopic("fd/%1/%2").arg(service, item));
-                mqttSubscribe(mqttTopic("fd/%1/%2/#").arg(service, item));
-                mqttPublish(mqttTopic("command/%1").arg(service), {{"action", "getProperties"}, {"device", item}, {"service", "automation"}});
+                m_devices.insert(key, Device(new DeviceObject(key, topic, name)));
+                check = true;
             }
 
-            m_devices.insert(key, name);
+            if (check)
+            {
+                mqttSubscribe(mqttTopic("fd/%1").arg(topic));
+                mqttSubscribe(mqttTopic("fd/%1/#").arg(topic));
+                mqttPublish(mqttTopic("command/%1").arg(service), {{"action", "getProperties"}, {"device", names ? name : id}, {"service", "automation"}});
+            }
         }
     }
     else if (subTopic.startsWith("fd/"))
     {
-        QString endpoint = endpointName(subTopic.mid(subTopic.indexOf('/') + 1));
+        const Device &device = findDevice(subTopic.mid(subTopic.indexOf('/') + 1));
 
-        if (!endpoint.isEmpty())
+        if (!device.isNull())
         {
-            auto it = m_endpoints.find(endpoint);
+            QMap <QString, QVariant> properties = json.toVariantMap();
+            quint8 endpointId = subTopic.split('/').last().toInt();
 
-            if (it == m_endpoints.end())
-                it = m_endpoints.insert(endpoint, Endpoint(new EndpointObject(endpoint)));
+            for (auto it = properties.begin(); it != properties.end(); it++)
+                handleTrigger(TriggerObject::Type::property, endpointId ? device->key().append('/').append(endpointId) : device->key(), it.key(), device->properties().value(endpointId).value(it.key()), it.value());
 
-            updateEndpoint(it.value(), json.toVariantMap());
+            properties.remove("action");
+            properties.remove("scene");
+
+            device->properties().insert(endpointId, properties);
         }
     }
 }

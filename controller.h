@@ -45,20 +45,16 @@ private:
     QMetaEnum m_commands, m_events;
     QDate m_date;
 
-    QList <QString> m_services, m_subscriptions;
-    QMap <QString, QString> m_devices;
-    QMap <QString, Endpoint> m_endpoints;
+    QList <QString> m_types, m_subscriptions;
+    QMap <QString, Device> m_devices;
     QMap <QString, QByteArray> m_topics;
 
-    QString endpointName(const QString &endpoint);
+    Device findDevice(const QString &search);
 
-    void parseProperty(QString &endpointName, QString &property);
     QVariant parseString(const QString &string);
     QVariant parseTemplate(QString string, const Trigger &trigger);
 
     void updateSun(void);
-    void updateEndpoint(const Endpoint &endpoint, const QMap <QString, QVariant> &data);
-
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
     bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type = ConditionObject::Type::AND);
     bool runActions(AutomationObject *automation);

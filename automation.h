@@ -14,27 +14,34 @@
 #include "condition.h"
 #include "trigger.h"
 
-class EndpointObject;
-typedef QSharedPointer <EndpointObject> Endpoint;
+class DeviceObject;
+typedef QSharedPointer <DeviceObject> Device;
 
 class AutomationObject;
 typedef QSharedPointer <AutomationObject> Automation;
 
-class EndpointObject
+class DeviceObject
 {
 
 public:
 
-    EndpointObject(const QString &name) :
-        m_name(name) {}
+    DeviceObject(const QString &key, const QString &topic, const QString &name) :
+        m_key(key), m_topic(topic), m_name(name) {}
+
+    inline QString key(void) { return m_key; }
+
+    inline QString topic(void) { return m_topic; }
+    inline void setTopic(const QString &value) { m_topic = value; }
 
     inline QString name(void) { return m_name; }
-    inline QMap <QString, QVariant> &properties(void) { return m_properties; }
+    inline void setName(const QString &value) { m_name = value; }
+
+    inline QMap <quint8, QVariantMap> &properties(void) { return m_properties; }
 
 private:
 
-    QString m_name;
-    QMap <QString, QVariant> m_properties;
+    QString m_key, m_topic, m_name;
+    QMap <quint8, QVariantMap> m_properties;
 
 };
 
