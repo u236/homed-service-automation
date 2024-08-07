@@ -76,9 +76,9 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 
                 if (!device.isNull())
                 {
-                    QList <QString> list = itemList.value(2).trimmed().split(0x20);
-                    QMap <QString, QVariant> map;
                     QString property;
+                    QMap <QString, QVariant> map;
+                    QList <QString> list = itemList.value(2).trimmed().split(0x20);
                     quint8 endpointId = static_cast <quint8> (list.last().toInt());
 
                     if (!endpointId)
@@ -86,8 +86,15 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                     else
                         list.removeLast();
 
-                    map = device->properties().value(endpointId);
                     property = list.join(QString());
+
+                    if (!device->properties().contains(endpointId))
+                    {
+                        property.append(QString("_%1").arg(endpointId));
+                        endpointId = 0;
+                    }
+
+                    map = device->properties().value(endpointId);
 
                     for (auto it = map.begin(); it != map.end(); it++)
                     {
@@ -399,7 +406,7 @@ bool Controller::runActions(AutomationObject *automation)
                          value = array;
                      }
 
-                     mqttPublish(mqttTopic("td/").append(endpointId ? device->topic().append('/').append(endpointId) : device->topic()), {{action->property(), QJsonValue::fromVariant(value)}});
+                     mqttPublish(mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic()), {{action->property(), QJsonValue::fromVariant(value)}});
                  }
 
                  break;
@@ -644,16 +651,14 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
         if (!device.isNull())
         {
-            QMap <QString, QVariant> properties = json.toVariantMap();
             quint8 endpointId = subTopic.split('/').last().toInt();
-
-            for (auto it = properties.begin(); it != properties.end(); it++)
-                handleTrigger(TriggerObject::Type::property, endpointId ? device->key().append('/').append(endpointId) : device->key(), it.key(), device->properties().value(endpointId).value(it.key()), it.value());
-
-            properties.remove("action");
-            properties.remove("scene");
+            QMap <QString, QVariant> properties = json.toVariantMap(), check = device->properties().value(endpointId);
+            QList <QString> list = {"action", "scene"};
 
             device->properties().insert(endpointId, properties);
+
+            for (auto it = properties.begin(); it != properties.end(); it++)
+                handleTrigger(TriggerObject::Type::property, endpointId ? QString("%1/%2").arg(device->key()).arg(endpointId) : device->key(), it.key(), list.contains(it.key()) ? QVariant() : check.value(it.key()), it.value());
         }
     }
 }

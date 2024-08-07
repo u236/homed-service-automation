@@ -21,7 +21,7 @@ bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, St
             return b != a && (b <= a - change || b >= a + change);
         }
 
-        case Statement::updates: return newValue.isValid();
+        case Statement::updates: return oldValue != newValue;
     }
 
     return false;
