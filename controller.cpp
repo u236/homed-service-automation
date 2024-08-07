@@ -243,17 +243,17 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
 
             if (!checkConditions(automation->conditions()))
             {
-                logInfo << "Automation" << automation->name() << "conditions mismatch";
+                logInfo << automation << "conditions mismatch";
                 continue;
             }
 
             if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
             {
-                logInfo << "Automation" << automation->name() << "debounced";
+                logInfo << automation << "debounced";
                 continue;
             }
 
-            logInfo << "Automation" << automation->name() << "triggered";
+            logInfo << automation << "triggered";
 
             automation->setLastTrigger(trigger);
             automation->updateLastTriggered();
@@ -261,7 +261,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
 
             if (automation->timer()->isActive() && !automation->restart())
             {
-                logWarning << "Automation" << automation->name() << "timer already started";
+                logWarning << automation << "timer already started";
                 continue;
             }
 
@@ -471,7 +471,7 @@ bool Controller::runActions(AutomationObject *automation)
                 automation->timer()->setSingleShot(true);
                 automation->actionList()->setIndex(++i);
 
-                logInfo << "Automation" << automation->name() << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
+                logInfo << automation << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
                 automation->timer()->start(action->delay() * 1000);
                 return false;
             }
@@ -528,7 +528,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             case Command::restartService:
             {
                 logWarning << "Restart request received...";
-                mqttPublish(mqttTopic("command/automation"), QJsonObject(), true);
+                mqttPublish(topic.name(), QJsonObject(), true);
                 QCoreApplication::exit(EXIT_RESTART);
                 break;
             }
@@ -559,13 +559,13 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 if (index >= 0)
                 {
                     m_automations->replace(index, automation);
-                    logInfo << "Automation" << automation->name() << "successfully updated";
+                    logInfo << automation << "successfully updated";
                     publishEvent(automation->name(), Event::updated);
                 }
                 else
                 {
                     m_automations->append(automation);
-                    logInfo << "Automation" << automation->name() << "successfully added";
+                    logInfo << automation << "successfully added";
                     publishEvent(automation->name(), Event::added);
                 }
 
@@ -581,7 +581,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 if (index >= 0)
                 {
                     m_automations->removeAt(index);
-                    logInfo << "Automation" << automation->name() << "removed";
+                    logInfo << automation << "removed";
                     publishEvent(automation->name(), Event::removed);
                     m_automations->store(true);
                 }
@@ -708,6 +708,6 @@ void Controller::updateTime(void)
 void Controller::automationTimeout(void)
 {
     AutomationObject *automation = reinterpret_cast <AutomationObject*> (sender()->parent());
-    logInfo << "Automation" << automation->name() << "timer stopped";
+    logInfo << automation << "timer stopped";
     runActions(automation);
 }

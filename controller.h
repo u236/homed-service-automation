@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.4.5"
+#define SERVICE_VERSION     "1.5.0"
 
 #include "automation.h"
 #include "homed.h"
