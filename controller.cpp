@@ -49,20 +49,18 @@ QVariant Controller::parseString(const QString &string)
 
 QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
-    QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{([^\\}]*)\\}\\}");
+    QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}");
     QList <QString> valueList = {"property", "mqtt", "file", "state", "timestamp", "triggerName"};
-    int position = 0;
+    int position;
 
-    while ((position = calculate.indexIn(string, position)) != -1)
+    while ((position = calculate.indexIn(string)) != -1)
     {
         QString item = calculate.cap();
         Expression expression(parseTemplate(item.mid(2, item.length() - 4), trigger).toString());
         string.replace(position, item.length(), QString::number(expression.result(), 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
     }
 
-    position = 0;
-
-    while ((position = replace.indexIn(string, position)) != -1)
+    while ((position = replace.indexIn(string)) != -1)
     {
         QString item = replace.cap(), value;
         QList <QString> itemList = item.mid(2, item.length() - 4).split('|');
