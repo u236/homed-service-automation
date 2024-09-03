@@ -27,7 +27,7 @@ Device Controller::findDevice(const QString &search)
     QList <QString> list = search.split('/');
 
     for (auto it = m_devices.begin(); it != m_devices.end(); it++)
-        if (search.startsWith(it.value()->key()) || search.startsWith(it.value()->topic()) || (it.value()->key().split('/').first() == list.value(0) && it.value()->name() == list.value(1)))
+        if (search == it.value()->key() || search.startsWith(it.value()->key().append('/')) || search == it.value()->topic() || search.startsWith(it.value()->topic().append('/')) || (it.value()->key().split('/').first() == list.value(0) && it.value()->name() == list.value(1)))
             return it.value();
 
     return Device();
@@ -619,7 +619,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             key = QString("%1/%2").arg(type, id);
             topic = QString("%1/%2").arg(service, names ? name : id);
 
-            if (names && m_devices.contains(key) && m_devices.value(key)->topic() != topic)
+            if (m_devices.contains(key) && m_devices.value(key)->topic() != topic)
             {
                 const Device &device = m_devices.value(key);
                 mqttUnsubscribe(mqttTopic("fd/%1").arg(device->topic()));
