@@ -24,13 +24,16 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendMessage(const QString &message, bool silent, const QList <qint64> &chats)
+void Telegram::sendMessage(const QString &message, qint64 thread, bool silent, const QList <qint64> &chats)
 {
     QJsonObject json = {{"text", message}, {"disable_notification", silent}, {"parse_mode", "Markdown"}};
     QList <qint64> list = chats;
 
     if (m_token.isEmpty() || !m_chat)
         return;
+
+    if (thread)
+        json.insert("message_thread_id", thread);
 
     if (list.isEmpty())
         list.append(m_chat);

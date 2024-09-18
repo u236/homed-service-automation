@@ -135,16 +135,19 @@ class TelegramAction : public ActionObject
 
 public:
 
-    TelegramAction(const QString &message, bool silent, const QList <qint64> &chats) :
-        ActionObject(Type::telegram), m_message(message), m_silent(silent), m_chats(chats) {}
+    TelegramAction(const QString &message, qint64 thread, bool silent, const QList <qint64> &chats) :
+        ActionObject(Type::telegram), m_message(message), m_thread(thread), m_silent(silent), m_chats(chats) {}
 
     inline QString message(void) { return m_message; }
+    inline qint64 thread(void) { return m_thread; }
     inline bool silent(void) { return m_silent; }
+
     inline QList <qint64> &chats(void) { return m_chats; }
 
 private:
 
     QString m_message;
+    qint64 m_thread;
     bool m_silent;
 
     QList <qint64> m_chats;
