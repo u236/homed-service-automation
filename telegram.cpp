@@ -24,24 +24,37 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendMessage(const QString &message, qint64 thread, bool silent, const QList <qint64> &chats)
+void Telegram::sendMessage(const QString &message, const QString &photo, qint64 thread, bool silent, const QList <qint64> &chats)
 {
-    QJsonObject json = {{"text", message}, {"disable_notification", silent}, {"parse_mode", "Markdown"}};
     QList <qint64> list = chats;
+    QJsonObject json = {{"disable_notification", silent}, {"parse_mode", "Markdown"}};
+    QString method;
 
     if (m_token.isEmpty() || !m_chat)
         return;
 
+    if (list.isEmpty())
+        list.append(m_chat);
+
     if (thread)
         json.insert("message_thread_id", thread);
 
-    if (list.isEmpty())
-        list.append(m_chat);
+    if (photo.isEmpty())
+    {
+        json.insert("text", message);
+        method = "sendMessage";
+    }
+    else
+    {
+        json.insert("caption", message);
+        json.insert("photo", photo);
+        method = "sendPhoto";
+    }
 
     for (int i = 0; i < list.count(); i++)
     {
         json.insert("chat_id", list.at(i));
-        system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendMessage > /dev/null &").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token).toUtf8().constData());
+        system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/%3 > /dev/null &").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token, method).toUtf8().constData());
     }
 }
 
@@ -71,7 +84,7 @@ void Telegram::finished(int, QProcess::ExitStatus)
 
         if (message.contains("photo"))
         {
-            sendMessage(QString("File ID:\n`%1`").arg(message.value("photo").toArray().last().toObject().value("file_id").toString()), 0, true, {chat});
+            sendMessage(QString("File ID:\n`%1`").arg(message.value("photo").toArray().last().toObject().value("file_id").toString()), QString(), 0, true, {chat});
             continue;
         }
 

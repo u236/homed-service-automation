@@ -436,7 +436,7 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(parseTemplate(action->message(), automation->lastTrigger()).toString(), action->thread(), action->silent(), action->chats());
+                m_telegram->sendMessage(parseTemplate(action->message(), automation->lastTrigger()).toString(), action->photo(), action->thread(), action->silent(), action->chats());
                 break;
             }
 

@@ -369,17 +369,17 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::telegram:
             {
-                QString message = item.value("message").toString().trimmed();
+                QString message = item.value("message").toString().trimmed(), photo = item.value("photo").toString().trimmed();
                 QJsonArray array = item.value("chats").toArray();
                 QList <qint64> chats;
 
-                if (message.isEmpty())
+                if (message.isEmpty() && photo.isEmpty())
                     continue;
 
                 for (auto it = array.begin(); it != array.end(); it++)
                     chats.append(it->toVariant().toLongLong());
 
-                action = Action(new TelegramAction(message, item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
+                action = Action(new TelegramAction(message, photo, item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
                 parseTemplate(message);
                 break;
             }
@@ -454,16 +454,16 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
 {
     QJsonArray array;
 
-    for (int j = 0; j < list.count(); j++)
+    for (int i = 0; i < list.count(); i++)
     {
-        ConditionObject::Type type = list.at(j)->type();
+        ConditionObject::Type type = list.at(i)->type();
         QJsonObject json = {{"type", m_conditionTypes.valueToKey(static_cast <int> (type))}};
 
         switch (type)
         {
             case ConditionObject::Type::property:
             {
-                PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (list.at(j).data());
+                PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (list.at(i).data());
                 json.insert("endpoint", condition->endpoint());
                 json.insert("property", condition->property());
                 json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
@@ -472,7 +472,7 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
 
             case ConditionObject::Type::mqtt:
             {
-                MqttCondition *condition = reinterpret_cast <MqttCondition*> (list.at(j).data());
+                MqttCondition *condition = reinterpret_cast <MqttCondition*> (list.at(i).data());
 
                 json.insert("topic", condition->topic());
                 json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
@@ -485,7 +485,7 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
 
             case ConditionObject::Type::state:
             {
-                StateCondition *condition = reinterpret_cast <StateCondition*> (list.at(j).data());
+                StateCondition *condition = reinterpret_cast <StateCondition*> (list.at(i).data());
                 json.insert("name", condition->name());
                 json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
                 break;
@@ -493,21 +493,21 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
 
             case ConditionObject::Type::date:
             {
-                DateCondition *condition = reinterpret_cast <DateCondition*> (list.at(j).data());
+                DateCondition *condition = reinterpret_cast <DateCondition*> (list.at(i).data());
                 json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
                 break;
             }
 
             case ConditionObject::Type::time:
             {
-                TimeCondition *condition = reinterpret_cast <TimeCondition*> (list.at(j).data());
+                TimeCondition *condition = reinterpret_cast <TimeCondition*> (list.at(i).data());
                 json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
                 break;
             }
 
             case ConditionObject::Type::week:
             {
-                WeekCondition *condition = reinterpret_cast <WeekCondition*> (list.at(j).data());
+                WeekCondition *condition = reinterpret_cast <WeekCondition*> (list.at(i).data());
                 json.insert("days", QJsonValue::fromVariant(condition->value()));
                 break;
             }
@@ -516,7 +516,7 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
             case ConditionObject::Type::OR:
             case ConditionObject::Type::NOT:
             {
-                NestedCondition *condition = reinterpret_cast <NestedCondition*> (list.at(j).data());
+                NestedCondition *condition = reinterpret_cast <NestedCondition*> (list.at(i).data());
                 json.insert("conditions", serializeConditions(condition->conditions()));
                 break;
             }
@@ -532,16 +532,16 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 {
     QJsonArray array;
 
-    for (int j = 0; j < list.count(); j++)
+    for (int i = 0; i < list.count(); i++)
     {
-        ActionObject::Type type = list.at(j)->type();
+        ActionObject::Type type = list.at(i)->type();
         QJsonObject json = {{"type", m_actionTypes.valueToKey(static_cast <int> (type))}};
 
         switch (type)
         {
             case ActionObject::Type::property:
             {
-                PropertyAction *action = reinterpret_cast <PropertyAction*> (list.at(j).data());
+                PropertyAction *action = reinterpret_cast <PropertyAction*> (list.at(i).data());
                 json.insert("endpoint", action->endpoint());
                 json.insert("property", action->property());
                 json.insert(m_actionStatements.valueToKey(static_cast <int> (action->statement())), QJsonValue::fromVariant(action->value()));
@@ -550,7 +550,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
             case ActionObject::Type::mqtt:
             {
-                MqttAction *action = reinterpret_cast <MqttAction*> (list.at(j).data());
+                MqttAction *action = reinterpret_cast <MqttAction*> (list.at(i).data());
                 json.insert("topic", action->topic());
                 json.insert("message", action->message());
                 json.insert("retain", action->retain());
@@ -559,7 +559,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
             case ActionObject::Type::state:
             {
-                StateAction *action = reinterpret_cast <StateAction*> (list.at(j).data());
+                StateAction *action = reinterpret_cast <StateAction*> (list.at(i).data());
                 json.insert("name", action->name());
 
                 if (action->value().isValid())
@@ -570,15 +570,23 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
             case ActionObject::Type::telegram:
             {
-                TelegramAction *action = reinterpret_cast <TelegramAction*> (list.at(j).data());
+                TelegramAction *action = reinterpret_cast <TelegramAction*> (list.at(i).data());
                 QList <QVariant> chats;
 
-                json.insert("message", action->message());
-                json.insert("thread", action->thread());
-                json.insert("silent", action->silent());
+                for (int j = 0; j < action->chats().count(); j++)
+                    chats.append(action->chats().at(j));
 
-                for (int k = 0; k < action->chats().count(); k++)
-                    chats.append(action->chats().at(k));
+                if (!action->message().isEmpty())
+                    json.insert("message", action->message());
+
+                if (!action->photo().isEmpty())
+                    json.insert("photo", action->photo());
+
+                if (action->thread())
+                    json.insert("thread", action->thread());
+
+                if (action->silent())
+                    json.insert("silent", action->silent());
 
                 if (!chats.isEmpty())
                     json.insert("chats", QJsonArray::fromVariantList(chats));
@@ -588,14 +596,14 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
             case ActionObject::Type::shell:
             {
-                ShellAction *action = reinterpret_cast <ShellAction*> (list.at(j).data());
+                ShellAction *action = reinterpret_cast <ShellAction*> (list.at(i).data());
                 json.insert("command", action->command());
                 break;
             }
 
             case ActionObject::Type::condition:
             {
-                ConditionAction *action = reinterpret_cast <ConditionAction*> (list.at(j).data());
+                ConditionAction *action = reinterpret_cast <ConditionAction*> (list.at(i).data());
                 json.insert("conditions", serializeConditions(action->conditions()));
                 json.insert("then", serializeActions(action->actions(true)));
                 json.insert("else", serializeActions(action->actions(false)));
@@ -604,14 +612,14 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
             case ActionObject::Type::delay:
             {
-                DelayAction *action = reinterpret_cast <DelayAction*> (list.at(j).data());
+                DelayAction *action = reinterpret_cast <DelayAction*> (list.at(i).data());
                 json.insert("delay", QJsonValue::fromVariant(action->delay()));
                 break;
             }
         }
 
-        if (!list.at(j)->triggerName().isEmpty())
-            json.insert("triggerName", list.at(j)->triggerName());
+        if (!list.at(i)->triggerName().isEmpty())
+            json.insert("triggerName", list.at(i)->triggerName());
 
         array.append(json);
     }
