@@ -47,17 +47,13 @@ void Telegram::sendMessage(const QString &message, qint64 thread, bool silent, c
 
 void Telegram::getUpdates(void)
 {
+    m_buffer.clear();
     m_process->start("curl", {"-X", "POST", "-H", "Content-Type: application/json", "-d", QJsonDocument(QJsonObject {{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), "-s", QString("https://api.telegram.org/bot%1/getUpdates").arg(m_token)});
 }
 
 void Telegram::finished(int, QProcess::ExitStatus)
 {
-    getUpdates();
-}
-
-void Telegram::readyRead(void)
-{
-    QJsonObject json = QJsonDocument::fromJson(m_process->readAllStandardOutput()).object();
+    QJsonObject json = QJsonDocument::fromJson(m_buffer).object();
     QJsonArray array = json.value("result").toArray();
 
     if (!json.value("ok").toBool())
@@ -69,9 +65,25 @@ void Telegram::readyRead(void)
     for (auto it = array.begin(); it != array.end(); it++)
     {
         QJsonObject item = it->toObject(), message = item.value("message").toObject();
-        emit messageReceived(message.value("text").toString(), message.value("chat").toObject().value("id").toVariant().toLongLong());
+        qint64 chat = message.value("chat").toObject().value("id").toVariant().toLongLong();
+
         m_offset = item.value("update_id").toVariant().toLongLong() + 1;
+
+        if (message.contains("photo"))
+        {
+            sendMessage(QString("File ID:\n`%1`").arg(message.value("photo").toArray().last().toObject().value("file_id").toString()), 0, true, {chat});
+            continue;
+        }
+
+        emit messageReceived(message.value("text").toString(), chat);
     }
+
+    getUpdates();
+}
+
+void Telegram::readyRead(void)
+{
+    m_buffer.append(m_process->readAllStandardOutput());
 }
 
 void Telegram::pollError(void)

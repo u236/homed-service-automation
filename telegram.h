@@ -17,6 +17,7 @@ public:
 
 private:
 
+    QByteArray m_buffer;
     QProcess *m_process;
 
     QString m_token;
