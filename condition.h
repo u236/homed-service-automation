@@ -49,7 +49,7 @@ public:
 
 protected:
 
-    bool match(const QVariant &newValue, Statement statement, const QVariant &value);
+    bool match(const QVariant &value, const QVariant &match, Statement statement);
 
 private:
 
@@ -70,7 +70,7 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    inline bool match(const QVariant &value) {{ return ConditionObject::match(value, m_statement, m_value); }}
+    inline bool match(const QVariant &value, const QVariant &match) {{ return ConditionObject::match(value, match, m_statement); }}
 
 private:
 
@@ -93,7 +93,7 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    inline bool match(const QByteArray &message) {{ return ConditionObject::match(m_property.isEmpty() ? message : QJsonDocument::fromJson(message).object().value(m_property).toVariant(), m_statement, m_value); }}
+    inline bool match(const QByteArray &message, const QVariant &match) {{ return ConditionObject::match(m_property.isEmpty() ? message : QJsonDocument::fromJson(message).object().value(m_property).toVariant(), match, m_statement); }}
 
 private:
 
@@ -115,7 +115,7 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    inline bool match(const QVariant &value) {{ return ConditionObject::match(value, m_statement, m_value); }}
+    inline bool match(const QVariant &value, const QVariant &match) {{ return ConditionObject::match(value, match, m_statement); }}
 
 private:
 

@@ -166,7 +166,7 @@ Automation AutomationList::parse(const QJsonObject &json)
 
 void AutomationList::parseTemplate(const QString &string)
 {
-    QRegExp pattern("\\{\\{([^\\}]*)\\}\\}");
+    QRegExp pattern("\\{\\{[^\\{\\}]*\\}\\}");
     int position = 0;
 
     while ((position = pattern.indexIn(string, position)) != -1)
@@ -205,6 +205,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                         continue;
 
                     list.append(Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    parseTemplate(value.toString());
                     break;
                 }
 
@@ -226,6 +227,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                         continue;
 
                     list.append(Condition(new MqttCondition(topic, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    parseTemplate(value.toString());
                     emit addSubscription(topic);
                     break;
                 }
@@ -248,6 +250,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                         continue;
 
                     list.append(Condition(new StateCondition(name, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    parseTemplate(value.toString());
                     break;
                 }
 

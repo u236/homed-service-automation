@@ -239,7 +239,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 }
             }
 
-            if (!checkConditions(automation->conditions()))
+            if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger))
             {
                 logInfo << automation << "conditions mismatch";
                 continue;
@@ -270,7 +270,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
     }
 }
 
-bool Controller::checkConditions(const QList <Condition> &conditions, ConditionObject::Type type)
+bool Controller::checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const Trigger &trigger)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
@@ -286,7 +286,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
                 const Device &device = findDevice(condition->endpoint());
 
-                if (!device.isNull() && condition->match(device->properties().value(condition->endpoint().split('/').last().toInt()).value(condition->property())))
+                if (!device.isNull() && condition->match(device->properties().value(condition->endpoint().split('/').last().toInt()).value(condition->property()), parseTemplate(condition->value().toString(), trigger)))
                     count++;
 
                 break;
@@ -296,7 +296,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 MqttCondition *condition = reinterpret_cast <MqttCondition*> (item.data());
 
-                if (condition->match(m_topics.value(condition->topic())))
+                if (condition->match(m_topics.value(condition->topic()), parseTemplate(condition->value().toString(), trigger)))
                     count++;
 
                 break;
@@ -306,7 +306,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 StateCondition *condition = reinterpret_cast <StateCondition*> (item.data());
 
-                if (condition->match(m_automations->states().value(condition->name())))
+                if (condition->match(m_automations->states().value(condition->name()), parseTemplate(condition->value().toString(), trigger)))
                     count++;
 
                 break;
@@ -348,7 +348,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 NestedCondition *condition = reinterpret_cast <NestedCondition*> (item.data());
 
-                if (checkConditions(condition->conditions(), condition->type()))
+                if (checkConditions(condition->conditions(), condition->type(), trigger))
                     count++;
 
                 break;
@@ -452,7 +452,7 @@ bool Controller::runActions(AutomationObject *automation)
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
 
                 automation->actionList()->setIndex(++i);
-                automation->setActionList(&action->actions(checkConditions(action->conditions())));
+                automation->setActionList(&action->actions(checkConditions(action->conditions(), ConditionObject::Type::AND, automation->lastTrigger())));
                 automation->actionList()->setIndex(0);
 
                 if (runActions(automation))
