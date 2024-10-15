@@ -650,9 +650,10 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         if (!device.isNull())
         {
             quint8 endpointId = subTopic.split('/').last().toInt();
-            QMap <QString, QVariant> properties = json.toVariantMap(), check = device->properties().value(endpointId);
-            QList <QString> list = {"action", "scene"};
+            QMap <QString, QVariant> properties = device->properties().value(endpointId), check = properties;
+            QList <QString> list = {"action", "event", "scene"};
 
+            properties.insert(json.toVariantMap());
             device->properties().insert(endpointId, properties);
 
             for (auto it = properties.begin(); it != properties.end(); it++)
