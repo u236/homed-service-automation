@@ -650,14 +650,18 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         if (!device.isNull())
         {
             quint8 endpointId = subTopic.split('/').last().toInt();
-            QMap <QString, QVariant> properties = device->properties().value(endpointId), check = properties;
+            QMap <QString, QVariant> data = json.toVariantMap(), properties = device->properties().value(endpointId), check = properties;
             QList <QString> list = {"action", "event", "scene"};
 
-            properties.insert(json.toVariantMap());
+            properties.insert(data);
+
+            for (int i = 0; i < list.count(); i++)
+                properties.remove(list.at(i));
+
             device->properties().insert(endpointId, properties);
 
-            for (auto it = properties.begin(); it != properties.end(); it++)
-                handleTrigger(TriggerObject::Type::property, endpointId ? QString("%1/%2").arg(device->key()).arg(endpointId) : device->key(), it.key(), list.contains(it.key()) ? QVariant() : check.value(it.key()), it.value());
+            for (auto it = data.begin(); it != data.end(); it++)
+                handleTrigger(TriggerObject::Type::property, endpointId ? QString("%1/%2").arg(device->key()).arg(endpointId) : device->key(), it.key(), check.value(it.key()), it.value());
         }
     }
 }
