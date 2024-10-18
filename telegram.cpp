@@ -70,10 +70,7 @@ void Telegram::finished(int, QProcess::ExitStatus)
     QJsonArray array = json.value("result").toArray();
 
     if (!json.value("ok").toBool())
-    {
-        logWarning << "Telegram getUpdates request error, description:" << json.value("description").toString();
-        return;
-    }
+        logWarning << "Telegram getUpdates request error, description:" << (json.contains("description") ? json.value("description").toString() : "(empty)");
 
     for (auto it = array.begin(); it != array.end(); it++)
     {
