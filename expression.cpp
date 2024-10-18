@@ -4,7 +4,7 @@
 
 Expression::Expression(QString string) : m_result(NAN)
 {
-    QRegExp error("([^0-9a-z\\+\\-\\*\\/\\^\\(\\)\\.\\ ])"), number("([0-9]+\\.?[0-9]*)"), negative(QString("(^\\-|[\\+\\-\\*\\/\\^]-)").append(number.pattern())), expression(number.pattern().append("|([()])|([\\+\\-\\*\\/\\^])|(sqrt|log|ln|exp|cosd|cosr|coshd|coshr|acosd|acosr|sind|sinr|sinhd|sinhr|asind|asinr|tgd|tgr|tghd|tghr|atgd|atgr)"));
+    QRegExp error("([^0-9a-z\\+\\-\\*\\/\\^\\(\\)\\.\\ ])"), number("([0-9]+\\.?[0-9]*)"), negative(QString("(^\\-|[\\+\\-\\*\\/\\^]-)").append(number.pattern())), expression(number.pattern().append("|([()])|([\\+\\-\\*\\/\\^])|(round|ceil|floor|sqrt|log|ln|exp|cosd|cosr|coshd|coshr|acosd|acosr|sind|sinr|sinhd|sinhr|asind|asinr|tgd|tgr|tghd|tghr|atgd|atgr)"));
     QVector <Item> items;
     QStack <Item> operationStack;
     QStack <int> priorityStack;
@@ -85,6 +85,9 @@ Expression::Type Expression::itemType(const QString &value)
     if (value == "*")     return Type::Multiply;
     if (value == "/")     return Type::Divide;
     if (value == "^")     return Type::Pow;
+    if (value == "round") return Type::Round;
+    if (value == "ceil")  return Type::Ceil;
+    if (value == "floor") return Type::Floor;
     if (value == "sqrt")  return Type::Sqrt;
     if (value == "log")   return Type::Log;
     if (value == "ln")    return Type::Ln;
@@ -170,6 +173,9 @@ void Expression::calculate(void)
                 case Type::Multiply: result.replace(a, result.at(a) * result.at(b)); items.replace(b, Type::Empty);     break;
                 case Type::Divide:   result.replace(a, result.at(a) / result.at(b)); items.replace(b, Type::Empty);     break;
                 case Type::Pow:      result.replace(a, pow(result.at(a), result.at(b))); items.replace(b, Type::Empty); break;
+                case Type::Round:    result.replace(b, round(result.at(b)));                                            break;
+                case Type::Ceil:     result.replace(b, ceil(result.at(b)));                                             break;
+                case Type::Floor:    result.replace(b, floor(result.at(b)));                                            break;
                 case Type::Sqrt:     result.replace(b, sqrt(result.at(b)));                                             break;
                 case Type::Log:      result.replace(b, log10(result.at(b)));                                            break;
                 case Type::Ln:       result.replace(b, log(result.at(b)));                                              break;
