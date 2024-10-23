@@ -50,7 +50,7 @@ QVariant Controller::parseString(const QString &string)
 QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}");
-    QList <QString> valueList = {"property", "mqtt", "file", "state", "timestamp", "triggerName"};
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "state", "timestamp", "triggerName"};
     int position;
 
     while ((position = calculate.indexIn(string)) != -1)
@@ -67,7 +67,48 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
 
         switch (valueList.lastIndexOf(itemList.value(0).trimmed()))
         {
-            case 0: // property
+            case 0: // colorTemperature
+            {
+                double sunrise = m_sun->sunrise().msecsSinceStartOfDay(), sunset = m_sun->sunset().msecsSinceStartOfDay(), position = 1 - sin(M_PI * (QDateTime::currentDateTime().time().msecsSinceStartOfDay() - sunrise) / (sunset - sunrise));
+                int min = itemList.value(1).toInt(), max = itemList.value(2).toInt();
+
+                if (!min)
+                    min = 153;
+
+                if (!max)
+                    max = 500;
+
+                value = QString::number(round(position < 1 ? min + (max - min) * position : max));
+                break;
+            }
+
+            case 1: // file
+            {
+                QFile file(itemList.value(1).trimmed());
+
+                if (file.open(QFile::ReadOnly | QFile::Text))
+                {
+                    value = QString(file.readAll());
+                    file.close();
+                }
+
+                break;
+            }
+
+            case 2: // mqtt
+            {
+                auto it = m_topics.find(itemList.value(1).trimmed());
+
+                if (it != m_topics.end())
+                {
+                    QString property = itemList.value(2).trimmed();
+                    value = property.isEmpty() ? it.value() : QJsonDocument::fromJson(it.value()).object().value(property).toVariant().toString();
+                }
+
+                break;
+            }
+
+            case 3: // property
             {
                 QString endpoint = itemList.value(1).trimmed();
                 const Device &device = findDevice(endpoint);
@@ -107,46 +148,20 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                 break;
             }
 
-            case 1: // mqtt
-            {
-                auto it = m_topics.find(itemList.value(1).trimmed());
-
-                if (it != m_topics.end())
-                {
-                    QString property = itemList.value(2).trimmed();
-                    value = property.isEmpty() ? it.value() : QJsonDocument::fromJson(it.value()).object().value(property).toVariant().toString();
-                }
-
-                break;
-            }
-
-            case 2: // file
-            {
-                QFile file(itemList.value(1).trimmed());
-
-                if (file.open(QFile::ReadOnly | QFile::Text))
-                {
-                    value = QString(file.readAll());
-                    file.close();
-                }
-
-                break;
-            }
-
-            case 3: // state
+            case 4: // state
             {
                 value = m_automations->states().value(itemList.value(1).trimmed()).toString();
                 break;
             }
 
-            case 4: // timestamp
+            case 5: // timestamp
             {
                 QString format = itemList.value(1).trimmed();
                 value = format.isEmpty() ? QString::number(QDateTime::currentSecsSinceEpoch()) : QDateTime::currentDateTime().toString(format);
                 break;
             }
 
-            case 5: // triggerName
+            case 6: // triggerName
             {
                 value = trigger->name();
                 break;
