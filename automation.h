@@ -32,6 +32,7 @@ public:
 
     inline QString topic(void) { return m_topic; }
     inline void setTopic(const QString &value) { m_topic = value; }
+    inline void clearTopic(void) { m_topic.clear(); }
 
     inline QString name(void) { return m_name; }
     inline void setName(const QString &value) { m_name = value; }
