@@ -33,6 +33,16 @@ Device Controller::findDevice(const QString &search)
     return Device();
 }
 
+quint8 Controller::getEndpointId(const QString &endpoint)
+{
+    QList <QString> list = endpoint.split('/');
+
+    if (list.count() > 2)
+        return static_cast <quint8> (list.last().toInt());
+
+    return 0;
+}
+
 QVariant Controller::parseString(const QString &string)
 {
     bool check;
@@ -121,7 +131,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                     quint8 endpointId = static_cast <quint8> (list.last().toInt());
 
                     if (!endpointId)
-                        endpointId = static_cast <quint8> (endpoint.split('/').last().toInt());
+                        endpointId = getEndpointId(endpoint);
                     else
                         list.removeLast();
 
@@ -301,7 +311,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
                 const Device &device = findDevice(condition->endpoint());
 
-                if (!device.isNull() && condition->match(device->properties().value(condition->endpoint().split('/').last().toInt()).value(condition->property()), parseTemplate(condition->value().toString(), trigger)))
+                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), parseTemplate(condition->value().toString(), trigger)))
                     count++;
 
                 break;
@@ -398,7 +408,7 @@ bool Controller::runActions(AutomationObject *automation)
 
                  if (!device.isNull())
                  {
-                     quint8 endpointId = static_cast <quint8> (action->endpoint().split('/').last().toInt());
+                     quint8 endpointId = getEndpointId(action->endpoint());
                      QVariant value = action->value(device->properties().value(endpointId).value(action->property()));
                      QString string;
 
@@ -692,11 +702,12 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     }
     else if (subTopic.startsWith("fd/"))
     {
-        const Device &device = findDevice(subTopic.mid(subTopic.indexOf('/') + 1));
+        QString endpoint = subTopic.mid(subTopic.indexOf('/') + 1);
+        const Device &device = findDevice(endpoint);
 
         if (!device.isNull())
         {
-            quint8 endpointId = subTopic.split('/').last().toInt();
+            quint8 endpointId = getEndpointId(endpoint);
             QMap <QString, QVariant> data = json.toVariantMap(), properties = device->properties().value(endpointId), check = properties;
             QList <QString> list = {"action", "event", "scene"};
 

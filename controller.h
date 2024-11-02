@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.5.6"
+#define SERVICE_VERSION     "1.5.7"
 
 #include "automation.h"
 #include "homed.h"
@@ -50,6 +50,7 @@ private:
     QMap <QString, QByteArray> m_topics;
 
     Device findDevice(const QString &search);
+    quint8 getEndpointId(const QString &endpoint);
 
     QVariant parseString(const QString &string);
     QVariant parseTemplate(QString string, const Trigger &trigger);
