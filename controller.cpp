@@ -150,7 +150,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                         if (it.key().compare(property, Qt::CaseInsensitive))
                             continue;
 
-                        value = it.value().toString();
+                        value = it.value().type() == QVariant::List ? it.value().toStringList().join(',') : it.value().toString();
                         break;
                     }
                 }
