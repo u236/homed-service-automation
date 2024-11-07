@@ -1,9 +1,8 @@
 #ifndef TRIGGER_H
 #define TRIGGER_H
 
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QSharedPointer>
+#include "json.h"
 #include "sun.h"
 
 class TriggerObject;
@@ -100,7 +99,7 @@ private:
     Statement m_statement;
     QVariant m_value;
 
-    inline QVariant parse(const QByteArray &message) { return m_property.isEmpty() ? message : QJsonDocument::fromJson(message).object().value(m_property).toVariant(); }
+    inline QVariant parse(const QByteArray &message) { return m_property.isEmpty() ? message : JSON::getValue(QJsonDocument::fromJson(message).object(), m_property); }
 
 };
 

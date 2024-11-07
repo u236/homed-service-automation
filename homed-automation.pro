@@ -7,6 +7,7 @@ HEADERS += \
     condition.h \
     controller.h \
     expression.h \
+    json.h \
     telegram.h \
     trigger.h
 
@@ -16,5 +17,6 @@ SOURCES += \
     condition.cpp \
     controller.cpp \
     expression.cpp \
+    json.cpp \
     telegram.cpp \
     trigger.cpp

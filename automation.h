@@ -4,9 +4,6 @@
 #define STORE_DATABASE_DELAY    20
 
 #include <QFile>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QMetaEnum>
 #include <QSettings>
 #include <QTimer>

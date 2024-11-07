@@ -112,7 +112,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                 if (it != m_topics.end())
                 {
                     QString property = itemList.value(2).trimmed();
-                    value = property.isEmpty() ? it.value() : QJsonDocument::fromJson(it.value()).object().value(property).toVariant().toString();
+                    value = property.isEmpty() ? it.value() : JSON::getValue(QJsonDocument::fromJson(it.value()).object(), property).toString();
                 }
 
                 break;
