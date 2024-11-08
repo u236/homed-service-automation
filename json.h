@@ -10,7 +10,7 @@ class JSON
 
 public:
 
-    static QVariant getValue(const QJsonObject &json, const QString &search);
+    static QVariant getValue(const QJsonObject &json, const QString &path);
 
 };
 

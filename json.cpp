@@ -1,8 +1,8 @@
 #include "json.h"
 
-QVariant JSON::getValue(const QJsonObject &json, const QString &search)
+QVariant JSON::getValue(const QJsonObject &json, const QString &path)
 {
-    QList <QString> list = search.split('.');
+    QList <QString> list = path.split('.');
     QJsonObject object = json;
 
     for (int i = 0; i < list.count(); i++)
