@@ -468,7 +468,8 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                system(QString("sh -c \"%1\" > /dev/null &").arg(parseTemplate(action->command(), automation->lastTrigger()).toString()).toUtf8().constData());
+                QString command = parseTemplate(action->command(), automation->lastTrigger()).toString();
+                system(action->command().startsWith("#!") ? command.toUtf8() : QString("sh -c \"%1\" > /dev/null &").arg(command.replace("\"","\\\"")).toUtf8());
                 break;
             }
 
