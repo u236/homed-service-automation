@@ -4,7 +4,7 @@
 
 Expression::Expression(QString string) : m_result(NAN)
 {
-    QRegExp error("([^0-9a-z\\+\\-\\*\\/\\^\\(\\)\\.\\ ])"), number("([0-9]+\\.?[0-9]*)"), negative(QString("(^\\-|[\\+\\-\\*\\/\\^]-)").append(number.pattern())), expression(number.pattern().append("|([()])|([\\+\\-\\*\\/\\^])|(round|ceil|floor|sqrt|log|ln|exp|cosd|cosr|coshd|coshr|acosd|acosr|sind|sinr|sinhd|sinhr|asind|asinr|tgd|tgr|tghd|tghr|atgd|atgr)"));
+    QRegExp error("([^0-9a-z\\+\\-\\*\\/\\^\\(\\)\\.\\ ])"), number("([0-9]+\\.?[0-9]*)"), negative(QString("(^\\-|[\\+\\-\\*\\/\\^\\(]-)").append(number.pattern())), expression(number.pattern().append("|([()])|([\\+\\-\\*\\/\\^])|(round|ceil|floor|sqrt|log|ln|exp|cosd|cosr|coshd|coshr|acosd|acosr|sind|sinr|sinhd|sinhr|asind|asinr|tgd|tgr|tghd|tghr|atgd|atgr)"));
     QVector <Item> items;
     QStack <Item> operationStack;
     QStack <int> priorityStack;
