@@ -155,6 +155,9 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
                     }
                 }
 
+                if (value.isEmpty())
+                    value = itemList.value(3).trimmed();
+
                 break;
             }
 

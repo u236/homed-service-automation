@@ -24,6 +24,7 @@ private:
         Subtract,
         Multiply,
         Divide,
+        Remainder,
         Pow,
         Round,
         Ceil,
@@ -49,7 +50,8 @@ private:
         Tghd,
         Tghr,
         ATgr,
-        ATgd
+        ATgd,
+        Random
     };
 
     struct Item
