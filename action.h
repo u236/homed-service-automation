@@ -135,11 +135,12 @@ class TelegramAction : public ActionObject
 
 public:
 
-    TelegramAction(const QString &message, const QString &photo, qint64 thread, bool silent, const QList <qint64> &chats) :
-        ActionObject(Type::telegram), m_message(message), m_photo(photo), m_thread(thread), m_silent(silent), m_chats(chats) {}
+    TelegramAction(const QString &message, const QString &photo, const QString &keyboard, qint64 thread, bool silent, const QList <qint64> &chats) :
+        ActionObject(Type::telegram), m_message(message), m_photo(photo), m_keyboard(keyboard), m_thread(thread), m_silent(silent), m_chats(chats) {}
 
     inline QString message(void) { return m_message; }
     inline QString photo(void) { return m_photo; }
+    inline QString keyboard(void) { return m_keyboard; }
     inline qint64 thread(void) { return m_thread; }
     inline bool silent(void) { return m_silent; }
 
@@ -147,7 +148,7 @@ public:
 
 private:
 
-    QString m_message, m_photo;
+    QString m_message, m_photo, m_keyboard;
     qint64 m_thread;
     bool m_silent;
 

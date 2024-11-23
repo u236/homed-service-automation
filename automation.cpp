@@ -382,7 +382,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 for (auto it = array.begin(); it != array.end(); it++)
                     chats.append(it->toVariant().toLongLong());
 
-                action = Action(new TelegramAction(message, photo, item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
+                action = Action(new TelegramAction(message, photo, item.value("keyboard").toString().trimmed(), item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
                 parseTemplate(message);
                 break;
             }
@@ -584,6 +584,9 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
                 if (!action->photo().isEmpty())
                     json.insert("photo", action->photo());
+
+                if (!action->keyboard().isEmpty())
+                    json.insert("keyboard", action->keyboard());
 
                 if (action->thread())
                     json.insert("thread", action->thread());

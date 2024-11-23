@@ -24,7 +24,7 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendMessage(const QString &message, const QString &photo, qint64 thread, bool silent, const QList <qint64> &chats)
+void Telegram::sendMessage(const QString &message, const QString &photo, const QString &keyboard, qint64 thread, bool silent, const QList <qint64> &chats)
 {
     QList <qint64> list = chats;
     QJsonObject json = {{"disable_notification", silent}, {"parse_mode", "Markdown"}};
@@ -51,6 +51,28 @@ void Telegram::sendMessage(const QString &message, const QString &photo, qint64 
         method = "sendPhoto";
     }
 
+    if (!keyboard.isEmpty())
+    {
+        QList <QString> lines = keyboard.split('\n');
+        QJsonArray array;
+
+        for (int i = 0; i < lines.length(); i++)
+        {
+            QList <QString> items = lines.at(i).split(',');
+            QJsonArray line;
+
+            for (int j = 0; j < items.length(); j++)
+            {
+                QList <QString> item = items.at(j).split(':');
+                line.append(QJsonObject{{"text", item.value(0).trimmed()}, {"callback_data", item.value(item.length() > 1 ? 1 : 0).trimmed()}});
+            }
+
+            array.append(line);
+        }
+
+        json.insert("reply_markup", QJsonObject {{"inline_keyboard", array}, {"one_time_keyboard",true}});
+    }
+
     for (int i = 0; i < list.count(); i++)
     {
         json.insert("chat_id", list.at(i));
@@ -74,18 +96,22 @@ void Telegram::finished(int, QProcess::ExitStatus)
 
     for (auto it = array.begin(); it != array.end(); it++)
     {
-        QJsonObject item = it->toObject(), message = item.value("message").toObject();
-        qint64 chat = message.value("chat").toObject().value("id").toVariant().toLongLong();
+        QJsonObject item = it->toObject(), data;
+        qint64 chat;
+        bool check = item.contains("message");
 
         m_offset = item.value("update_id").toVariant().toLongLong() + 1;
 
-        if (message.contains("photo"))
+        data = item.value(check ? "message" : "callback_query").toObject();
+        chat = check ? data.value("chat").toObject().value("id").toVariant().toLongLong() : data.value("message").toObject().value("chat").toObject().value("id").toVariant().toLongLong();
+
+        if (check && data.contains("photo"))
         {
-            sendMessage(QString("File ID:\n`%1`").arg(message.value("photo").toArray().last().toObject().value("file_id").toString()), QString(), 0, true, {chat});
+            sendMessage(QString("File ID:\n`%1`").arg(data.value("photo").toArray().last().toObject().value("file_id").toString()), QString(), QString(), 0, true, {chat});
             continue;
         }
 
-        emit messageReceived(message.value("text").toString(), chat);
+        emit messageReceived(data.value(check ? "text" : "data").toString(), chat);
     }
 
     getUpdates();
