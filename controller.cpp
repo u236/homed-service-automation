@@ -451,7 +451,7 @@ bool Controller::runActions(AutomationObject *automation)
                 QVariant check = m_automations->states().value(action->name());
 
                 if (action->value().isValid() && !action->value().isNull())
-                    m_automations->states().insert(action->name(), action->value().type() == QVariant::String ? parseTemplate(action->value().toString(), automation->lastTrigger()) : action->value());
+                    m_automations->states().insert(action->name(), parseTemplate(action->value().toString(), automation->lastTrigger()));
                 else
                     m_automations->states().remove(action->name());
 
@@ -499,7 +499,7 @@ bool Controller::runActions(AutomationObject *automation)
                 automation->actionList()->setIndex(++i);
 
                 logInfo << automation << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
-                automation->timer()->start(action->delay() * 1000);
+                automation->timer()->start(parseTemplate(action->value().toString(), automation->lastTrigger()).toInt() * 1000);
                 return false;
             }
         }

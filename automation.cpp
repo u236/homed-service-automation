@@ -410,12 +410,12 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::delay:
             {
-                quint32 delay = static_cast <quint32> (item.value("delay").toInt());
+                QVariant value = item.value("delay").toVariant();
 
-                if (!delay)
+                if (!value.isValid())
                     continue;
 
-                action = Action(new DelayAction(delay));
+                action = Action(new DelayAction(value));
                 break;
             }
         }
@@ -619,7 +619,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
             case ActionObject::Type::delay:
             {
                 DelayAction *action = reinterpret_cast <DelayAction*> (list.at(i).data());
-                json.insert("delay", QJsonValue::fromVariant(action->delay()));
+                json.insert("delay", QJsonValue::fromVariant(action->value()));
                 break;
             }
         }

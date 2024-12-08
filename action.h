@@ -194,14 +194,14 @@ class DelayAction : public ActionObject
 
 public:
 
-    DelayAction(quint32 delay) :
-        ActionObject(Type::delay), m_delay(delay) {}
+    DelayAction(const QVariant &value) :
+        ActionObject(Type::delay), m_value(value) {}
 
-    inline quint32 delay(void) { return m_delay; }
+    inline QVariant value(void) { return m_value; }
 
 private:
 
-    quint32 m_delay;
+    QVariant m_value;
 
 };
 
