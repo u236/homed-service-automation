@@ -23,15 +23,15 @@ bool DateCondition::match(const QDate &value)
 {
     switch (m_statement)
     {
-        case Statement::equals:  return value == QDate::fromString(m_value.toString(), "dd.MM");
-        case Statement::differs: return value != QDate::fromString(m_value.toString(), "dd.MM");
-        case Statement::above:   return value >= QDate::fromString(m_value.toString(), "dd.MM");
-        case Statement::below:   return value <= QDate::fromString(m_value.toString(), "dd.MM");
+        case Statement::equals:  return value == QDate::fromString(m_value.toString(), "d.M");
+        case Statement::differs: return value != QDate::fromString(m_value.toString(), "d.M");
+        case Statement::above:   return value >= QDate::fromString(m_value.toString(), "d.M");
+        case Statement::below:   return value <= QDate::fromString(m_value.toString(), "d.M");
 
         case Statement::between:
         {
             QList <QVariant> list = m_value.toList();
-            QDate start = QDate::fromString(list.value(0).toString(), "dd.MM"), end = QDate::fromString(list.value(1).toString(), "dd.MM");
+            QDate start = QDate::fromString(list.value(0).toString(), "d.M"), end = QDate::fromString(list.value(1).toString(), "d.M");
             return start > end ? value >= start || value <= end : value >= start && value <= end;
         }
     }
