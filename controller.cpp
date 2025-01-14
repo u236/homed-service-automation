@@ -615,6 +615,14 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
                 break;
             }
+
+            case Command::removeState:
+            {
+                if (m_automations->states().remove(json.value("state").toString()))
+                    m_automations->store(true);
+
+                break;
+            }
         }
     }
     else if (subTopic.startsWith("service/"))

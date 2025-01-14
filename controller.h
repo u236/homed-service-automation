@@ -20,7 +20,8 @@ public:
     {
         restartService,
         updateAutomation,
-        removeAutomation
+        removeAutomation,
+        removeState
     };
 
     enum class Event
