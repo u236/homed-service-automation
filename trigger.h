@@ -114,7 +114,7 @@ public:
     inline QString message(void) { return m_message; }
     inline QList <qint64> &chats(void) { return m_chats; }
 
-    inline bool match(const QString &message, qint64 chat) { return message == m_message && m_chats.contains(chat); }
+    inline bool match(const QString &message, qint64 chat) { return message.toLower() == m_message.toLower() && m_chats.contains(chat); }
 
 private:
 
