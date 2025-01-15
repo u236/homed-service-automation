@@ -60,7 +60,7 @@ QVariant Controller::parseString(const QString &string)
 QVariant Controller::parsePattern(QString string, const Trigger &trigger)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "state", "timestamp", "triggerName"};
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "timestamp", "triggerName"};
     int position;
 
     while ((position = calculate.indexIn(string)) != -1)
@@ -161,20 +161,26 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger)
                 break;
             }
 
-            case 4: // state
+            case 4: // shellOutput
+            {
+                value = reinterpret_cast <AutomationObject*> (trigger->parent())->shellOutput();
+                break;
+            }
+
+            case 5: // state
             {
                 value = m_automations->states().value(itemList.value(1).trimmed()).toString();
                 break;
             }
 
-            case 5: // timestamp
+            case 6: // timestamp
             {
                 QString format = itemList.value(1).trimmed();
                 value = format.isEmpty() ? QString::number(QDateTime::currentSecsSinceEpoch()) : QDateTime::currentDateTime().toString(format);
                 break;
             }
 
-            case 6: // triggerName
+            case 7: // triggerName
             {
                 value = trigger->name();
                 break;
@@ -481,8 +487,20 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                QString command = parsePattern(action->command(), automation->lastTrigger()).toString();
-                system(action->command().startsWith("#!") ? command.toUtf8() : QString("sh -c \"%1\" > /dev/null &").arg(command.replace("\"","\\\"")).toUtf8());
+                FILE *file = popen(parsePattern(action->command(), automation->lastTrigger()).toString().append(0x20).append("2>&1").toUtf8().constData(), "r");
+                char buffer[32];
+                QByteArray data;
+
+                if (!file)
+                    break;
+
+                memset(buffer, 0, sizeof(buffer));
+
+                while (fgets(buffer, sizeof(buffer), file))
+                    data.append(buffer, strlen(buffer));
+
+                automation->setShellOutput(data.trimmed());
+                pclose(file);
                 break;
             }
 

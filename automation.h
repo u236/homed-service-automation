@@ -70,6 +70,9 @@ public:
     inline ActionList *actionList(void) { return m_actionList; }
     inline void setActionList(ActionList *value) { m_actionList = value; }
 
+    inline QString shellOutput(void) { return m_shellOutput; }
+    inline void setShellOutput(const QString &value) { m_shellOutput = value; }
+
     inline QList <Trigger> &triggers(void) { return m_triggers; }
     inline QList <Condition> &conditions(void) { return m_conditions; }
     inline ActionList &actions(void) { return m_actions; }
@@ -86,7 +89,9 @@ private:
 
     QWeakPointer <TriggerObject> m_lastTrigger;
     qint64 m_lastTriggered;
+
     ActionList *m_actionList;
+    QString m_shellOutput;
 
     QList <Trigger> m_triggers;
     QList <Condition> m_conditions;
