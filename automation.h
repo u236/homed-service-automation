@@ -142,6 +142,6 @@ signals:
 
 };
 
-inline QDebug operator << (QDebug debug, const Automation &automation) { return debug << "Automation" << automation->name(); }
+inline QDebug operator << (QDebug debug, const Automation &automation) { return debug << "automation" << automation->name(); }
 
 #endif
