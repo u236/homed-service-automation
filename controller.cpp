@@ -57,7 +57,7 @@ QVariant Controller::parseString(const QString &string)
     return string == "true" ? true : false;
 }
 
-QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
+QVariant Controller::parsePattern(QString string, const Trigger &trigger)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}");
     QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "state", "timestamp", "triggerName"};
@@ -66,7 +66,7 @@ QVariant Controller::parseTemplate(QString string, const Trigger &trigger)
     while ((position = calculate.indexIn(string)) != -1)
     {
         QString item = calculate.cap();
-        Expression expression(parseTemplate(item.mid(2, item.length() - 4), trigger).toString());
+        Expression expression(parsePattern(item.mid(2, item.length() - 4), trigger).toString());
         string.replace(position, item.length(), QString::number(expression.result(), 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
     }
 
@@ -314,7 +314,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
                 const Device &device = findDevice(condition->endpoint());
 
-                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), parseTemplate(condition->value().toString(), trigger)))
+                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), parsePattern(condition->value().toString(), trigger)))
                     count++;
 
                 break;
@@ -324,7 +324,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 MqttCondition *condition = reinterpret_cast <MqttCondition*> (item.data());
 
-                if (condition->match(m_topics.value(condition->topic()), parseTemplate(condition->value().toString(), trigger)))
+                if (condition->match(m_topics.value(condition->topic()), parsePattern(condition->value().toString(), trigger)))
                     count++;
 
                 break;
@@ -334,7 +334,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 StateCondition *condition = reinterpret_cast <StateCondition*> (item.data());
 
-                if (condition->match(m_automations->states().value(condition->name()), parseTemplate(condition->value().toString(), trigger)))
+                if (condition->match(m_automations->states().value(condition->name()), parsePattern(condition->value().toString(), trigger)))
                     count++;
 
                 break;
@@ -417,7 +417,7 @@ bool Controller::runActions(AutomationObject *automation)
 
                      if (value.type() == QVariant::String)
                      {
-                         value = parseTemplate(value.toString(), automation->lastTrigger());
+                         value = parsePattern(value.toString(), automation->lastTrigger());
                          string = value.toString();
                      }
 
@@ -441,7 +441,7 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), parseTemplate(action->message(), automation->lastTrigger()).toString(), action->retain());
+                mqttPublishString(action->topic(), parsePattern(action->message(), automation->lastTrigger()).toString(), action->retain());
                 break;
             }
 
@@ -451,7 +451,7 @@ bool Controller::runActions(AutomationObject *automation)
                 QVariant check = m_automations->states().value(action->name());
 
                 if (action->value().isValid() && !action->value().isNull())
-                    m_automations->states().insert(action->name(), parseTemplate(action->value().toString(), automation->lastTrigger()));
+                    m_automations->states().insert(action->name(), parsePattern(action->value().toString(), automation->lastTrigger()));
                 else
                     m_automations->states().remove(action->name());
 
@@ -464,14 +464,14 @@ bool Controller::runActions(AutomationObject *automation)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                m_telegram->sendMessage(parseTemplate(action->message(), automation->lastTrigger()).toString(), action->photo(), action->keyboard(), action->thread(), action->silent(), action->chats());
+                m_telegram->sendMessage(parsePattern(action->message(), automation->lastTrigger()).toString(), action->photo(), action->keyboard(), action->thread(), action->silent(), action->chats());
                 break;
             }
 
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                QString command = parseTemplate(action->command(), automation->lastTrigger()).toString();
+                QString command = parsePattern(action->command(), automation->lastTrigger()).toString();
                 system(action->command().startsWith("#!") ? command.toUtf8() : QString("sh -c \"%1\" > /dev/null &").arg(command.replace("\"","\\\"")).toUtf8());
                 break;
             }
@@ -499,7 +499,7 @@ bool Controller::runActions(AutomationObject *automation)
                 automation->actionList()->setIndex(++i);
 
                 logInfo << automation << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
-                automation->timer()->start(parseTemplate(action->value().toString(), automation->lastTrigger()).toInt() * 1000);
+                automation->timer()->start(parsePattern(action->value().toString(), automation->lastTrigger()).toInt() * 1000);
                 return false;
             }
         }

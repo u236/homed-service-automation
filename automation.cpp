@@ -164,7 +164,7 @@ Automation AutomationList::parse(const QJsonObject &json)
     return automation;
 }
 
-void AutomationList::parseTemplate(const QString &string)
+void AutomationList::parsePattern(const QString &string)
 {
     QRegExp pattern("\\{\\{[^\\{\\}]*\\}\\}");
     int position = 0;
@@ -205,7 +205,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                         continue;
 
                     list.append(Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                    parseTemplate(value.toString());
+                    parsePattern(value.toString());
                     break;
                 }
 
@@ -227,7 +227,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                         continue;
 
                     list.append(Condition(new MqttCondition(topic, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                    parseTemplate(value.toString());
+                    parsePattern(value.toString());
                     emit addSubscription(topic);
                     break;
                 }
@@ -250,7 +250,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                         continue;
 
                     list.append(Condition(new StateCondition(name, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
-                    parseTemplate(value.toString());
+                    parsePattern(value.toString());
                     break;
                 }
 
@@ -338,7 +338,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                         continue;
 
                     action = Action(new PropertyAction(endpoint, property, static_cast <ActionObject::Statement> (m_actionStatements.value(i)), value));
-                    parseTemplate(value.toString());
+                    parsePattern(value.toString());
                     break;
                 }
 
@@ -353,7 +353,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                     continue;
 
                 action = Action(new MqttAction(topic, message, item.value("retain").toBool()));
-                parseTemplate(message);
+                parsePattern(message);
                 break;
             }
 
@@ -366,7 +366,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                     continue;
 
                 action = Action(new StateAction(name, value));
-                parseTemplate(value.toString());
+                parsePattern(value.toString());
                 break;
             }
 
@@ -383,7 +383,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                     chats.append(it->toVariant().toLongLong());
 
                 action = Action(new TelegramAction(message, photo, item.value("keyboard").toString().trimmed(), item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
-                parseTemplate(message);
+                parsePattern(message);
                 break;
             }
 
@@ -395,7 +395,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                     continue;
 
                 action = Action(new ShellAction(command));
-                parseTemplate(command);
+                parsePattern(command);
                 break;
             }
 

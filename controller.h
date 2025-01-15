@@ -54,7 +54,7 @@ private:
     quint8 getEndpointId(const QString &endpoint);
 
     QVariant parseString(const QString &string);
-    QVariant parseTemplate(QString string, const Trigger &trigger);
+    QVariant parsePattern(QString string, const Trigger &trigger);
 
     void updateSun(void);
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());

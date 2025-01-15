@@ -122,7 +122,7 @@ private:
 
     QMap <QString, QVariant> m_states;
 
-    void parseTemplate(const QString &string);
+    void parsePattern(const QString &string);
     void unserializeConditions(QList <Condition> &list, const QJsonArray &conditions);
     void unserializeActions(ActionList &list, const QJsonArray &actions);
     void unserialize(const QJsonArray &automations);
