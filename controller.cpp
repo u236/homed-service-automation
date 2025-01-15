@@ -370,6 +370,16 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
                 break;
             }
 
+            case ConditionObject::Type::pattern:
+            {
+                PatternCondition *condition = reinterpret_cast <PatternCondition*> (item.data());
+
+                if (condition->match(parsePattern(condition->pattern(), trigger), parsePattern(condition->value().toString(), trigger)))
+                    count++;
+
+                break;
+            }
+
             case ConditionObject::Type::AND:
             case ConditionObject::Type::OR:
             case ConditionObject::Type::NOT:

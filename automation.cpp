@@ -151,7 +151,9 @@ Automation AutomationList::parse(const QJsonObject &json)
         if (trigger.isNull())
             continue;
 
+        trigger->setParent(automation.data());
         trigger->setName(item.value("name").toString().trimmed());
+
         automation->triggers().append(trigger);
     }
 
@@ -297,6 +299,29 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                     continue;
 
                 list.append(Condition(new WeekCondition(value)));
+                break;
+            }
+
+            case ConditionObject::Type::pattern:
+            {
+                QString pattern = item.value("pattern").toString().trimmed();
+
+                if (pattern.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_conditionStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_conditionStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    list.append(Condition(new PatternCondition(pattern, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    parsePattern(pattern);
+                    parsePattern(value.toString());
+                    break;
+                }
+
                 break;
             }
 
@@ -512,6 +537,14 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
             {
                 WeekCondition *condition = reinterpret_cast <WeekCondition*> (list.at(i).data());
                 json.insert("days", QJsonValue::fromVariant(condition->value()));
+                break;
+            }
+
+            case ConditionObject::Type::pattern:
+            {
+                PatternCondition *condition = reinterpret_cast <PatternCondition*> (list.at(i).data());
+                json.insert("pattern", condition->pattern());
+                json.insert(m_conditionStatements.valueToKey(static_cast <int> (condition->statement())), QJsonValue::fromVariant(condition->value()));
                 break;
             }
 

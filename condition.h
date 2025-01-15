@@ -24,6 +24,7 @@ public:
         date,
         time,
         week,
+        pattern,
         AND,
         OR,
         NOT
@@ -92,7 +93,7 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    inline bool match(const QByteArray &message, const QVariant &match) {{ return ConditionObject::match(m_property.isEmpty() ? message : JSON::getValue(QJsonDocument::fromJson(message).object(), m_property), match, m_statement); }}
+    inline bool match(const QByteArray &value, const QVariant &match) {{ return ConditionObject::match(m_property.isEmpty() ? value : JSON::getValue(QJsonDocument::fromJson(value).object(), m_property), match, m_statement); }}
 
 private:
 
@@ -177,6 +178,28 @@ public:
 
 private:
 
+    QVariant m_value;
+
+};
+
+class PatternCondition : public ConditionObject
+{
+
+public:
+
+    PatternCondition(const QString &pattern, Statement statement, const QVariant &value) :
+        ConditionObject(Type::pattern), m_pattern(pattern), m_statement(statement), m_value(value) {}
+
+    inline QString pattern(void) { return m_pattern; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
+
+    inline bool match(const QVariant &value, const QVariant &match) {{ return ConditionObject::match(value, match, m_statement); }}
+
+private:
+
+    QString m_pattern;
+    Statement m_statement;
     QVariant m_value;
 
 };
