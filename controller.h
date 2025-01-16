@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.5.12"
+#define SERVICE_VERSION     "1.6.0"
 
 #include "automation.h"
 #include "homed.h"
@@ -13,8 +13,6 @@ class Controller : public HOMEd
     Q_OBJECT
 
 public:
-
-    Controller(const QString &configFile);
 
     enum class Command
     {
@@ -32,6 +30,8 @@ public:
         updated,
         removed
     };
+
+    Controller(const QString &configFile);
 
     Q_ENUM(Command)
     Q_ENUM(Event)
