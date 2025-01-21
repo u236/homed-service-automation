@@ -27,7 +27,7 @@ Device Controller::findDevice(const QString &search)
     QList <QString> list = search.split('/');
 
     for (auto it = m_devices.begin(); it != m_devices.end(); it++)
-        if (search == it.value()->key() || search.startsWith(it.value()->key().append('/')) || search == it.value()->topic() || search.startsWith(it.value()->topic().append('/')) || (it.value()->key().split('/').first() == list.value(0) && it.value()->name() == list.value(1)))
+        if (search == it.value()->key() || search.startsWith(it.value()->key().append('/')) || search == it.value()->topic() || search.startsWith(it.value()->topic().append('/')) || (it.value()->key().split('/').first() == list.value(0).toLower().trimmed() && it.value()->name().toLower() == list.value(1).toLower().trimmed()))
             return it.value();
 
     return Device();
@@ -75,7 +75,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger)
         QString item = replace.cap(), value;
         QList <QString> itemList = item.mid(2, item.length() - 4).split('|');
 
-        switch (valueList.lastIndexOf(itemList.value(0).trimmed()))
+        switch (valueList.indexOf(itemList.value(0).trimmed()))
         {
             case 0: // colorTemperature
             {
@@ -187,7 +187,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger)
             }
         }
 
-        string.replace(position, item.length(), value);
+        string.replace(position, item.length(), value.isEmpty() ? "_NULL_" : value);
     }
 
     return parseString(string);
