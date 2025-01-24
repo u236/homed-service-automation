@@ -397,17 +397,17 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::telegram:
             {
-                QString message = item.value("message").toString().trimmed(), photo = item.value("photo").toString().trimmed();
+                QString message = item.value("message").toString().trimmed(), file = item.value("file").toString().trimmed(), photo = item.value("photo").toString().trimmed();
                 QJsonArray array = item.value("chats").toArray();
                 QList <qint64> chats;
 
-                if (message.isEmpty() && photo.isEmpty())
+                if (message.isEmpty() && file.isEmpty() && photo.isEmpty())
                     continue;
 
                 for (auto it = array.begin(); it != array.end(); it++)
                     chats.append(it->toVariant().toLongLong());
 
-                action = Action(new TelegramAction(message, photo, item.value("keyboard").toString().trimmed(), item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
+                action = Action(new TelegramAction(message, file, photo, item.value("keyboard").toString().trimmed(), item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
                 parsePattern(message);
                 break;
             }
@@ -614,6 +614,9 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
                 if (!action->message().isEmpty())
                     json.insert("message", action->message());
+
+                if (!action->file().isEmpty())
+                    json.insert("file", action->file());
 
                 if (!action->photo().isEmpty())
                     json.insert("photo", action->photo());

@@ -24,6 +24,33 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
+void Telegram::sendFile(const QString &message, const QString &file, qint64 thread, bool silent, const QList<qint64> &chats)
+{
+    QList <QString> items = {QString("-F document=@'%1'").arg(file)};
+    QList <qint64> list = chats;
+
+    if (m_token.isEmpty() || !m_chat)
+        return;
+
+    if (list.isEmpty())
+        list.append(m_chat);
+
+    if (!message.isEmpty())
+    {
+        items.append(QString("-F caption='%1'").arg(message));
+        items.append("-F parse_mode=markdown");
+    }
+
+    if (thread)
+        items.append(QString("-F message_thread_id=%1").arg(thread));
+
+    if (silent)
+        items.append("-F disable_notification=true");
+
+    for (int i = 0; i < list.count(); i++)
+        system(QString("curl -X POST -F chat_id=%1 %2 -s https://api.telegram.org/bot%3/sendDocument > /dev/null &").arg(list.at(i)).arg(items.join(0x20), m_token).toUtf8().constData());
+}
+
 void Telegram::sendMessage(const QString &message, const QString &photo, const QString &keyboard, qint64 thread, bool silent, const QList <qint64> &chats)
 {
     QList <qint64> list = chats;
