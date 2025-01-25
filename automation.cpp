@@ -87,7 +87,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                     if (!value.isValid())
                         continue;
 
-                    trigger = Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value));
+                    trigger = Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value, item.value("force").toBool()));
                     break;
                 }
 
@@ -108,7 +108,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                     if (!value.isValid())
                         continue;
 
-                    trigger = Trigger(new MqttTrigger(topic, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value));
+                    trigger = Trigger(new MqttTrigger(topic, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value, item.value("force").toBool()));
                     emit addSubscription(topic);
                     break;
                 }
@@ -701,6 +701,10 @@ QJsonArray AutomationList::serialize(void)
                     item.insert("endpoint", trigger->endpoint());
                     item.insert("property", trigger->property());
                     item.insert(m_triggerStatements.valueToKey(static_cast <int> (trigger->statement())), QJsonValue::fromVariant(trigger->value()));
+
+                    if (trigger->force())
+                        item.insert("force", true);
+
                     break;
                 }
 
@@ -713,6 +717,9 @@ QJsonArray AutomationList::serialize(void)
 
                     if (!trigger->property().isEmpty())
                         item.insert("property", trigger->property());
+
+                    if (trigger->force())
+                        item.insert("force", true);
 
                     break;
                 }

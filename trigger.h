@@ -46,7 +46,7 @@ public:
 
 protected:
 
-    bool match(const QVariant &oldValue, const QVariant &newValue, Statement statement, const QVariant &value);
+    bool match(const QVariant &oldValue, const QVariant &newValue, Statement statement, const QVariant &value, bool force);
 
 private:
 
@@ -60,21 +60,23 @@ class PropertyTrigger : public TriggerObject
 
 public:
 
-    PropertyTrigger(const QString &endpoint, const QString &property, Statement statement, const QVariant &value) :
-        TriggerObject(Type::property), m_endpoint(endpoint), m_property(property), m_statement(statement), m_value(value) {}
+    PropertyTrigger(const QString &endpoint, const QString &property, Statement statement, const QVariant &value, bool force) :
+        TriggerObject(Type::property), m_endpoint(endpoint), m_property(property), m_statement(statement), m_value(value), m_force(force) {}
 
     inline QString endpoint(void) { return m_endpoint; }
     inline QString property(void) { return m_property; }
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
+    inline bool force(void) { return m_force; }
 
-    inline bool match(const QVariant &oldValue, const QVariant &newValue) {{ return TriggerObject::match(oldValue, newValue, m_statement, m_value); }}
+    inline bool match(const QVariant &oldValue, const QVariant &newValue) {{ return TriggerObject::match(oldValue, newValue, m_statement, m_value, m_force); }}
 
 private:
 
     QString m_endpoint, m_property;
     Statement m_statement;
     QVariant m_value;
+    bool m_force;
 
 };
 
@@ -83,21 +85,23 @@ class MqttTrigger : public TriggerObject
 
 public:
 
-    MqttTrigger(const QString &topic, const QString &property, Statement statement, const QVariant &value) :
-        TriggerObject(Type::mqtt), m_topic(topic), m_property(property), m_statement(statement), m_value(value) {}
+    MqttTrigger(const QString &topic, const QString &property, Statement statement, const QVariant &value, bool force) :
+        TriggerObject(Type::mqtt), m_topic(topic), m_property(property), m_statement(statement), m_value(value), m_force(force) {}
 
     inline QString topic(void) { return m_topic; }
     inline QString property(void) { return m_property; }
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
+    inline bool force(void) { return m_force; }
 
-    inline bool match(const QByteArray &oldMessage, const QByteArray &newMessage) {{ return TriggerObject::match(parse(oldMessage), parse(newMessage), m_statement, m_value); }}
+    inline bool match(const QByteArray &oldMessage, const QByteArray &newMessage) {{ return TriggerObject::match(parse(oldMessage), parse(newMessage), m_statement, m_value, m_force); }}
 
 private:
 
     QString m_topic, m_property;
     Statement m_statement;
     QVariant m_value;
+    bool m_force;
 
     inline QVariant parse(const QByteArray &message) { return m_property.isEmpty() ? message : JSON::getValue(QJsonDocument::fromJson(message).object(), m_property); }
 

@@ -285,7 +285,10 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 continue;
             }
 
-            logInfo << automation << "triggered";
+            if (!trigger->name().isEmpty())
+                logInfo << automation << "triggered by" << trigger->name();
+            else
+                logInfo << automation << "triggered";
 
             automation->setLastTrigger(trigger);
             automation->updateLastTriggered();
