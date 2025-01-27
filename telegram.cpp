@@ -10,7 +10,7 @@ Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_proc
     m_chat = config->value("telegram/chat").toLongLong();
     m_timeout = config->value("telegram/timeout", 60).toInt();
 
-    if (m_token.isEmpty() || !m_chat)
+    if (m_token.isEmpty() || !m_chat || !config->value("telegram/update", true).toBool())
         return;
 
     connect(m_process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
