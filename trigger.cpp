@@ -1,12 +1,11 @@
 #include "trigger.h"
 
-bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, Statement statement, const QVariant &value, bool force)
+bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, Statement statement, QVariant value, bool force)
 {
-    if (statement == Statement::equals && newValue.type() == QVariant::Bool && value.type() == QVariant::String)
+    if (newValue.type() == QVariant::Bool && value.type() == QVariant::String)
     {
         QList <QString> list = {"detected", "low", "occupied", "on", "open", "wet"};
-        QVariant check = list.contains(value.toString()) ? true : false;
-        return oldValue != check && newValue == check;
+        value = list.contains(value.toString()) ? true : false;
     }
 
     switch (statement)

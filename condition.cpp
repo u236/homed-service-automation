@@ -1,7 +1,13 @@
 #include "condition.h"
 
-bool ConditionObject::match(const QVariant &value, const QVariant &match, Statement statement)
+bool ConditionObject::match(const QVariant &value, QVariant match, Statement statement)
 {
+    if (value.type() == QVariant::Bool && match.type() == QVariant::String)
+    {
+        QList <QString> list = {"detected", "low", "occupied", "on", "open", "wet"};
+        match = list.contains(value.toString()) ? true : false;
+    }
+
     switch (statement)
     {
         case Statement::equals:  return value == match;

@@ -49,7 +49,7 @@ public:
 
 protected:
 
-    bool match(const QVariant &value, const QVariant &match, Statement statement);
+    bool match(const QVariant &value, QVariant match, Statement statement);
 
 private:
 

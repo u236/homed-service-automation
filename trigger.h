@@ -46,7 +46,7 @@ public:
 
 protected:
 
-    bool match(const QVariant &oldValue, const QVariant &newValue, Statement statement, const QVariant &value, bool force);
+    bool match(const QVariant &oldValue, const QVariant &newValue, Statement statement, QVariant value, bool force);
 
 private:
 
