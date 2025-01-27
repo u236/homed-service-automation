@@ -2,7 +2,7 @@
 #include "expression.h"
 #include "logger.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
+Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
 {
     logInfo << "Starting version" << SERVICE_VERSION;
     logInfo << "Configuration file is" << getConfig()->fileName();
@@ -552,12 +552,12 @@ bool Controller::runActions(AutomationObject *automation)
 
 void Controller::publishEvent(const QString &name, Event event)
 {
-    mqttPublish(mqttTopic("event/automation"), {{"automation", name}, {"event", m_events.valueToKey(static_cast <int> (event))}});
+    mqttPublish(mqttTopic("event/%1").arg(serviceTopic()), {{"automation", name}, {"event", m_events.valueToKey(static_cast <int> (event))}});
 }
 
 void Controller::mqttConnected(void)
 {
-    mqttSubscribe(mqttTopic("command/automation"));
+    mqttSubscribe(mqttTopic("command/%1").arg(serviceTopic()));
     mqttSubscribe(mqttTopic("service/#"));
 
     for (int i = 0; i < m_subscriptions.count(); i++)
@@ -584,7 +584,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         handleTrigger(TriggerObject::Type::mqtt, topic.name(), check, message);
     }
 
-    if (subTopic == "command/automation")
+    if (subTopic == QString("command/%1").arg(serviceTopic()))
     {
         switch (static_cast <Command> (m_commands.keyToValue(json.value("action").toString().toUtf8().constData())))
         {
@@ -774,7 +774,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
 void Controller::statusUpdated(const QJsonObject &json)
 {
-    mqttPublish(mqttTopic("status/automation"), json, true);
+    mqttPublish(mqttTopic("status/%1").arg(serviceTopic()), json, true);
 }
 
 void Controller::addSubscription(const QString &topic)
