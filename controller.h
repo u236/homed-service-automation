@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.6.2"
+#define SERVICE_VERSION     "1.6.3"
 
 #include "automation.h"
 #include "homed.h"
@@ -59,7 +59,7 @@ private:
     void updateSun(void);
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
     bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const Trigger &trigger);
-    bool runActions(AutomationObject *automation);
+    void runActions(AutomationObject *automation);
 
     void publishEvent(const QString &name, Event event);
 

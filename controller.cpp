@@ -412,7 +412,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
     }
 }
 
-bool Controller::runActions(AutomationObject *automation)
+void Controller::runActions(AutomationObject *automation)
 {
     for (int i = automation->actionList()->index(); i < automation->actionList()->count(); i++)
     {
@@ -520,10 +520,8 @@ bool Controller::runActions(AutomationObject *automation)
                 automation->setActionList(&action->actions(checkConditions(action->conditions(), ConditionObject::Type::AND, automation->lastTrigger())));
                 automation->actionList()->setIndex(0);
 
-                if (runActions(automation))
-                    break;
-
-                return false;
+                runActions(automation);
+                return;
             }
 
             case ActionObject::Type::delay:
@@ -536,7 +534,7 @@ bool Controller::runActions(AutomationObject *automation)
 
                 logInfo << automation << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
                 automation->timer()->start(parsePattern(action->value().toString(), automation->lastTrigger()).toInt() * 1000);
-                return false;
+                return;
             }
         }
     }
@@ -546,8 +544,6 @@ bool Controller::runActions(AutomationObject *automation)
         automation->setActionList(automation->actionList()->parent());
         runActions(automation);
     }
-
-    return true;
 }
 
 void Controller::publishEvent(const QString &name, Event event)
