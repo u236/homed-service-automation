@@ -24,7 +24,7 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendFile(const QString &message, const QString &file, qint64 thread, bool silent, const QList<qint64> &chats)
+void Telegram::sendFile(const QString &message, const QString &file, const QString &keyboard, qint64 thread, bool silent, const QList<qint64> &chats)
 {
     QList <QString> items = {QString("-F document=@'%1'").arg(file)};
     QList <qint64> list = chats;
@@ -40,6 +40,9 @@ void Telegram::sendFile(const QString &message, const QString &file, qint64 thre
         items.append(QString("-F caption='%1'").arg(message));
         items.append("-F parse_mode=markdown");
     }
+
+    if (!keyboard.isEmpty())
+        items.append(QString("-F reply_markup='%1'").arg(QString(QJsonDocument(inllineKeyboard(keyboard)).toJson(QJsonDocument::Compact))));
 
     if (thread)
         items.append(QString("-F message_thread_id=%1").arg(thread));
@@ -63,9 +66,6 @@ void Telegram::sendMessage(const QString &message, const QString &photo, const Q
     if (list.isEmpty())
         list.append(m_chat);
 
-    if (thread)
-        json.insert("message_thread_id", thread);
-
     if (photo.isEmpty())
     {
         json.insert("text", message);
@@ -79,32 +79,38 @@ void Telegram::sendMessage(const QString &message, const QString &photo, const Q
     }
 
     if (!keyboard.isEmpty())
-    {
-        QList <QString> lines = keyboard.split('\n');
-        QJsonArray array;
+        json.insert("reply_markup", inllineKeyboard(keyboard));
 
-        for (int i = 0; i < lines.length(); i++)
-        {
-            QList <QString> items = lines.at(i).split(',');
-            QJsonArray line;
-
-            for (int j = 0; j < items.length(); j++)
-            {
-                QList <QString> item = items.at(j).split(':');
-                line.append(QJsonObject{{"text", item.value(0).trimmed()}, {"callback_data", item.value(item.length() > 1 ? 1 : 0).trimmed()}});
-            }
-
-            array.append(line);
-        }
-
-        json.insert("reply_markup", QJsonObject {{"inline_keyboard", array}, {"one_time_keyboard",true}});
-    }
+    if (thread)
+        json.insert("message_thread_id", thread);
 
     for (int i = 0; i < list.count(); i++)
     {
         json.insert("chat_id", list.at(i));
         system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/%3 > /dev/null &").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token, method).toUtf8().constData());
     }
+}
+
+QJsonObject Telegram::inllineKeyboard(const QString &keyboard)
+{
+    QList <QString> lines = keyboard.split('\n');
+    QJsonArray array;
+
+    for (int i = 0; i < lines.length(); i++)
+    {
+        QList <QString> items = lines.at(i).split(',');
+        QJsonArray line;
+
+        for (int j = 0; j < items.length(); j++)
+        {
+            QList <QString> item = items.at(j).split(':');
+            line.append(QJsonObject{{"text", item.value(0).trimmed()}, {"callback_data", item.value(item.length() > 1 ? 1 : 0).trimmed()}});
+        }
+
+        array.append(line);
+    }
+
+    return QJsonObject {{"inline_keyboard", array}};
 }
 
 void Telegram::getUpdates(void)

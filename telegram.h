@@ -13,7 +13,7 @@ public:
     Telegram(QSettings *config, QObject *parent);
     ~Telegram(void);
 
-    void sendFile(const QString &message, const QString &file, qint64 thread, bool silent, const QList <qint64> &chats);
+    void sendFile(const QString &message, const QString &file, const QString &keyboard, qint64 thread, bool silent, const QList <qint64> &chats);
     void sendMessage(const QString &message, const QString &photo, const QString &keyboard, qint64 thread, bool silent, const QList <qint64> &chats);
 
 private:
@@ -25,6 +25,7 @@ private:
     qint64 m_chat, m_offset;
     qint32 m_timeout;
 
+    QJsonObject inllineKeyboard(const QString &keyboard);
     void getUpdates(void);
 
 private slots:

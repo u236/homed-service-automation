@@ -485,7 +485,7 @@ void Controller::runActions(AutomationObject *automation)
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
 
                 if (!action->file().isEmpty() && QFile::exists(action->file()))
-                    m_telegram->sendFile(parsePattern(action->message(), automation->lastTrigger()).toString(), parsePattern(action->file(), automation->lastTrigger()).toString(), action->thread(), action->silent(), action->chats());
+                    m_telegram->sendFile(parsePattern(action->message(), automation->lastTrigger()).toString(), parsePattern(action->file(), automation->lastTrigger()).toString(), action->keyboard(), action->thread(), action->silent(), action->chats());
                 else
                     m_telegram->sendMessage(parsePattern(action->message(), automation->lastTrigger()).toString(), action->photo(), action->keyboard(), action->thread(), action->silent(), action->chats());
 
