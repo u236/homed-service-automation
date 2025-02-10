@@ -1,6 +1,7 @@
 #include "controller.h"
 #include "expression.h"
 #include "logger.h"
+#include "parser.h"
 
 Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
 {
@@ -41,20 +42,6 @@ quint8 Controller::getEndpointId(const QString &endpoint)
         return static_cast <quint8> (list.last().toInt());
 
     return 0;
-}
-
-QVariant Controller::parseString(const QString &string)
-{
-    bool check;
-    double value = string.toDouble(&check);
-
-    if (check)
-        return value;
-
-    if (string != "true" && string != "false")
-        return string;
-
-    return string == "true" ? true : false;
 }
 
 QVariant Controller::parsePattern(QString string, const Trigger &trigger)
@@ -112,7 +99,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger)
                 if (it != m_topics.end())
                 {
                     QString property = itemList.value(2).trimmed();
-                    value = property.isEmpty() ? it.value() : JSON::getValue(QJsonDocument::fromJson(it.value()).object(), property).toString();
+                    value = property.isEmpty() ? it.value() : Parser::jsonValue(QJsonDocument::fromJson(it.value()).object(), property).toString();
                 }
 
                 break;
@@ -190,7 +177,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger)
         string.replace(position, item.length(), value.isEmpty() ? "_NULL_" : value);
     }
 
-    return parseString(string);
+    return Parser::stringValue(string);
 }
 
 void Controller::updateSun(void)
@@ -446,7 +433,7 @@ void Controller::runActions(AutomationObject *automation)
                          QJsonArray array;
 
                          for (int i = 0; i < list.count(); i++)
-                             array.append(QJsonValue::fromVariant(parseString(list.at(i))));
+                             array.append(QJsonValue::fromVariant(Parser::stringValue(list.at(i))));
 
                          value = array;
                      }

@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.6.3"
+#define SERVICE_VERSION     "1.6.4"
 
 #include "automation.h"
 #include "homed.h"
@@ -52,8 +52,6 @@ private:
 
     Device findDevice(const QString &search);
     quint8 getEndpointId(const QString &endpoint);
-
-    QVariant parseString(const QString &string);
     QVariant parsePattern(QString string, const Trigger &trigger);
 
     void updateSun(void);

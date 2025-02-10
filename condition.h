@@ -4,7 +4,7 @@
 #include <QDateTime>
 #include <QSharedPointer>
 #include <QVariant>
-#include "json.h"
+#include "parser.h"
 #include "sun.h"
 
 class ConditionObject;
@@ -93,7 +93,7 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    inline bool match(const QByteArray &value, const QVariant &match) {{ return ConditionObject::match(m_property.isEmpty() ? value : JSON::getValue(QJsonDocument::fromJson(value).object(), m_property), match, m_statement); }}
+    inline bool match(const QByteArray &value, const QVariant &match) {{ return ConditionObject::match(m_property.isEmpty() ? value : Parser::jsonValue(QJsonDocument::fromJson(value).object(), m_property), match, m_statement); }}
 
 private:
 
