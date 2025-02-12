@@ -26,32 +26,38 @@ Telegram::~Telegram(void)
 
 void Telegram::sendFile(const QString &message, const QString &file, const QString &keyboard, qint64 thread, bool silent, const QList<qint64> &chats)
 {
-    QList <QString> items = {QString("-F document=@'%1'").arg(file)};
-    QList <qint64> list = chats;
+    QList <qint64> chatList = chats;
+    QList <QString> typeList = {"animation", "audio", "photo", "video"}, itemList = file.split('|'), formList;
+    QString type = itemList.value(1).trimmed();
 
     if (m_token.isEmpty() || !m_chat)
         return;
 
-    if (list.isEmpty())
-        list.append(m_chat);
+    if (chatList.isEmpty())
+        chatList.append(m_chat);
+
+    if (!typeList.contains(type))
+        type = "document";
+
+    formList.append(QString("-F %1=@'%2'").arg(type, itemList.value(0).trimmed()));
 
     if (!message.isEmpty())
     {
-        items.append(QString("-F caption='%1'").arg(message));
-        items.append("-F parse_mode=markdown");
+        formList.append(QString("-F caption='%1'").arg(message));
+        formList.append("-F parse_mode=markdown");
     }
 
     if (!keyboard.isEmpty())
-        items.append(QString("-F reply_markup='%1'").arg(QString(QJsonDocument(inllineKeyboard(keyboard)).toJson(QJsonDocument::Compact))));
+        formList.append(QString("-F reply_markup='%1'").arg(QString(QJsonDocument(inllineKeyboard(keyboard)).toJson(QJsonDocument::Compact))));
 
     if (thread)
-        items.append(QString("-F message_thread_id=%1").arg(thread));
+        formList.append(QString("-F message_thread_id=%1").arg(thread));
 
     if (silent)
-        items.append("-F disable_notification=true");
+        formList.append("-F disable_notification=true");
 
-    for (int i = 0; i < list.count(); i++)
-        system(QString("curl -X POST -F chat_id=%1 %2 -s https://api.telegram.org/bot%3/sendDocument > /dev/null &").arg(list.at(i)).arg(items.join(0x20), m_token).toUtf8().constData());
+    for (int i = 0; i < chatList.count(); i++)
+        system(QString("curl -X POST -F chat_id=%1 %2 -s https://api.telegram.org/bot%3/send%4 > /dev/null &").arg(chatList.at(i)).arg(formList.join(0x20), m_token, type.replace(0, 1, type.at(0).toUpper())).toUtf8().constData());
 }
 
 void Telegram::sendMessage(const QString &message, const QString &photo, const QString &keyboard, qint64 thread, bool silent, const QList <qint64> &chats)
