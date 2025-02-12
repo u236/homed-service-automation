@@ -1,5 +1,4 @@
 #include "controller.h"
-#include "expression.h"
 #include "logger.h"
 #include "parser.h"
 
@@ -53,8 +52,8 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger)
     while ((position = calculate.indexIn(string)) != -1)
     {
         QString item = calculate.cap();
-        Expression expression(parsePattern(item.mid(2, item.length() - 4), trigger).toString());
-        string.replace(position, item.length(), QString::number(expression.result(), 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
+        double number = Expression(parsePattern(item.mid(2, item.length() - 4), trigger).toString()).result();
+        string.replace(position, item.length(), QString::number(number, 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
     }
 
     while ((position = replace.indexIn(string)) != -1)
