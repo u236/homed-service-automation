@@ -112,17 +112,19 @@ class TelegramTrigger : public TriggerObject
 
 public:
 
-    TelegramTrigger(const QString &message, const QList <qint64> &chats) :
-        TriggerObject(Type::telegram), m_message(message), m_chats(chats) {}
+    TelegramTrigger(const QString &message, qint64 chat, const QList <qint64> &chats) :
+        TriggerObject(Type::telegram), m_message(message), m_chat(chat), m_chats(chats) {}
 
     inline QString message(void) { return m_message; }
     inline QList <qint64> &chats(void) { return m_chats; }
 
-    inline bool match(const QString &message, qint64 chat) { return message.toLower() == m_message.toLower() && m_chats.contains(chat); }
+    inline bool match(const QString &message, qint64 chat) { return message.toLower() == m_message.toLower() && m_chats.isEmpty() ? chat == m_chat : m_chats.contains(chat); }
 
 private:
 
     QString m_message;
+    qint64 m_chat;
+
     QList <qint64> m_chats;
 
 };

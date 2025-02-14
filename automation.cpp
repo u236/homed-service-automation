@@ -128,10 +128,7 @@ Automation AutomationList::parse(const QJsonObject &json)
                 for (auto it = array.begin(); it != array.end(); it++)
                     chats.append(it->toVariant().toLongLong());
 
-                if (chats.isEmpty())
-                    chats.append(m_telegramChat);
-
-                trigger = Trigger(new TelegramTrigger(message, chats));
+                trigger = Trigger(new TelegramTrigger(message, m_telegramChat, chats));
                 break;
             }
 
@@ -732,8 +729,7 @@ QJsonArray AutomationList::serialize(void)
                     item.insert("message", trigger->message());
 
                     for (int k = 0; k < trigger->chats().count(); k++)
-                         if (trigger->chats().at(k) != m_telegramChat || trigger->chats().count() > 1)
-                            chats.append(trigger->chats().at(k));
+                        chats.append(trigger->chats().at(k));
 
                     if (!chats.isEmpty())
                         item.insert("chats", QJsonArray::fromVariantList(chats));
