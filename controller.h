@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.6.5"
+#define SERVICE_VERSION     "1.6.6"
 
 #include "automation.h"
 #include "homed.h"
@@ -44,7 +44,7 @@ private:
     QTimer *m_timer;
 
     QMetaEnum m_commands, m_events;
-    QDate m_date;
+    QDateTime m_dateTime;
 
     QList <QString> m_types, m_subscriptions;
     QMap <QString, Device> m_devices;

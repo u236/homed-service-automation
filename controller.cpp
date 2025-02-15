@@ -2,7 +2,7 @@
 #include "logger.h"
 #include "parser.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_date(QDate::currentDate())
+Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime())
 {
     logInfo << "Starting version" << SERVICE_VERSION;
     logInfo << "Configuration file is" << getConfig()->fileName();
@@ -782,17 +782,15 @@ void Controller::updateTime(void)
 {
     QDateTime now = QDateTime::currentDateTime();
 
-    if (m_date != now.date())
-    {
+    if (m_dateTime.date() != now.date())
         updateSun();
-        m_date = now.date();
-    }
 
-    if (!now.time().second())
+    if (m_dateTime.time().minute() != now.time().minute())
     {
         QTime time = QTime(now.time().hour(), now.time().minute());
         handleTrigger(TriggerObject::Type::time, time);
         handleTrigger(TriggerObject::Type::interval, time);
+        m_dateTime = now;
     }
 }
 
