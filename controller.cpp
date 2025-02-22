@@ -49,11 +49,14 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger)
     QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "timestamp", "triggerName"};
     int position;
 
-    while ((position = calculate.indexIn(string)) != -1)
+    if (!string.startsWith("#!"))
     {
-        QString item = calculate.cap();
-        double number = Expression(parsePattern(item.mid(2, item.length() - 4), trigger).toString()).result();
-        string.replace(position, item.length(), QString::number(number, 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
+        while ((position = calculate.indexIn(string)) != -1)
+        {
+            QString item = calculate.cap();
+            double number = Expression(parsePattern(item.mid(2, item.length() - 4), trigger).toString()).result();
+            string.replace(position, item.length(), QString::number(number, 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
+        }
     }
 
     while ((position = replace.indexIn(string)) != -1)
