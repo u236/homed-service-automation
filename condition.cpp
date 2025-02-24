@@ -7,6 +7,8 @@ bool ConditionObject::match(const QVariant &value, QVariant match, Statement sta
         QList <QString> list = {"detected", "low", "occupied", "on", "open", "wet"};
         match = list.contains(match.toString()) ? true : false;
     }
+    else if (match.isNull() || match.toString() == "_NULL_")
+        match = QVariant();
 
     switch (statement)
     {
