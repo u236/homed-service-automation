@@ -52,7 +52,7 @@ private:
 
     Device findDevice(const QString &search);
     quint8 getEndpointId(const QString &endpoint);
-    QVariant parsePattern(QString string, const Trigger &trigger);
+    QVariant parsePattern(QString string, const Trigger &trigger, bool condition = false);
 
     void updateSun(void);
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
