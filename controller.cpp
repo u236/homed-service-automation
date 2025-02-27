@@ -46,7 +46,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "timestamp", "triggerName"};
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName"};
     int position;
 
     if (!string.startsWith("#!"))
@@ -63,8 +63,9 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
     {
         QString item = replace.cap(), value;
         QList <QString> itemList = item.mid(2, item.length() - 4).split('|');
+        int index = valueList.indexOf(itemList.value(0).trimmed());
 
-        switch (valueList.indexOf(itemList.value(0).trimmed()))
+        switch (index)
         {
             case 0: // colorTemperature
             {
@@ -162,14 +163,24 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
                 break;
             }
 
-            case 6: // timestamp
+            case 6: // sunrise
+            case 7: // sunset
+            case 8: // timestamp
             {
+                QDateTime dateTime = QDateTime::currentDateTime();
                 QString format = itemList.value(1).trimmed();
-                value = format.isEmpty() ? QString::number(QDateTime::currentSecsSinceEpoch()) : QDateTime::currentDateTime().toString(format);
+
+                switch (index)
+                {
+                    case 6: dateTime.setTime(m_sun->sunrise()); break;
+                    case 7: dateTime.setTime(m_sun->sunset()); break;
+                }
+
+                value = format.isEmpty() ? QString::number(dateTime.toSecsSinceEpoch()) : dateTime.toString(format);
                 break;
             }
 
-            case 7: // triggerName
+            case 9: // triggerName
             {
                 value = trigger->name();
                 break;
