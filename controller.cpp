@@ -102,7 +102,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
                 if (it != m_topics.end())
                 {
                     QString property = itemList.value(2).trimmed();
-                    value = property.isEmpty() ? it.value() : Parser::jsonValue(QJsonDocument::fromJson(it.value()).object(), property).toString();
+                    value = property.isEmpty() ? it.value() : Parser::jsonValue(it.value(), property).toString();
                 }
 
                 break;

@@ -93,7 +93,7 @@ public:
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
 
-    inline bool match(const QByteArray &value, const QVariant &match) {{ return ConditionObject::match(m_property.isEmpty() ? value.isEmpty() ? QVariant() : value : Parser::jsonValue(QJsonDocument::fromJson(value).object(), m_property), match, m_statement); }}
+    inline bool match(const QByteArray &value, const QVariant &match) {{ return ConditionObject::match(m_property.isEmpty() ? value.isEmpty() ? QVariant() : value : Parser::jsonValue(value, m_property), match, m_statement); }}
 
 private:
 
