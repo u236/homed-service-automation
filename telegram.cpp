@@ -102,15 +102,15 @@ QJsonObject Telegram::inllineKeyboard(const QString &keyboard)
     QList <QString> lines = keyboard.split('\n');
     QJsonArray array;
 
-    for (int i = 0; i < lines.length(); i++)
+    for (int i = 0; i < lines.count(); i++)
     {
         QList <QString> items = lines.at(i).split(',');
         QJsonArray line;
 
-        for (int j = 0; j < items.length(); j++)
+        for (int j = 0; j < items.count(); j++)
         {
             QList <QString> item = items.at(j).split(':');
-            line.append(QJsonObject{{"text", item.value(0).trimmed()}, {"callback_data", item.value(item.length() > 1 ? 1 : 0).trimmed()}});
+            line.append(QJsonObject{{"text", item.value(0).trimmed()}, {"callback_data", item.value(item.count() > 1 ? 1 : 0).trimmed()}});
         }
 
         array.append(line);
