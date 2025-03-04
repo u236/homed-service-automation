@@ -1,7 +1,8 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION     "1.6.8"
+#define SERVICE_VERSION         "2.0.0"
+#define SUBSCRIPTION_DELAY      1000
 
 #include "automation.h"
 #include "homed.h"
@@ -47,10 +48,10 @@ public:
 
 private:
 
+    QTimer *m_subscribeTimer, *m_updateTimer;
     AutomationList *m_automations;
     Telegram *m_telegram;
     Sun *m_sun;
-    QTimer *m_timer;
 
     QMetaEnum m_commands, m_events;
     QDateTime m_dateTime;
@@ -76,6 +77,7 @@ private slots:
     void storeAutomations(void);
     void finished(void);
 
+    void updateSubscriptions(void);
     void updateTime(void);
 
 };
