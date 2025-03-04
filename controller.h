@@ -33,6 +33,15 @@ public:
 
     Controller(const QString &configFile);
 
+    inline AutomationList *automations(void) { return m_automations; }
+    inline Telegram *telegram(void) { return m_telegram; }
+
+    Device findDevice(const QString &search);
+    quint8 getEndpointId(const QString &endpoint);
+
+    QVariant parsePattern(QString string, const Trigger &trigger, bool condition = false);
+    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const Trigger &trigger);
+
     Q_ENUM(Command)
     Q_ENUM(Event)
 
@@ -50,16 +59,9 @@ private:
     QMap <QString, Device> m_devices;
     QMap <QString, QByteArray> m_topics;
 
-    Device findDevice(const QString &search);
-    quint8 getEndpointId(const QString &endpoint);
-    QVariant parsePattern(QString string, const Trigger &trigger, bool condition = false);
-
-    void updateSun(void);
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
-    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const Trigger &trigger);
-    void runActions(AutomationObject *automation);
-
     void publishEvent(const QString &name, Event event);
+    void updateSun(void);
 
 private slots:
 
@@ -70,8 +72,11 @@ private slots:
     void addSubscription(const QString &topic);
     void telegramReceived(const QString &message, qint64 chat);
 
+    void publishData(const QString &topic, const QVariant &data, bool retain);
+    void storeAutomations(void);
+    void finished(void);
+
     void updateTime(void);
-    void automationTimeout(void);
 
 };
 

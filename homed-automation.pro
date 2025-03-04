@@ -7,6 +7,7 @@ HEADERS += \
     automation.h \
     condition.h \
     controller.h \
+    runner.h \
     telegram.h \
     trigger.h
 
@@ -15,5 +16,6 @@ SOURCES += \
     automation.cpp \
     condition.cpp \
     controller.cpp \
+    runner.cpp \
     telegram.cpp \
     trigger.cpp

@@ -50,9 +50,7 @@ class AutomationObject : public QObject
 public:
 
     AutomationObject(const QString &name, const QString &note, bool active, qint32 debounce, bool restart, qint64 lastTriggered) :
-        QObject(nullptr), m_timer(new QTimer(this)), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_restart(restart), m_lastTriggered(lastTriggered) {}
-
-    inline QTimer *timer(void) { return m_timer; }
+        QObject(nullptr), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_restart(restart), m_lastTriggered(lastTriggered), m_runner(nullptr) {}
 
     inline QString name(void) { return m_name; }
     inline QString note(void) { return m_note; }
@@ -70,6 +68,9 @@ public:
     inline ActionList *actionList(void) { return m_actionList; }
     inline void setActionList(ActionList *value) { m_actionList = value; }
 
+    inline void *runner(void) { return m_runner; }
+    inline void setRunner(void *value) { m_runner = value; }
+
     inline QString shellOutput(void) { return m_shellOutput; }
     inline void setShellOutput(const QString &value) { m_shellOutput = value; }
 
@@ -78,8 +79,6 @@ public:
     inline ActionList &actions(void) { return m_actions; }
 
 private:
-
-    QTimer *m_timer;
 
     QString m_name, m_note;
     bool m_active;
@@ -91,6 +90,8 @@ private:
     qint64 m_lastTriggered;
 
     ActionList *m_actionList;
+    void *m_runner;
+
     QString m_shellOutput;
 
     QList <Trigger> m_triggers;

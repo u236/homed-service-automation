@@ -1,6 +1,7 @@
 #include "controller.h"
 #include "logger.h"
 #include "parser.h"
+#include "runner.h"
 
 Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_timer(new QTimer(this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime())
 {
@@ -193,120 +194,6 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
     return Parser::stringValue(string);
 }
 
-void Controller::updateSun(void)
-{
-    m_sun->setDate(QDate::currentDate());
-    m_sun->setOffset(QDateTime::currentDateTime().offsetFromUtc());
-
-    m_sun->updateSunrise();
-    m_sun->updateSunset();
-
-    logInfo << "Sunrise set to" << m_sun->sunrise().toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sun->sunset().toString("hh:mm").toUtf8().constData();
-}
-
-void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
-{
-    for (int i = 0; i < m_automations->count(); i++)
-    {
-        const Automation &automation = m_automations->at(i);
-
-        if (!automation->active())
-            continue;
-
-        for (int j = 0; j < automation->triggers().count(); j++)
-        {
-            const Trigger &trigger = automation->triggers().at(j);
-
-            if (trigger->type() != type)
-                continue;
-
-            switch (type)
-            {
-                case TriggerObject::Type::property:
-                {
-                    PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
-
-                    if (item->endpoint() != a.toString() || item->property() != b.toString() || !item->match(c, d))
-                        continue;
-                    
-                    break;
-                }
-
-                case TriggerObject::Type::mqtt:
-                {
-                    MqttTrigger *item = reinterpret_cast <MqttTrigger*> (trigger.data());
-
-                    if (item->topic() != a.toString() || !item->match(b.toByteArray(), c.toByteArray()))
-                        continue;
-
-                    break;
-                }
-
-                case TriggerObject::Type::telegram:
-                {
-                    TelegramTrigger *item = reinterpret_cast <TelegramTrigger*> (trigger.data());
-
-                    if (!item->match(a.toString(), b.toLongLong()))
-                        continue;
-
-                    break;
-                }
-
-                case TriggerObject::Type::time:
-                {
-                    TimeTrigger *item = reinterpret_cast <TimeTrigger*> (trigger.data());
-
-                    if (!item->match(a.toTime(), m_sun))
-                        continue;
-
-                    break;
-                }
-
-                case TriggerObject::Type::interval:
-                {
-                    IntervalTrigger *item = reinterpret_cast <IntervalTrigger*> (trigger.data());
-
-                    if (!item->match(a.toTime().msecsSinceStartOfDay() / 60000))
-                        continue;
-
-                    break;
-                }
-            }
-
-            if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger))
-            {
-                logInfo << automation << "conditions mismatch";
-                continue;
-            }
-
-            if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
-            {
-                logInfo << automation << "debounced";
-                continue;
-            }
-
-            if (!trigger->name().isEmpty())
-                logInfo << automation << "triggered by" << trigger->name();
-            else
-                logInfo << automation << "triggered";
-
-            automation->setLastTrigger(trigger);
-            automation->updateLastTriggered();
-            m_automations->store();
-
-            if (automation->timer()->isActive() && !automation->restart())
-            {
-                logWarning << automation << "timer already started";
-                continue;
-            }
-
-            automation->setActionList(&automation->actions());
-            automation->actionList()->setIndex(0);
-            runActions(automation.data());
-        }
-    }
-}
-
 bool Controller::checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const Trigger &trigger)
 {
     QDateTime now = QDateTime::currentDateTime();
@@ -412,143 +299,134 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
     }
 }
 
-void Controller::runActions(AutomationObject *automation)
+void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
 {
-    for (int i = automation->actionList()->index(); i < automation->actionList()->count(); i++)
+    for (int i = 0; i < m_automations->count(); i++)
     {
-        const Action &item = automation->actionList()->at(i);
+        const Automation &automation = m_automations->at(i);
 
-        if (!item->triggerName().isEmpty() && item->triggerName() != automation->lastTrigger()->name())
+        if (!automation->active())
             continue;
 
-        switch (item->type())
+        for (int j = 0; j < automation->triggers().count(); j++)
         {
-            case ActionObject::Type::property:
+            const Trigger &trigger = automation->triggers().at(j);
+            Runner *runner = reinterpret_cast <Runner*> (automation->runner());
+
+            if (trigger->type() != type)
+                continue;
+
+            switch (type)
             {
-                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
-                 const Device &device = findDevice(action->endpoint());
+                case TriggerObject::Type::property:
+                {
+                    PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
 
-                 if (!device.isNull())
-                 {
-                     quint8 endpointId = getEndpointId(action->endpoint());
-                     QVariant value = action->value(device->properties().value(endpointId).value(action->property()));
-                     QString string;
+                    if (item->endpoint() != a.toString() || item->property() != b.toString() || !item->match(c, d))
+                        continue;
 
-                     if (value.type() == QVariant::String)
-                     {
-                         value = parsePattern(value.toString(), automation->lastTrigger());
-                         string = value.toString();
-                     }
-
-                     if (string.contains(','))
-                     {
-                         QList <QString> list = string.split(',');
-                         QJsonArray array;
-
-                         for (int i = 0; i < list.count(); i++)
-                             array.append(QJsonValue::fromVariant(Parser::stringValue(list.at(i))));
-
-                         value = array;
-                     }
-
-                     mqttPublish(mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic()), {{action->property(), QJsonValue::fromVariant(value)}});
-                 }
-
-                 break;
-            }
-
-            case ActionObject::Type::mqtt:
-            {
-                MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                mqttPublishString(action->topic(), parsePattern(action->message(), automation->lastTrigger()).toString(), action->retain());
-                break;
-            }
-
-            case ActionObject::Type::state:
-            {
-                StateAction *action = reinterpret_cast <StateAction*> (item.data());
-                QVariant check = m_automations->states().value(action->name());
-
-                if (action->value().isValid() && !action->value().isNull())
-                    m_automations->states().insert(action->name(), parsePattern(action->value().toString(), automation->lastTrigger()));
-                else
-                    m_automations->states().remove(action->name());
-
-                if (check != m_automations->states().value(action->name()))
-                    m_automations->store(true);
-
-                break;
-            }
-
-            case ActionObject::Type::telegram:
-            {
-                TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-
-                if (!action->file().isEmpty())
-                    m_telegram->sendFile(parsePattern(action->message(), automation->lastTrigger()).toString(), parsePattern(action->file(), automation->lastTrigger()).toString(), parsePattern(action->keyboard(), automation->lastTrigger()).toString(), action->thread(), action->silent(), action->chats());
-                else
-                    m_telegram->sendMessage(parsePattern(action->message(), automation->lastTrigger()).toString(), action->photo(), parsePattern(action->keyboard(), automation->lastTrigger()).toString(), action->thread(), action->silent(), action->chats());
-
-                break;
-            }
-
-            case ActionObject::Type::shell:
-            {
-                ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                FILE *file = popen(parsePattern(action->command(), automation->lastTrigger()).toString().append(0x20).append("2>&1").toUtf8().constData(), "r");
-                char buffer[32];
-                QByteArray data;
-
-                if (!file)
                     break;
+                }
 
-                memset(buffer, 0, sizeof(buffer));
+                case TriggerObject::Type::mqtt:
+                {
+                    MqttTrigger *item = reinterpret_cast <MqttTrigger*> (trigger.data());
 
-                while (fgets(buffer, sizeof(buffer), file))
-                    data.append(buffer, strlen(buffer));
+                    if (item->topic() != a.toString() || !item->match(b.toByteArray(), c.toByteArray()))
+                        continue;
 
-                automation->setShellOutput(data.trimmed());
-                pclose(file);
-                break;
+                    break;
+                }
+
+                case TriggerObject::Type::telegram:
+                {
+                    TelegramTrigger *item = reinterpret_cast <TelegramTrigger*> (trigger.data());
+
+                    if (!item->match(a.toString(), b.toLongLong()))
+                        continue;
+
+                    break;
+                }
+
+                case TriggerObject::Type::time:
+                {
+                    TimeTrigger *item = reinterpret_cast <TimeTrigger*> (trigger.data());
+
+                    if (!item->match(a.toTime(), m_sun))
+                        continue;
+
+                    break;
+                }
+
+                case TriggerObject::Type::interval:
+                {
+                    IntervalTrigger *item = reinterpret_cast <IntervalTrigger*> (trigger.data());
+
+                    if (!item->match(a.toTime().msecsSinceStartOfDay() / 60000))
+                        continue;
+
+                    break;
+                }
             }
 
-            case ActionObject::Type::condition:
+            if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger))
             {
-                ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
-
-                automation->actionList()->setIndex(++i);
-                automation->setActionList(&action->actions(checkConditions(action->conditions(), ConditionObject::Type::AND, automation->lastTrigger())));
-                automation->actionList()->setIndex(0);
-
-                runActions(automation);
-                return;
+                logInfo << automation << "conditions mismatch";
+                continue;
             }
 
-            case ActionObject::Type::delay:
+            if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
             {
-                DelayAction *action = reinterpret_cast <DelayAction*> (item.data());
-
-                connect(automation->timer(), &QTimer::timeout, this, &Controller::automationTimeout, Qt::UniqueConnection);
-                automation->timer()->setSingleShot(true);
-                automation->actionList()->setIndex(++i);
-
-                logInfo << automation << "timer" << (automation->timer()->isActive() ? "restarted" : "started");
-                automation->timer()->start(parsePattern(action->value().toString(), automation->lastTrigger()).toInt() * 1000);
-                return;
+                logInfo << automation << "debounced";
+                continue;
             }
+
+            if (!trigger->name().isEmpty())
+                logInfo << automation << "triggered by" << trigger->name();
+            else
+                logInfo << automation << "triggered";
+
+            automation->setLastTrigger(trigger);
+            automation->updateLastTriggered();
+            m_automations->store();
+
+            if (runner && runner->timer()->isActive() && !automation->restart())
+            {
+                logWarning << automation << "timer already started";
+                continue;
+            }
+
+            automation->setActionList(&automation->actions());
+            automation->actionList()->setIndex(0);
+
+            if (!runner)
+            {
+                runner = new Runner(this, automation);
+                connect(runner, &Runner::publishData, this, &Controller::publishData);
+                connect(runner, &Runner::storeAutomations, this, &Controller::storeAutomations);
+                connect(runner, &Runner::finished, this, &Controller::finished);
+                continue;
+            }
+
+            QMetaObject::invokeMethod(runner, "runActions");
         }
-    }
-
-    if (automation->actionList()->parent())
-    {
-        automation->setActionList(automation->actionList()->parent());
-        runActions(automation);
     }
 }
 
 void Controller::publishEvent(const QString &name, Event event)
 {
     mqttPublish(mqttTopic("event/%1").arg(serviceTopic()), {{"automation", name}, {"event", m_events.valueToKey(static_cast <int> (event))}});
+}
+
+void Controller::updateSun(void)
+{
+    m_sun->setDate(QDate::currentDate());
+    m_sun->setOffset(QDateTime::currentDateTime().offsetFromUtc());
+
+    m_sun->updateSunrise();
+    m_sun->updateSunset();
+
+    logInfo << "Sunrise set to" << m_sun->sunrise().toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sun->sunset().toString("hh:mm").toUtf8().constData();
 }
 
 void Controller::mqttConnected(void)
@@ -662,7 +540,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         QString type = subTopic.split('/').value(1), service = subTopic.mid(subTopic.indexOf('/') + 1);
 
         if (!m_types.contains(type))
-           return;
+            return;
 
         if (json.value("status").toString() == "online")
         {
@@ -675,7 +553,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             const Device &device = it.value();
 
             if (!device->topic().startsWith(QString("%1/").arg(service)))
-               continue;
+                continue;
 
             mqttUnsubscribe(mqttTopic("fd/%1").arg(device->topic()));
             mqttUnsubscribe(mqttTopic("fd/%1/#").arg(device->topic()));
@@ -691,7 +569,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         bool names = json.value("names").toBool();
 
         if (!m_types.contains(type))
-           return;
+            return;
 
         for (auto it = devices.begin(); it != devices.end(); it++)
         {
@@ -808,9 +686,26 @@ void Controller::updateTime(void)
     }
 }
 
-void Controller::automationTimeout(void)
+void Controller::publishData(const QString &topic, const QVariant &data, bool retain)
 {
-    AutomationObject *automation = reinterpret_cast <AutomationObject*> (sender()->parent());
-    logInfo << automation << "timer stopped";
-    runActions(automation);
+    if (data.type() == QVariant::Map)
+    {
+        mqttPublish(topic, QJsonObject::fromVariantMap(data.toMap()), retain);
+        return;
+    }
+
+    mqttPublishString(topic, data.toString(), retain);
+}
+
+void Controller::storeAutomations(void)
+{
+    m_automations->store(true);
+}
+
+void Controller::finished(void)
+{
+    Runner *runner = reinterpret_cast <Runner*> (sender());
+    runner->quit();
+    runner->wait();
+    delete runner;
 }
