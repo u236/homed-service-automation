@@ -21,8 +21,9 @@ private:
 
     QTimer *m_timer;
     Controller *m_controller;
-
     QWeakPointer <AutomationObject> m_automation;
+
+    QVariant parsePattern(QString string);
 
 private slots:
 

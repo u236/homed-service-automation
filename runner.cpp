@@ -14,6 +14,11 @@ Runner::~Runner(void)
     m_timer->stop();
 }
 
+QVariant Runner::parsePattern(QString string)
+{
+    return m_controller->parsePattern(string, automation()->lastTrigger());
+}
+
 void Runner::runActions(void)
 {
     for (int i = automation()->actionList()->index(); i < automation()->actionList()->count(); i++)
@@ -38,7 +43,7 @@ void Runner::runActions(void)
 
                     if (value.type() == QVariant::String)
                     {
-                        value = m_controller->parsePattern(value.toString(), automation()->lastTrigger());
+                        value = parsePattern(value.toString());
                         string = value.toString();
                     }
 
@@ -62,7 +67,7 @@ void Runner::runActions(void)
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                emit publishData(action->topic(), m_controller->parsePattern(action->message(), automation()->lastTrigger()).toString(), action->retain());
+                emit publishData(action->topic(), parsePattern(action->message()).toString(), action->retain());
                 break;
             }
 
@@ -73,7 +78,7 @@ void Runner::runActions(void)
                 QVariant check = states.value(action->name());
 
                 if (action->value().isValid() && !action->value().isNull())
-                    states.insert(action->name(), m_controller->parsePattern(action->value().toString(), automation()->lastTrigger()));
+                    states.insert(action->name(), parsePattern(action->value().toString()));
                 else
                     states.remove(action->name());
 
@@ -88,9 +93,9 @@ void Runner::runActions(void)
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
 
                 if (!action->file().isEmpty())
-                    m_controller->telegram()->sendFile(m_controller->parsePattern(action->message(), automation()->lastTrigger()).toString(), m_controller->parsePattern(action->file(), automation()->lastTrigger()).toString(), m_controller->parsePattern(action->keyboard(), automation()->lastTrigger()).toString(), action->thread(), action->silent(), action->chats());
+                    m_controller->telegram()->sendFile(parsePattern(action->message()).toString(), parsePattern(action->file()).toString(), parsePattern(action->keyboard()).toString(), action->thread(), action->silent(), action->chats());
                 else
-                    m_controller->telegram()->sendMessage(m_controller->parsePattern(action->message(), automation()->lastTrigger()).toString(), action->photo(), m_controller->parsePattern(action->keyboard(), automation()->lastTrigger()).toString(), action->thread(), action->silent(), action->chats());
+                    m_controller->telegram()->sendMessage(parsePattern(action->message()).toString(), action->photo(), parsePattern(action->keyboard()).toString(), action->thread(), action->silent(), action->chats());
 
                 break;
             }
@@ -98,7 +103,7 @@ void Runner::runActions(void)
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                FILE *file = popen(m_controller->parsePattern(action->command(), automation()->lastTrigger()).toString().append(0x20).append("2>&1").toUtf8().constData(), "r");
+                FILE *file = popen(parsePattern(action->command()).toString().append(0x20).append("2>&1").toUtf8().constData(), "r");
                 char buffer[32];
                 QByteArray data;
 
@@ -130,7 +135,7 @@ void Runner::runActions(void)
                 DelayAction *action = reinterpret_cast <DelayAction*> (item.data());
                 automation()->actionList()->setIndex(++i);
                 logInfo << automation() << "timer" << (m_timer->isActive() ? "restarted" : "started");
-                m_timer->start(m_controller->parsePattern(action->value().toString(), automation()->lastTrigger()).toInt() * 1000);
+                m_timer->start(parsePattern(action->value().toString()).toInt() * 1000);
                 return;
             }
         }
