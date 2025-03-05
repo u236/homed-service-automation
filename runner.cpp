@@ -1,3 +1,4 @@
+#include <QProcess>
 #include "logger.h"
 #include "runner.h"
 
@@ -10,6 +11,7 @@ Runner::Runner(Controller *controller, const Automation &automation) : QThread(n
 
 Runner::~Runner(void)
 {
+    logInfo << automation() << "completed";
     automation()->setRunner(nullptr);
     m_timer->stop();
 }
@@ -103,20 +105,11 @@ void Runner::runActions(void)
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                FILE *file = popen(parsePattern(action->command()).toString().append(0x20).append("2>&1").toUtf8().constData(), "r");
-                char buffer[32];
-                QByteArray data;
-
-                if (!file)
-                    break;
-
-                memset(buffer, 0, sizeof(buffer));
-
-                while (fgets(buffer, sizeof(buffer), file))
-                    data.append(buffer, strlen(buffer));
-
-                automation()->setShellOutput(data.trimmed());
-                pclose(file);
+                QProcess process;
+                process.setProcessChannelMode(QProcess::MergedChannels);
+                process.start("/bin/sh", {"-c", parsePattern(action->command()).toString()});
+                process.waitForFinished(action->timeout() * 1000);
+                automation()->setShellOutput(process.readAll());
                 break;
             }
 

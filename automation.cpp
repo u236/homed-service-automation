@@ -416,7 +416,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 if (command.isEmpty())
                     continue;
 
-                action = Action(new ShellAction(command));
+                action = Action(new ShellAction(command, static_cast <quint32> (item.value("timeout").toInt(30))));
                 parsePattern(command);
                 break;
             }
@@ -637,6 +637,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (list.at(i).data());
                 json.insert("command", action->command());
+                json.insert("timeout", QJsonValue::fromVariant(action->timeout()));
                 break;
             }
 

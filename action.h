@@ -161,14 +161,16 @@ class ShellAction : public ActionObject
 
 public:
 
-    ShellAction(const QString &command) :
-        ActionObject(Type::shell), m_command(command) {}
+    ShellAction(const QString &command, quint32 timeout) :
+        ActionObject(Type::shell), m_command(command), m_timeout(timeout) {}
 
     inline QString command(void) { return m_command; }
+    inline quint32 timeout(void) { return m_timeout; }
 
 private:
 
     QString m_command;
+    quint32 m_timeout;
 
 };
 
