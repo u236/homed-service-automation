@@ -10,13 +10,6 @@ Runner::Runner(Controller *controller, const Automation &automation) : QThread(n
     start();
 }
 
-Runner::~Runner(void)
-{
-    logInfo << automation() << "completed";
-    automation()->setRunner(nullptr);
-    m_timer->stop();
-}
-
 QVariant Runner::parsePattern(QString string)
 {
     return m_controller->parsePattern(string, automation()->lastTrigger());
@@ -140,7 +133,9 @@ void Runner::runActions(void)
         return;
     }
 
-    exit();
+    logInfo << automation() << "completed";
+    automation()->setRunner(nullptr);
+    quit();
 }
 
 void Runner::threadStarted(void)
