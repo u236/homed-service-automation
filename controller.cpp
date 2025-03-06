@@ -371,10 +371,10 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 }
             }
 
-            if (!trigger->name().isEmpty())
-                logInfo << automation << "triggered by" << trigger->name();
+            if (trigger->name().isEmpty())
+                logInfo << automation << "triggered by" << QString("[%1]").arg(j + 1).toUtf8().constData();
             else
-                logInfo << automation << "triggered";
+                logInfo << automation << "triggered by" << trigger->name();
 
             if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger))
             {
@@ -407,6 +407,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 connect(runner, &Runner::publishData, this, &Controller::publishData);
                 connect(runner, &Runner::updateState, this, &Controller::updateState);
                 connect(runner, &Runner::finished, this, &Controller::finished);
+                runner->start();
                 continue;
             }
 
@@ -695,7 +696,6 @@ void Controller::updateState(const QString &name, const QVariant &value)
 void Controller::finished(void)
 {
     Runner *runner = reinterpret_cast <Runner*> (sender());
-    runner->quit();
     runner->wait();
     delete runner;
 }
