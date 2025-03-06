@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <QProcess>
 #include "logger.h"
 #include "runner.h"
@@ -106,9 +107,17 @@ void Runner::runActions(void)
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
                 QProcess process;
+
                 process.setProcessChannelMode(QProcess::MergedChannels);
                 process.start("/bin/sh", {"-c", parsePattern(action->command()).toString()});
-                process.waitForFinished(action->timeout() * 1000);
+                setpgid(process.processId(), process.processId());
+
+                if (!process.waitForFinished(action->timeout() * 1000))
+                {
+                    logWarning << automation() << "shell action process" << process.processId() << "timed out";
+                    system(QString("kill -9 -%1").arg(process.processId()).toUtf8().constData());
+                }
+
                 automation()->setShellOutput(process.readAll());
                 break;
             }
