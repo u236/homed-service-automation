@@ -371,6 +371,11 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 }
             }
 
+            if (!trigger->name().isEmpty())
+                logInfo << automation << "triggered by" << trigger->name();
+            else
+                logInfo << automation << "triggered";
+
             if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger))
             {
                 logInfo << automation << "conditions mismatch";
@@ -382,11 +387,6 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 logInfo << automation << "debounced";
                 continue;
             }
-
-            if (!trigger->name().isEmpty())
-                logInfo << automation << "triggered by" << trigger->name();
-            else
-                logInfo << automation << "triggered";
 
             automation->setLastTrigger(trigger);
             automation->updateLastTriggered();
@@ -405,7 +405,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             {
                 runner = new Runner(this, automation);
                 connect(runner, &Runner::publishData, this, &Controller::publishData);
-                connect(runner, &Runner::storeAutomations, this, &Controller::storeAutomations);
+                connect(runner, &Runner::updateState, this, &Controller::updateState);
                 connect(runner, &Runner::finished, this, &Controller::finished);
                 continue;
             }
@@ -677,8 +677,18 @@ void Controller::publishData(const QString &topic, const QVariant &data, bool re
     mqttPublishString(topic, data.toString(), retain);
 }
 
-void Controller::storeAutomations(void)
+void Controller::updateState(const QString &name, const QVariant &value)
 {
+    QVariant check = m_automations->states().value(name);
+
+    if (value.isValid())
+        m_automations->states().insert(name, value);
+    else
+        m_automations->states().remove(name);
+
+    if (check == m_automations->states().value(name))
+        return;
+
     m_automations->store(true);
 }
 

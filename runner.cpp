@@ -77,17 +77,7 @@ void Runner::runActions(void)
             case ActionObject::Type::state:
             {
                 StateAction *action = reinterpret_cast <StateAction*> (item.data());
-                QMap <QString, QVariant> &states = m_controller->automations()->states();
-                QVariant check = states.value(action->name());
-
-                if (action->value().isValid() && !action->value().isNull())
-                    states.insert(action->name(), parsePattern(action->value().toString()));
-                else
-                    states.remove(action->name());
-
-                if (check != states.value(action->name()))
-                    emit storeAutomations();
-
+                emit updateState(action->name(), parsePattern(action->value().toString()));
                 break;
             }
 

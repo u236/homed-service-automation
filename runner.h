@@ -34,7 +34,7 @@ private slots:
 signals:
 
     void publishData(const QString &topic, const QVariant &data, bool retain = false);
-    void storeAutomations(void);
+    void updateState(const QString &name, const QVariant &value);
 
 };
 

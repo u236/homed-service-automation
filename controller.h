@@ -34,7 +34,6 @@ public:
 
     Controller(const QString &configFile);
 
-    inline AutomationList *automations(void) { return m_automations; }
     inline Telegram *telegram(void) { return m_telegram; }
 
     Device findDevice(const QString &search);
@@ -74,7 +73,7 @@ private slots:
     void telegramReceived(const QString &message, qint64 chat);
 
     void publishData(const QString &topic, const QVariant &data, bool retain);
-    void storeAutomations(void);
+    void updateState(const QString &name, const QVariant &value);
     void finished(void);
 
     void updateSubscriptions(void);
