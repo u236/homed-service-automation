@@ -12,6 +12,7 @@ class Runner : public QThread
 public:
 
     Runner(Controller *controller, const Automation &automation);
+    ~Runner(void);
 
     inline QTimer *timer(void) { return m_timer; }
     inline Automation automation(void) { return m_automation; }

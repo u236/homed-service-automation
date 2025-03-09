@@ -407,6 +407,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 connect(runner, &Runner::publishData, this, &Controller::publishData);
                 connect(runner, &Runner::updateState, this, &Controller::updateState);
                 connect(runner, &Runner::finished, this, &Controller::finished);
+                runner->start();
                 continue;
             }
 
