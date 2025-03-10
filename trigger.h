@@ -20,7 +20,8 @@ public:
         mqtt,
         telegram,
         time,
-        interval
+        interval,
+        startup
     };
 
     enum class Statement
@@ -52,6 +53,15 @@ private:
 
     Type m_type;
     QString m_name;
+
+};
+
+class StartupTrigger : public TriggerObject
+{
+
+public:
+
+    StartupTrigger(void) : TriggerObject(Type::startup) {}
 
 };
 

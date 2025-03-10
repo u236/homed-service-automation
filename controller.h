@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.0.1"
+#define SERVICE_VERSION         "2.0.2"
 #define SUBSCRIPTION_DELAY      1000
 
 #include "automation.h"
@@ -54,6 +54,7 @@ private:
 
     QMetaEnum m_commands, m_events;
     QDateTime m_dateTime;
+    bool m_startup;
 
     QList <QString> m_types, m_subscriptions;
     QMap <QString, Device> m_devices;

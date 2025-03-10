@@ -3,7 +3,7 @@
 #include "parser.h"
 #include "runner.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime())
+Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
 {
     logInfo << "Starting version" << SERVICE_VERSION;
     logInfo << "Configuration file is" << getConfig()->fileName();
@@ -369,6 +369,8 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
 
                     break;
                 }
+
+                case TriggerObject::Type::startup: break;
             }
 
             if (trigger->name().isEmpty())
@@ -706,6 +708,12 @@ void Controller::updateSubscriptions(void)
     {
         logInfo << "MQTT subscribed to" << m_subscriptions.at(i);
         mqttSubscribe(m_subscriptions.at(i));
+    }
+
+    if (!m_startup)
+    {
+        handleTrigger(TriggerObject::Type::startup);
+        m_startup = true;
     }
 }
 
