@@ -33,8 +33,9 @@ private slots:
 
 signals:
 
-    void publishData(const QString &topic, const QVariant &data, bool retain = false);
+    void publishMessage(const QString &topic, const QVariant &data, bool retain = false);
     void updateState(const QString &name, const QVariant &value);
+    void telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, qint64 thread, bool silent, QList <qint64> *chats);
 
 };
 

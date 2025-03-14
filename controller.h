@@ -73,8 +73,9 @@ private slots:
     void addSubscription(const QString &topic);
     void telegramReceived(const QString &message, qint64 chat);
 
-    void publishData(const QString &topic, const QVariant &data, bool retain);
+    void publishMessage(const QString &topic, const QVariant &data, bool retain);
     void updateState(const QString &name, const QVariant &value);
+    void telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, qint64 thread, bool silent, QList <qint64> *chats);
     void finished(void);
 
     void updateSubscriptions(void);

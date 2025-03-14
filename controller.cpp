@@ -406,8 +406,9 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             if (!runner)
             {
                 runner = new Runner(this, automation);
-                connect(runner, &Runner::publishData, this, &Controller::publishData);
+                connect(runner, &Runner::publishMessage, this, &Controller::publishMessage);
                 connect(runner, &Runner::updateState, this, &Controller::updateState);
+                connect(runner, &Runner::telegramAction, this, &Controller::telegramAction);
                 connect(runner, &Runner::finished, this, &Controller::finished);
                 runner->start();
                 continue;
@@ -669,7 +670,7 @@ void Controller::telegramReceived(const QString &message, qint64 chat)
     handleTrigger(TriggerObject::Type::telegram, message, chat);
 }
 
-void Controller::publishData(const QString &topic, const QVariant &data, bool retain)
+void Controller::publishMessage(const QString &topic, const QVariant &data, bool retain)
 {
     if (data.type() == QVariant::Map)
     {
@@ -693,6 +694,17 @@ void Controller::updateState(const QString &name, const QVariant &value)
         return;
 
     m_automations->store(true);
+}
+
+void Controller::telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, qint64 thread, bool silent, QList <qint64> *chats)
+{
+    if (!file.isEmpty() && QFile::exists(file))
+    {
+        m_telegram->sendFile(message, file, keyboard, thread, silent, *chats);
+        return;
+    }
+
+    m_telegram->sendMessage(message, photo, keyboard, thread, silent, *chats);
 }
 
 void Controller::finished(void)

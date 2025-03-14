@@ -59,7 +59,7 @@ void Runner::runActions(void)
                         value = array;
                     }
 
-                    emit publishData(m_controller->mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic()), QMap <QString, QVariant> {{action->property(), value}});
+                    emit publishMessage(m_controller->mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic()), QMap <QString, QVariant> {{action->property(), value}});
                 }
 
                 break;
@@ -68,7 +68,7 @@ void Runner::runActions(void)
             case ActionObject::Type::mqtt:
             {
                 MqttAction *action = reinterpret_cast <MqttAction*> (item.data());
-                emit publishData(action->topic(), parsePattern(action->message()).toString(), action->retain());
+                emit publishMessage(action->topic(), parsePattern(action->message()).toString(), action->retain());
                 break;
             }
 
@@ -82,12 +82,7 @@ void Runner::runActions(void)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-
-                if (!action->file().isEmpty())
-                    m_controller->telegram()->sendFile(parsePattern(action->message()).toString(), parsePattern(action->file()).toString(), parsePattern(action->keyboard()).toString(), action->thread(), action->silent(), action->chats());
-                else
-                    m_controller->telegram()->sendMessage(parsePattern(action->message()).toString(), action->photo(), parsePattern(action->keyboard()).toString(), action->thread(), action->silent(), action->chats());
-
+                emit telegramAction(parsePattern(action->message()).toString(), parsePattern(action->file()).toString(), action->photo(), parsePattern(action->keyboard()).toString(), action->thread(), action->silent(), &action->chats());;
                 break;
             }
 
