@@ -1,3 +1,4 @@
+#include <QUuid>
 #include "automation.h"
 #include "controller.h"
 #include "logger.h"
@@ -451,6 +452,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
         if (action.isNull())
             continue;
 
+        action->setUuid(item.value("uuid").toString(QUuid::createUuid().toString(QUuid::StringFormat::Id128)).trimmed());
         action->setTriggerName(item.value("triggerName").toString().trimmed());
         list.append(action);
     }
@@ -574,7 +576,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
     for (int i = 0; i < list.count(); i++)
     {
         ActionObject::Type type = list.at(i)->type();
-        QJsonObject json = {{"type", m_actionTypes.valueToKey(static_cast <int> (type))}};
+        QJsonObject json = {{"type", m_actionTypes.valueToKey(static_cast <int> (type))}, {"uuid", list.at(i)->uuid()}};
 
         switch (type)
         {
@@ -599,6 +601,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
             case ActionObject::Type::state:
             {
                 StateAction *action = reinterpret_cast <StateAction*> (list.at(i).data());
+
                 json.insert("name", action->name());
 
                 if (action->value().isValid())

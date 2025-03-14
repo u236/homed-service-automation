@@ -57,6 +57,9 @@ public:
 
     inline Type type(void) { return m_type; }
 
+    inline QString uuid(void) { return m_uuid; }
+    inline void setUuid(const QString &value) { m_uuid = value; }
+
     inline QString triggerName(void) { return m_triggerName; }
     inline void setTriggerName(const QString &value) { m_triggerName = value; }
 
@@ -66,7 +69,7 @@ public:
 private:
 
     Type m_type;
-    QString m_triggerName;
+    QString m_uuid, m_triggerName;
 
 };
 
