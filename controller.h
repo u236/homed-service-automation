@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.0.2"
+#define SERVICE_VERSION         "2.0.3"
 #define SUBSCRIPTION_DELAY      1000
 
 #include "automation.h"
@@ -75,7 +75,7 @@ private slots:
 
     void publishMessage(const QString &topic, const QVariant &data, bool retain);
     void updateState(const QString &name, const QVariant &value);
-    void telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, qint64 thread, bool silent, QList <qint64> *chats);
+    void telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats);
     void finished(void);
 
     void updateSubscriptions(void);

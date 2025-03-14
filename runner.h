@@ -35,7 +35,7 @@ signals:
 
     void publishMessage(const QString &topic, const QVariant &data, bool retain = false);
     void updateState(const QString &name, const QVariant &value);
-    void telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, qint64 thread, bool silent, QList <qint64> *chats);
+    void telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats);
 
 };
 

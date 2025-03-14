@@ -696,15 +696,15 @@ void Controller::updateState(const QString &name, const QVariant &value)
     m_automations->store(true);
 }
 
-void Controller::telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, qint64 thread, bool silent, QList <qint64> *chats)
+void Controller::telegramAction(const QString &message, const QString &file, const QString &photo, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats)
 {
     if (!file.isEmpty() && QFile::exists(file))
     {
-        m_telegram->sendFile(message, file, keyboard, thread, silent, *chats);
+        m_telegram->sendFile(message, file, keyboard, uuid, thread, silent, remove, update, *chats);
         return;
     }
 
-    m_telegram->sendMessage(message, photo, keyboard, thread, silent, *chats);
+    m_telegram->sendMessage(message, photo, keyboard, uuid, thread, silent, remove, update, *chats);
 }
 
 void Controller::finished(void)

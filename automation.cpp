@@ -411,7 +411,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 for (auto it = array.begin(); it != array.end(); it++)
                     chats.append(it->toVariant().toLongLong());
 
-                action = Action(new TelegramAction(message, file, photo, item.value("keyboard").toString().trimmed(), item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), chats));
+                action = Action(new TelegramAction(message, file, photo, item.value("keyboard").toString().trimmed(), item.value("thread").toVariant().toLongLong(), item.value("silent").toBool(), item.value("remove").toBool(), item.value("update").toBool(), chats));
                 parsePattern(message);
                 break;
             }
@@ -634,7 +634,13 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
                     json.insert("thread", action->thread());
 
                 if (action->silent())
-                    json.insert("silent", action->silent());
+                    json.insert("silent", true);
+
+                if (action->remove())
+                    json.insert("remove", true);
+
+                if (action->update())
+                    json.insert("update", true);
 
                 if (!chats.isEmpty())
                     json.insert("chats", QJsonArray::fromVariantList(chats));
