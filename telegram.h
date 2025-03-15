@@ -15,7 +15,7 @@ public:
 
     void sendFile(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats);
     void sendMessage(const QString &message, const QString &photo, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update,const QList <qint64> &chats);
-    void deleteMessage(qint64 chatId, qint64 messageId);
+
 
 private:
 
@@ -27,13 +27,15 @@ private:
     qint32 m_timeout;
 
     QJsonObject inllineKeyboard(const QString &keyboard);
+
+    void deleteMessage(qint64 chatId, qint64 messageId);
     void getUpdates(void);
 
     QMap <QString, quint64> m_messages;
 
 private slots:
 
-    void sendFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void requestFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void pollFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void readyRead(void);
     void pollError(void);

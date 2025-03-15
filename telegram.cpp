@@ -44,7 +44,7 @@ void Telegram::sendFile(const QString &message, const QString &file, const QStri
     if (!message.isEmpty())
     {
         formList.append(QString("-F caption='%1'").arg(message));
-        formList.append("-F parse_mode=markdown");
+        formList.append("-F parse_mode=Markdown");
     }
 
     if (!keyboard.isEmpty())
@@ -58,14 +58,15 @@ void Telegram::sendFile(const QString &message, const QString &file, const QStri
 
     for (int i = 0; i < chatList.count(); i++)
     {
-        QString method = QString("send%1").arg(type.replace(0, 1, type.at(0).toUpper()));
         QProcess *process(new QProcess(this));
+        QString method = QString("send%1").arg(type.replace(0, 1, type.at(0).toUpper()));
+        qint64 chatId = chatList.at(i);
 
-        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::sendFinished);
+        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::requestFinished);
 
         if (remove || update)
         {
-            QString id = QString("%1:%2").arg(uuid).arg(chatList.at(i));
+            QString id = QString("%1:%2").arg(uuid).arg(chatId);
 
             if (m_messages.contains(id))
             {
@@ -75,13 +76,13 @@ void Telegram::sendFile(const QString &message, const QString &file, const QStri
                     method = "editMessageCaption";
                 }
                 else
-                    deleteMessage(chatList.at(i), m_messages.value(id));
+                    deleteMessage(chatId, m_messages.value(id));
             }
 
             process->setProperty("id", id);
         }
 
-        process->start("sh", {"-c", QString("curl -X POST -F chat_id=%1 %2 -s https://api.telegram.org/bot%3/%4").arg(chatList.at(i)).arg(formList.join(0x20), m_token, method)});
+        process->start("sh", {"-c", QString("curl -X POST -F chat_id=%1 %2 -s https://api.telegram.org/bot%3/%4").arg(chatId).arg(formList.join(0x20), m_token, method)});
     }
 }
 
@@ -118,12 +119,14 @@ void Telegram::sendMessage(const QString &message, const QString &photo, const Q
     for (int i = 0; i < chatList.count(); i++)
     {
         QProcess *process(new QProcess(this));
+        qint64 chatId = chatList.at(i);
 
-        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::sendFinished);
+        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::requestFinished);
+        json.insert("chat_id", chatId);
 
         if (remove || update)
         {
-            QString id = QString("%1:%2").arg(uuid).arg(chatList.at(i));
+            QString id = QString("%1:%2").arg(uuid).arg(chatId);
 
             if (m_messages.contains(id))
             {
@@ -133,21 +136,14 @@ void Telegram::sendMessage(const QString &message, const QString &photo, const Q
                     method = "editMessageText";
                 }
                 else
-                    deleteMessage(chatList.at(i), m_messages.value(id));
+                    deleteMessage(chatId, m_messages.value(id));
             }
 
             process->setProperty("id", id);
         }
 
-        json.insert("chat_id", chatList.at(i));
         process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/%3").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token, method)});
     }
-}
-
-void Telegram::deleteMessage(qint64 chatId, qint64 messageId)
-{
-    QJsonObject data = {{"chat_id", chatId}, {"message_id", messageId}};
-    system(QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument(data).toJson(QJsonDocument::Compact), m_token).toUtf8().constData());
 }
 
 QJsonObject Telegram::inllineKeyboard(const QString &keyboard)
@@ -172,13 +168,20 @@ QJsonObject Telegram::inllineKeyboard(const QString &keyboard)
     return QJsonObject {{"inline_keyboard", array}};
 }
 
+void Telegram::deleteMessage(qint64 chatId, qint64 messageId)
+{
+    QProcess *process(new QProcess(this));
+    connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::requestFinished);
+    process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument({{"chat_id", chatId}, {"message_id", messageId}}).toJson(QJsonDocument::Compact), m_token)});
+}
+
 void Telegram::getUpdates(void)
 {
     m_buffer.clear();
-    m_process->start("curl", {"-X", "POST", "-H", "Content-Type: application/json", "-d", QJsonDocument(QJsonObject {{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), "-s", QString("https://api.telegram.org/bot%1/getUpdates").arg(m_token)});
+    m_process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/getUpdates").arg(QJsonDocument({{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), m_token)});
 }
 
-void Telegram::sendFinished(int, QProcess::ExitStatus)
+void Telegram::requestFinished(int, QProcess::ExitStatus)
 {
     QProcess *process = reinterpret_cast <QProcess*> (sender());
     QJsonObject json = QJsonDocument::fromJson(process->readAllStandardOutput()).object();
