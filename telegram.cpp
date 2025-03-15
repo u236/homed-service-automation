@@ -13,7 +13,7 @@ Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_proc
     if (m_token.isEmpty() || !m_chat || !config->value("telegram/update", true).toBool())
         return;
 
-    connect(m_process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::pollFinished);
+    connect(m_process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
     connect(m_process, &QProcess::readyReadStandardOutput, this, &Telegram::readyRead);
     connect(m_process, &QProcess::readyReadStandardError, this, &Telegram::pollError);
     getUpdates();
@@ -62,7 +62,7 @@ void Telegram::sendFile(const QString &message, const QString &file, const QStri
         QString method = QString("send%1").arg(type.replace(0, 1, type.at(0).toUpper()));
         qint64 chatId = chatList.at(i);
 
-        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::requestFinished);
+        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
 
         if (remove || update)
         {
@@ -121,7 +121,7 @@ void Telegram::sendMessage(const QString &message, const QString &photo, const Q
         QProcess *process(new QProcess(this));
         qint64 chatId = chatList.at(i);
 
-        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::requestFinished);
+        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
         json.insert("chat_id", chatId);
 
         if (remove || update)
@@ -171,7 +171,7 @@ QJsonObject Telegram::inllineKeyboard(const QString &keyboard)
 void Telegram::deleteMessage(qint64 chatId, qint64 messageId)
 {
     QProcess *process(new QProcess(this));
-    connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::requestFinished);
+    connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
     process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument({{"chat_id", chatId}, {"message_id", messageId}}).toJson(QJsonDocument::Compact), m_token)});
 }
 
@@ -181,47 +181,50 @@ void Telegram::getUpdates(void)
     m_process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/getUpdates").arg(QJsonDocument({{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), m_token)});
 }
 
-void Telegram::requestFinished(int, QProcess::ExitStatus)
+void Telegram::finished(int, QProcess::ExitStatus)
 {
     QProcess *process = reinterpret_cast <QProcess*> (sender());
-    QJsonObject json = QJsonDocument::fromJson(process->readAllStandardOutput()).object();
-    QString id = process->property("id").toString();
 
-    if (json.value("ok").toBool() && !id.isEmpty())
-        m_messages.insert(id, json.value("result").toObject().value("message_id").toVariant().toLongLong());
-
-    process->deleteLater();
-}
-
-void Telegram::pollFinished(int, QProcess::ExitStatus)
-{
-    QJsonObject json = QJsonDocument::fromJson(m_buffer).object();
-    QJsonArray array = json.value("result").toArray();
-
-    if (!json.value("ok").toBool())
-        logWarning << "Telegram getUpdates request error, description:" << (json.contains("description") ? json.value("description").toString() : "(empty)");
-
-    for (auto it = array.begin(); it != array.end(); it++)
+    if (process != m_process)
     {
-        QJsonObject item = it->toObject(), data;
-        qint64 chat;
-        bool check = item.contains("message");
+        QJsonObject json = QJsonDocument::fromJson(process->readAllStandardOutput()).object();
+        QString id = process->property("id").toString();
 
-        m_offset = item.value("update_id").toVariant().toLongLong() + 1;
+        if (json.value("ok").toBool() && !id.isEmpty())
+            m_messages.insert(id, json.value("result").toObject().value("message_id").toVariant().toLongLong());
 
-        data = item.value(check ? "message" : "callback_query").toObject();
-        chat = check ? data.value("chat").toObject().value("id").toVariant().toLongLong() : data.value("message").toObject().value("chat").toObject().value("id").toVariant().toLongLong();
+        process->deleteLater();
+    }
+    else
+    {
+        QJsonObject json = QJsonDocument::fromJson(m_buffer).object();
+        QJsonArray array = json.value("result").toArray();
 
-        if (check && data.contains("photo"))
+        if (!json.value("ok").toBool())
+            logWarning << "Telegram getUpdates request error, description:" << (json.contains("description") ? json.value("description").toString() : "(empty)");
+
+        for (auto it = array.begin(); it != array.end(); it++)
         {
-            sendMessage(QString("File ID:\n`%1`").arg(data.value("photo").toArray().last().toObject().value("file_id").toString()), QString(), QString(), QString(), 0, true, false, false, {chat});
-            continue;
+            QJsonObject item = it->toObject(), data;
+            qint64 chat;
+            bool check = item.contains("message");
+
+            m_offset = item.value("update_id").toVariant().toLongLong() + 1;
+
+            data = item.value(check ? "message" : "callback_query").toObject();
+            chat = check ? data.value("chat").toObject().value("id").toVariant().toLongLong() : data.value("message").toObject().value("chat").toObject().value("id").toVariant().toLongLong();
+
+            if (check && data.contains("photo"))
+            {
+                sendMessage(QString("File ID:\n`%1`").arg(data.value("photo").toArray().last().toObject().value("file_id").toString()), QString(), QString(), QString(), 0, false, false, false, {chat});
+                continue;
+            }
+
+            emit messageReceived(data.value(check ? "text" : "data").toString(), chat);
         }
 
-        emit messageReceived(data.value(check ? "text" : "data").toString(), chat);
+        getUpdates();
     }
-
-    getUpdates();
 }
 
 void Telegram::readyRead(void)

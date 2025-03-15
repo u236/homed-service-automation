@@ -35,8 +35,7 @@ private:
 
 private slots:
 
-    void requestFinished(int exitCode, QProcess::ExitStatus exitStatus);
-    void pollFinished(int exitCode, QProcess::ExitStatus exitStatus);
+    void finished(int exitCode, QProcess::ExitStatus exitStatus);
     void readyRead(void);
     void pollError(void);
 
