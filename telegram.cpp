@@ -4,7 +4,7 @@
 #include "logger.h"
 #include "telegram.h"
 
-Telegram::Telegram(QSettings *config, QObject *parent) : QObject(parent), m_process(new QProcess(this)), m_offset(0)
+Telegram::Telegram(QSettings *config, AutomationList *automations, QObject *parent) : QObject(parent), m_automations(automations), m_process(new QProcess(this)), m_offset(0)
 {
     m_token = config->value("telegram/token").toString();
     m_chat = config->value("telegram/chat").toLongLong();
@@ -68,15 +68,15 @@ void Telegram::sendFile(const QString &message, const QString &file, const QStri
         {
             QString id = QString("%1:%2").arg(uuid).arg(chatId);
 
-            if (m_messages.contains(id))
+            if (m_automations->messages().contains(id))
             {
                 if (update)
                 {
-                    formList.append(QString("-F message_id=%1").arg(m_messages.value(id)));
+                    formList.append(QString("-F message_id=%1").arg(m_automations->messages().value(id)));
                     method = "editMessageCaption";
                 }
                 else
-                    deleteMessage(chatId, m_messages.value(id));
+                    deleteMessage(chatId, m_automations->messages().value(id));
             }
 
             process->setProperty("id", id);
@@ -128,15 +128,15 @@ void Telegram::sendMessage(const QString &message, const QString &photo, const Q
         {
             QString id = QString("%1:%2").arg(uuid).arg(chatId);
 
-            if (m_messages.contains(id))
+            if (m_automations->messages().contains(id))
             {
                 if (update)
                 {
-                    json.insert("message_id", QJsonValue::fromVariant(m_messages.value(id)));
+                    json.insert("message_id", QJsonValue::fromVariant(m_automations->messages().value(id)));
                     method = "editMessageText";
                 }
                 else
-                    deleteMessage(chatId, m_messages.value(id));
+                    deleteMessage(chatId, m_automations->messages().value(id));
             }
 
             process->setProperty("id", id);
@@ -191,7 +191,10 @@ void Telegram::finished(int, QProcess::ExitStatus)
         QString id = process->property("id").toString();
 
         if (json.value("ok").toBool() && !id.isEmpty())
-            m_messages.insert(id, json.value("result").toObject().value("message_id").toVariant().toLongLong());
+        {
+            m_automations->messages().insert(id, json.value("result").toObject().value("message_id").toVariant().toLongLong());
+            m_automations->store(true);
+        }
 
         process->deleteLater();
     }

@@ -109,6 +109,7 @@ public:
     AutomationList(QSettings *config, QObject *parent);
     ~AutomationList(void);
 
+    inline QMap <QString, qint64> &messages(void) { return m_messages; }
     inline QMap <QString, QVariant> &states(void) { return m_states; }
 
     void init(void);
@@ -126,9 +127,12 @@ private:
     qint64 m_telegramChat;
     bool m_sync;
 
+    QList <QString> m_telegramActions;
+    QMap <QString, qint64> m_messages;
     QMap <QString, QVariant> m_states;
 
     void parsePattern(const QString &string);
+
     void unserializeConditions(QList <Condition> &list, const QJsonArray &conditions);
     void unserializeActions(ActionList &list, const QJsonArray &actions);
     void unserialize(const QJsonArray &automations);

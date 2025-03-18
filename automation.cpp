@@ -28,14 +28,25 @@ AutomationList::~AutomationList(void)
 
 void AutomationList::init(void)
 {
-    QJsonObject json;
+    QJsonObject json, messages;
 
     if (!m_file.open(QFile::ReadOnly))
         return;
 
     json = QJsonDocument::fromJson(m_file.readAll()).object();
-    m_states = json.value("states").toObject().toVariantMap();
+    messages = json.value("messages").toObject();
+
     unserialize(json.value("automations").toArray());
+    m_states = json.value("states").toObject().toVariantMap();
+
+    for (auto it = messages.begin(); it != messages.end(); it++)
+    {
+        if (!m_telegramActions.contains(it.key().split(':').value(0)))
+            continue;
+
+        m_messages.insert(it.key(), it.value().toVariant().toLongLong());
+    }
+
     m_file.close();
 }
 
@@ -347,6 +358,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
     for (auto it = actions.begin(); it != actions.end(); it++)
     {
         QJsonObject item = it->toObject();
+        QString uuid = item.value("uuid").toString(QUuid::createUuid().toString(QUuid::StringFormat::Id128)).trimmed();
         ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
         Action action;
 
@@ -408,6 +420,9 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 if (message.isEmpty() && file.isEmpty() && photo.isEmpty())
                     continue;
 
+                if (!m_telegramActions.contains(uuid))
+                    m_telegramActions.append(uuid);
+
                 for (auto it = array.begin(); it != array.end(); it++)
                     chats.append(it->toVariant().toLongLong());
 
@@ -452,7 +467,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
         if (action.isNull())
             continue;
 
-        action->setUuid(item.value("uuid").toString(QUuid::createUuid().toString(QUuid::StringFormat::Id128)).trimmed());
+        action->setUuid(uuid);
         action->setTriggerName(item.value("triggerName").toString().trimmed());
         list.append(action);
     }
@@ -793,8 +808,8 @@ QJsonArray AutomationList::serialize(void)
 
 void AutomationList::writeDatabase(void)
 {
-    QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}};
-    QByteArray data = QJsonDocument(json).toJson(QJsonDocument::Compact);
+    QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}}, messages;
+    QByteArray data;
     bool check = true;
 
     emit statusUpdated(json);
@@ -809,6 +824,14 @@ void AutomationList::writeDatabase(void)
         logWarning << "Database not stored, file" << m_file.fileName() << "open error:" << m_file.errorString();
         return;
     }
+
+    for (auto it = m_messages.begin(); it != m_messages.end(); it++)
+        messages.insert(it.key(), QJsonValue::fromVariant(it.value()));
+
+    if (!messages.isEmpty())
+        json.insert("messages", messages);
+
+    data = QJsonDocument(json).toJson(QJsonDocument::Compact);
 
     if (m_file.write(data) != data.length())
     {

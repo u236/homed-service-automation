@@ -3,6 +3,7 @@
 
 #include <QProcess>
 #include <QSettings>
+#include "automation.h"
 
 class Telegram : public QObject
 {
@@ -10,7 +11,7 @@ class Telegram : public QObject
 
 public:
 
-    Telegram(QSettings *config, QObject *parent);
+    Telegram(QSettings *config, AutomationList *automations, QObject *parent);
     ~Telegram(void);
 
     void sendFile(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats);
@@ -19,6 +20,7 @@ public:
 
 private:
 
+    AutomationList *m_automations;
     QByteArray m_buffer;
     QProcess *m_process;
 
@@ -30,8 +32,6 @@ private:
 
     void deleteMessage(qint64 chatId, qint64 messageId);
     void getUpdates(void);
-
-    QMap <QString, quint64> m_messages;
 
 private slots:
 

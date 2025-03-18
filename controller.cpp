@@ -3,7 +3,7 @@
 #include "parser.h"
 #include "runner.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
+Controller::Controller(const QString &configFile) : HOMEd(configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
 {
     logInfo << "Starting version" << SERVICE_VERSION;
     logInfo << "Configuration file is" << getConfig()->fileName();
@@ -30,7 +30,7 @@ Device Controller::findDevice(const QString &search)
     QList <QString> list = search.split('/');
 
     for (auto it = m_devices.begin(); it != m_devices.end(); it++)
-        if (search == it.value()->key() || search.startsWith(it.value()->key().append('/')) || search == it.value()->topic() || search.startsWith(it.value()->topic().append('/')) || (it.value()->key().split('/').first() == list.value(0).toLower().trimmed() && it.value()->name().toLower() == list.value(1).toLower().trimmed()))
+        if (search == it.value()->key() || search.startsWith(it.value()->key().append('/')) || search == it.value()->topic() || search.startsWith(it.value()->topic().append('/')) || (it.value()->key().split('/').value(0) == list.value(0).toLower().trimmed() && it.value()->name().toLower() == list.value(1).toLower().trimmed()))
             return it.value();
 
     return Device();
