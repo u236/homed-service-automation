@@ -152,7 +152,7 @@ Automation AutomationList::parse(const QJsonObject &json)
 
             case TriggerObject::Type::interval:
             {
-                trigger = Trigger(new IntervalTrigger(item.value("interval").toInt()));
+                trigger = Trigger(new IntervalTrigger(item.value("interval").toInt(), item.value("offset").toInt()));
                 break;
             }
 
@@ -778,7 +778,8 @@ QJsonArray AutomationList::serialize(void)
                 case TriggerObject::Type::interval:
                 {
                     IntervalTrigger *trigger = reinterpret_cast <IntervalTrigger*> (automation->triggers().at(j).data());
-                    item.insert("interval", QJsonValue::fromVariant(trigger->value()));
+                    item.insert("interval", QJsonValue::fromVariant(trigger->interval()));
+                    item.insert("offset", QJsonValue::fromVariant(trigger->offset()));
                     break;
                 }
 

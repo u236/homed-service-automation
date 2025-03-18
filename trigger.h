@@ -144,15 +144,15 @@ class TimeTrigger : public TriggerObject
 
 public:
 
-    TimeTrigger(const QVariant &value) :
-        TriggerObject(Type::time), m_value(value) {}
+    TimeTrigger(const QVariant &time) :
+        TriggerObject(Type::time), m_time(time) {}
 
-    inline QVariant value(void) { return m_value; }
-    inline bool match(const QTime &value, Sun *sun) { return value == sun->fromString(m_value.toString()); }
+    inline QVariant value(void) { return m_time; }
+    inline bool match(const QTime &value, Sun *sun) { return value == sun->fromString(m_time.toString()); }
 
 private:
 
-    QVariant m_value;
+    QVariant m_time;
 
 };
 
@@ -161,15 +161,16 @@ class IntervalTrigger : public TriggerObject
 
 public:
 
-    IntervalTrigger(int value) :
-        TriggerObject(Type::interval), m_value(value) {}
+    IntervalTrigger(int interval, int offset) :
+        TriggerObject(Type::interval), m_interval(interval), m_offset(offset) {}
 
-    inline int value(void) { return m_value; }
-    inline bool match(int value) { return !m_value || value % m_value ? false : true; }
+    inline int interval(void) { return m_interval; }
+    inline int offset(void) { return m_offset; }
+    inline bool match(int value) { return !m_interval || value - m_offset < 0 || (value - m_offset) % m_interval ? false : true; }
 
 private:
 
-    int m_value;
+    int m_interval, m_offset;
 
 };
 

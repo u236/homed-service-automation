@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.0.3"
+#define SERVICE_VERSION         "2.0.4"
 #define SUBSCRIPTION_DELAY      1000
 
 #include "automation.h"
