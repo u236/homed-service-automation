@@ -23,7 +23,7 @@ private:
     Controller *m_controller;
     QWeakPointer <AutomationObject> m_automation;
 
-    QVariant parsePattern(QString string);
+    inline QVariant parsePattern(QString string) { return m_controller->parsePattern(m_automation, string); }
 
 private slots:
 

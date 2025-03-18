@@ -24,7 +24,7 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendFile(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList<qint64> &chats)
+void Telegram::sendFile(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats)
 {
     QList <qint64> chatList = chats;
     QList <QString> typeList = {"animation", "audio", "photo", "video"}, itemList = file.split('|'), formList;

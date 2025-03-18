@@ -39,8 +39,8 @@ public:
     Device findDevice(const QString &search);
     quint8 getEndpointId(const QString &endpoint);
 
-    QVariant parsePattern(QString string, const Trigger &trigger, bool condition = false);
-    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const Trigger &trigger);
+    QVariant parsePattern(const Automation &automation, QString string, bool condition = false);
+    bool checkConditions(const Automation &automation, const QList <Condition> &conditions, ConditionObject::Type type);
 
     Q_ENUM(Command)
     Q_ENUM(Event)

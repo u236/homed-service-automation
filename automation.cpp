@@ -166,9 +166,7 @@ Automation AutomationList::parse(const QJsonObject &json)
         if (trigger.isNull())
             continue;
 
-        trigger->setParent(automation.data());
         trigger->setName(item.value("name").toString().trimmed());
-
         automation->triggers().append(trigger);
     }
 

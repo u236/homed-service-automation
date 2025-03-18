@@ -46,7 +46,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
     return 0;
 }
 
-QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool condition)
+QVariant Controller::parsePattern(const Automation &automation, QString string, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}");
     QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName"};
@@ -57,7 +57,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
         while ((position = calculate.indexIn(string)) != -1)
         {
             QString item = calculate.cap();
-            double number = Expression(parsePattern(item.mid(2, item.length() - 4), trigger, condition).toString()).result();
+            double number = Expression(parsePattern(automation, item.mid(2, item.length() - 4), condition).toString()).result();
             string.replace(position, item.length(), QString::number(number, 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
         }
     }
@@ -156,7 +156,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
 
             case 4: // shellOutput
             {
-                value = reinterpret_cast <AutomationObject*> (trigger->parent())->shellOutput();
+                value = automation->shellOutput();
                 break;
             }
 
@@ -185,7 +185,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
 
             case 9: // triggerName
             {
-                value = trigger->name();
+                value = automation->lastTrigger()->name();
                 break;
             }
         }
@@ -196,7 +196,7 @@ QVariant Controller::parsePattern(QString string, const Trigger &trigger, bool c
     return Parser::stringValue(string);
 }
 
-bool Controller::checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const Trigger &trigger)
+bool Controller::checkConditions(const Automation &automation, const QList <Condition> &conditions, ConditionObject::Type type)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
@@ -212,7 +212,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
                 const Device &device = findDevice(condition->endpoint());
 
-                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), trigger, true) : condition->value()))
+                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
                     count++;
 
                 break;
@@ -222,7 +222,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 MqttCondition *condition = reinterpret_cast <MqttCondition*> (item.data());
 
-                if (condition->match(m_topics.value(condition->topic()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), trigger, true) : condition->value()))
+                if (condition->match(m_topics.value(condition->topic()), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
                     count++;
 
                 break;
@@ -232,7 +232,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 StateCondition *condition = reinterpret_cast <StateCondition*> (item.data());
 
-                if (condition->match(m_automations->states().value(condition->name()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), trigger, true) : condition->value()))
+                if (condition->match(m_automations->states().value(condition->name()), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
                     count++;
 
                 break;
@@ -272,7 +272,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 PatternCondition *condition = reinterpret_cast <PatternCondition*> (item.data());
 
-                if (condition->match(parsePattern(condition->pattern(), trigger, true), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), trigger, true) : condition->value()))
+                if (condition->match(parsePattern(automation, condition->pattern(), true), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
                     count++;
 
                 break;
@@ -284,7 +284,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 NestedCondition *condition = reinterpret_cast <NestedCondition*> (item.data());
 
-                if (checkConditions(condition->conditions(), condition->type(), trigger))
+                if (checkConditions(automation, condition->conditions(), condition->type()))
                     count++;
 
                 break;
@@ -378,7 +378,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             else
                 logInfo << automation << "triggered by" << trigger->name();
 
-            if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger))
+            if (!checkConditions(automation, automation->conditions(), ConditionObject::Type::AND))
             {
                 logInfo << automation << "conditions mismatch";
                 continue;

@@ -15,11 +15,6 @@ Runner::~Runner(void)
     automation()->setRunner(nullptr);
 }
 
-QVariant Runner::parsePattern(QString string)
-{
-    return m_controller->parsePattern(string, automation()->lastTrigger());
-}
-
 void Runner::runActions(void)
 {
     for (int i = automation()->actionList()->index(); i < automation()->actionList()->count(); i++)
@@ -109,7 +104,7 @@ void Runner::runActions(void)
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
                 automation()->actionList()->setIndex(++i);
-                automation()->setActionList(&action->actions(m_controller->checkConditions(action->conditions(), ConditionObject::Type::AND, automation()->lastTrigger())));
+                automation()->setActionList(&action->actions(m_controller->checkConditions(automation(), action->conditions(), ConditionObject::Type::AND)));
                 automation()->actionList()->setIndex(0);
                 runActions();
                 return;
