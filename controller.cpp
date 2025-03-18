@@ -406,9 +406,9 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             if (!runner)
             {
                 runner = new Runner(this, automation);
-                connect(runner, &Runner::publishMessage, this, &Controller::publishMessage);
-                connect(runner, &Runner::updateState, this, &Controller::updateState);
-                connect(runner, &Runner::telegramAction, this, &Controller::telegramAction);
+                connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
+                connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
+                connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
                 connect(runner, &Runner::finished, this, &Controller::finished);
                 runner->start();
                 continue;
