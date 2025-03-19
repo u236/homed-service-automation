@@ -378,6 +378,10 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             else
                 logInfo << automation << "triggered by" << trigger->name();
 
+            automation->setLastTrigger(trigger);
+            automation->updateLastTriggered();
+            m_automations->store();
+
             if (!checkConditions(automation, automation->conditions(), ConditionObject::Type::AND))
             {
                 logInfo << automation << "conditions mismatch";
@@ -389,10 +393,6 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 logInfo << automation << "debounced";
                 continue;
             }
-
-            automation->setLastTrigger(trigger);
-            automation->updateLastTriggered();
-            m_automations->store();
 
             if (runner && runner->timer()->isActive() && !automation->restart())
             {
