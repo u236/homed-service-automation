@@ -27,7 +27,7 @@ Telegram::~Telegram(void)
 void Telegram::sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats)
 {
     QList <qint64> chatList = chats.isEmpty() ? QList <qint64> {m_chat} : chats;
-    QList <QString> typeList = {"animation", "audio", "message", "photo", "video"}, itemList = file.split('|'), formList;
+    QList <QString> typeList = {"animation", "audio", "message", "photo", "video"}, itemList = file.split('|'), formList, messageList;
     QString document = itemList.value(0).trimmed(), type = file.isEmpty() ? "message" : itemList.value(1).trimmed();
 
     if (m_token.isEmpty() || !m_chat)
@@ -36,13 +36,13 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
     if (!typeList.contains(type))
         type = "document";
 
-    if (type != "message")
+    if (!file.isEmpty())
         formList.append(QString("-F %1=%2'%3'").arg(type, QFile::exists(document) ? "@" : QString(), document));
 
     if (!message.isEmpty())
     {
-        formList.append(QString("-F %1='%2'").arg(type != "message" ? "caption" : "text", message));
-        formList.append("-F parse_mode=Markdown");
+        messageList.append(QString("-F %1='%2'").arg(file.isEmpty() ? "text" : "caption", message));
+        messageList.append("-F parse_mode=Markdown");
     }
 
     if (!keyboard.isEmpty())
@@ -67,11 +67,14 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
         formList.append(QString("-F reply_markup='%1'").arg(QString(QJsonDocument(QJsonObject {{"inline_keyboard", array}}).toJson(QJsonDocument::Compact))));
     }
 
-    if (thread)
-        formList.append(QString("-F message_thread_id=%1").arg(thread));
+    if (!update)
+    {
+        if (thread)
+            formList.append(QString("-F message_thread_id=%1").arg(thread));
 
-    if (silent)
-        formList.append("-F disable_notification=true");
+        if (silent)
+            formList.append("-F disable_notification=true");
+    }
 
     for (int i = 0; i < chatList.count(); i++)
     {
@@ -84,21 +87,31 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
         list.append(QString("-F chat_id=%1").arg(chatId));
         id = QString("%1:%2").arg(uuid).arg(chatId);
 
-        if (remove || update)
-            process->setProperty("id", id);
-
         if (m_automations->messages().contains(id))
         {
-            if (remove)
+            if (update)
+            {
+                list.append(QString("-F message_id=%1").arg(m_automations->messages().value(id)));
+                method = file.isEmpty() ? "editMessageText" : "editMessageMedia";
+
+                if (!file.isEmpty())
+                {
+                    QJsonObject json = {{"type", type}, {"media", QFile::exists(document) ? QString("attach://%1").arg(type) : document}};
+
+                    if (!message.isEmpty())
+                    {
+                        json.insert("caption", message);
+                        json.insert("parse_mode", "Markdown");
+                    }
+
+                    list.append(QString("-F media='%1'").arg(QString(QJsonDocument(json).toJson(QJsonDocument::Compact))));
+                }
+            }
+            else if (remove)
             {
                 QProcess *process(new QProcess(this));
                 connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
                 process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument({{"chat_id", chatId}, {"message_id", m_automations->messages().value(id)}}).toJson(QJsonDocument::Compact), m_token)});
-            }
-            else if (update)
-            {
-                list.append(QString("-F message_id=%1").arg(m_automations->messages().value(id)));
-                method = type != "message" ? "editMessageCaption" : "editMessageText";
             }
             else
             {
@@ -106,6 +119,12 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
                 m_automations->store(true);
             }
         }
+
+        if (method != "editMessageMedia")
+            list.append(messageList);
+
+        if (remove || update)
+            process->setProperty("id", id);
 
         process->start("sh", {"-c", QString("curl -X POST %1 -s https://api.telegram.org/bot%2/%3").arg(list.join(0x20), m_token, method)});
     }
@@ -142,6 +161,7 @@ void Telegram::finished(int, QProcess::ExitStatus)
     }
     else
     {
+        QList <QString> list = {"audio", "document", "photo", "video"};
         QJsonObject json = QJsonDocument::fromJson(m_buffer).object();
         QJsonArray array = json.value("result").toArray();
 
@@ -158,11 +178,21 @@ void Telegram::finished(int, QProcess::ExitStatus)
             data = item.value(check ? "message" : "callback_query").toObject();
             chat = check ? data.value("chat").toObject().value("id").toVariant().toLongLong() : data.value("message").toObject().value("chat").toObject().value("id").toVariant().toLongLong();
 
-            if (check && data.contains("photo"))
+            if (check)
             {
-                sendMessage(QString("File ID:\n`%1`").arg(data.value("  photo").toArray().last().toObject().value("file_id").toString()), QString(), QString(), QString(), 0, false, false, false, {chat});
-                continue;
+                for (int i = 0; i < list.count(); i++)
+                {
+                    QString type = list.at(i);
+
+                    if (!data.contains(type))
+                        continue;
+
+                    sendMessage(QString("File ID:\n`%1`\n\nType:\n`%2`").arg(type != "photo" ? data.value(type).toObject().value("file_id").toString() : data.value("photo").toArray().last().toObject().value("file_id").toString(), type), QString(), QString(), QString(), 0, false, false, false, {chat});
+                }
             }
+
+            if (!data.contains(check ? "text" : "data"))
+                continue;
 
             emit messageReceived(data.value(check ? "text" : "data").toString(), chat);
         }
