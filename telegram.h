@@ -14,9 +14,7 @@ public:
     Telegram(QSettings *config, AutomationList *automations, QObject *parent);
     ~Telegram(void);
 
-    void sendFile(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats);
-    void sendMessage(const QString &message, const QString &photo, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats);
-
+    void sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats);
 
 private:
 
@@ -27,8 +25,6 @@ private:
     QString m_token;
     qint64 m_chat, m_offset;
     qint32 m_timeout;
-
-    QJsonObject inllineKeyboard(const QString &keyboard);
 
     void deleteMessage(qint64 chatId, qint64 messageId);
     void getUpdates(void);
