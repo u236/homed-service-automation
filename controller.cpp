@@ -379,8 +379,6 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 logInfo << automation << "triggered by" << trigger->name();
 
             automation->setLastTrigger(trigger);
-            automation->updateLastTriggered();
-            m_automations->store();
 
             if (!checkConditions(automation, automation->conditions(), ConditionObject::Type::AND))
             {
@@ -393,6 +391,9 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 logInfo << automation << "debounced";
                 continue;
             }
+
+            automation->updateLastTriggered();
+            m_automations->store();
 
             if (runner && runner->timer()->isActive() && !automation->restart())
             {
@@ -449,7 +450,7 @@ void Controller::mqttConnected(void)
 
 void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &topic)
 {
-    QString subTopic = topic.name().replace(mqttTopic(), QString());
+    QString subTopic = topic.name().replace(0, mqttTopic().length(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
 
     if (m_subscriptions.contains(topic.name()))
