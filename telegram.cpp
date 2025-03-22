@@ -29,6 +29,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
     QList <qint64> chatList = chats.isEmpty() ? QList <qint64> {m_chat} : chats;
     QList <QString> typeList = {"animation", "audio", "message", "photo", "video"}, itemList = file.split('|'), formList, messageList;
     QString document = itemList.value(0).trimmed(), type = file.isEmpty() ? "message" : itemList.value(1).trimmed();
+    QJsonArray array;
 
     if (m_token.isEmpty() || !m_chat)
         return;
@@ -47,8 +48,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
 
     if (!keyboard.isEmpty())
     {
-        QList <QString> lines = keyboard.split('\n');
-        QJsonArray array;
+        QList <QString> lines = keyboard.trimmed().split('\n');
 
         for (int i = 0; i < lines.count(); i++)
         {
@@ -58,14 +58,22 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
             for (int j = 0; j < items.count(); j++)
             {
                 QList <QString> item = items.at(j).split(':');
+
+                if (item.value(0).isEmpty())
+                    continue;
+
                 line.append(QJsonObject{{"text", item.value(0).trimmed()}, {"callback_data", item.value(item.count() > 1 ? 1 : 0).trimmed()}});
             }
 
+            if (line.isEmpty())
+                continue;
+
             array.append(line);
         }
-
-        formList.append(QString("-F reply_markup='%1'").arg(QString(QJsonDocument(QJsonObject {{"inline_keyboard", array}}).toJson(QJsonDocument::Compact))));
     }
+
+    if (!array.isEmpty())
+        formList.append(QString("-F reply_markup='%1'").arg(QString(QJsonDocument(QJsonObject {{"inline_keyboard", array}}).toJson(QJsonDocument::Compact))));
 
     if (!update)
     {
