@@ -4,7 +4,7 @@
 #include "logger.h"
 #include "telegram.h"
 
-Telegram::Telegram(QSettings *config, AutomationList *automations, QObject *parent) : QObject(parent), m_automations(automations), m_process(new QProcess(this)), m_offset(0)
+Telegram::Telegram(QSettings *config, AutomationList *automations, QObject *parent) : QObject(parent), m_automations(automations), m_process(new QProcess(this)), m_timer(new QTimer(this)), m_offset(0)
 {
     m_token = config->value("telegram/token").toString();
     m_chat = config->value("telegram/chat").toLongLong();
@@ -16,6 +16,9 @@ Telegram::Telegram(QSettings *config, AutomationList *automations, QObject *pare
     connect(m_process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
     connect(m_process, &QProcess::readyReadStandardOutput, this, &Telegram::readyRead);
     connect(m_process, &QProcess::readyReadStandardError, this, &Telegram::pollError);
+    connect(m_timer, &QTimer::timeout, this, &Telegram::getUpdates);
+
+    m_timer->setSingleShot(true);
     getUpdates();
 }
 
@@ -144,7 +147,7 @@ void Telegram::getUpdates(void)
     m_process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/getUpdates").arg(QJsonDocument({{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), m_token)});
 }
 
-void Telegram::finished(int, QProcess::ExitStatus)
+void Telegram::finished(int exitCode, QProcess::ExitStatus)
 {
     QProcess *process = reinterpret_cast <QProcess*> (sender());
 
@@ -167,7 +170,7 @@ void Telegram::finished(int, QProcess::ExitStatus)
             m_automations->store(true);
         }
     }
-    else
+    else if (!exitCode || exitCode == CURL_OPERATION_TIMEOUT_EXIT_CODE)
     {
         QList <QString> list = {"audio", "document", "photo", "video"};
         QJsonObject json = QJsonDocument::fromJson(m_buffer).object();
@@ -206,6 +209,11 @@ void Telegram::finished(int, QProcess::ExitStatus)
         }
 
         getUpdates();
+    }
+    else
+    {
+        logWarning << "Telegram getUpdates process failed, exit code:" << exitCode;
+        m_timer->start(GET_UPDATES_RETRY_TIMEOUT);
     }
 }
 

@@ -1,6 +1,9 @@
 #ifndef TELEGRAM_H
 #define TELEGRAM_H
 
+#define CURL_OPERATION_TIMEOUT_EXIT_CODE    28
+#define GET_UPDATES_RETRY_TIMEOUT           15000
+
 #include <QProcess>
 #include <QSettings>
 #include "automation.h"
@@ -20,17 +23,19 @@ private:
 
     AutomationList *m_automations;
     QByteArray m_buffer;
+
     QProcess *m_process;
+    QTimer *m_timer;
 
     QString m_token;
     qint64 m_chat, m_offset;
     qint32 m_timeout;
 
     void deleteMessage(qint64 chatId, qint64 messageId);
-    void getUpdates(void);
 
 private slots:
 
+    void getUpdates(void);
     void finished(int exitCode, QProcess::ExitStatus exitStatus);
     void readyRead(void);
     void pollError(void);
