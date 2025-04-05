@@ -29,12 +29,24 @@ bool ConditionObject::match(const QVariant &value, QVariant match, Statement sta
 
 bool DateCondition::match(const QDate &value)
 {
+    QDate match;
+
+    if (m_statement != Statement::between)
+    {
+        QList <QString> list = m_value.toString().split('.');
+
+        if (list.count() < 2)
+            list.append(QDateTime::currentDateTime().toString("M"));
+
+        match = QDate::fromString(list.join('.'), "d.M");
+    }
+
     switch (m_statement)
     {
-        case Statement::equals:  return value == QDate::fromString(m_value.toString(), "d.M");
-        case Statement::differs: return value != QDate::fromString(m_value.toString(), "d.M");
-        case Statement::above:   return value >= QDate::fromString(m_value.toString(), "d.M");
-        case Statement::below:   return value <= QDate::fromString(m_value.toString(), "d.M");
+        case Statement::equals:  return value == match;
+        case Statement::differs: return value != match;
+        case Statement::above:   return value >= match;
+        case Statement::below:   return value <= match;
 
         case Statement::between:
         {
