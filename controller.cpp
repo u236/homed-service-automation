@@ -48,8 +48,8 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 
 QVariant Controller::parsePattern(const Automation &automation, QString string, bool condition)
 {
-    QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName"};
+    QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
     int position;
 
     if (!string.startsWith("#!"))
@@ -64,8 +64,8 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
 
     while ((position = replace.indexIn(string)) != -1)
     {
-        QString item = replace.cap(), value;
-        QList <QString> itemList = item.mid(2, item.length() - 4).split('|');
+        QString capture = replace.cap(), item = capture.mid(2, capture.length() - 4).trimmed(), value;
+        QList <QString> itemList = item.split('|');
         int index = valueList.indexOf(itemList.value(0).trimmed());
 
         switch (index)
@@ -188,9 +188,46 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
                 value = automation->lastTrigger()->name();
                 break;
             }
+
+            default:
+            {
+                QList <QString> list = item.split(split);
+
+                for (int i = 0; i < list.count(); i++)
+                {
+                    QString item = list.at(i);
+
+                    if (!item.startsWith('\'') || !item.endsWith('\''))
+                        continue;
+
+                    list.replace(i, item.mid(1, item.length() - 2));
+                }
+
+                while (list.count() >= 7 && list.at(1) == "if" && list.at(5) == "else")
+                {
+                    bool check = false;
+
+                    switch (operatList.indexOf(list.at(3)))
+                    {
+                        case 0: check = list.at(4) == "defined" ? !list.at(2).isEmpty() : list.at(4) == "undefined" ? list.at(2).isEmpty() : false; break;
+                        case 1: check = list.at(2) == list.at(4); break;
+                        case 2: check = list.at(2) != list.at(4); break;
+                        case 3: check = list.at(2).toDouble() > list.at(4).toDouble(); break;
+                        case 4: check = list.at(2).toDouble() >= list.at(4).toDouble(); break;
+                        case 5: check = list.at(2).toDouble() < list.at(4).toDouble(); break;
+                        case 6: check = list.at(2).toDouble() <= list.at(4).toDouble(); break;
+                    }
+
+                    list = check ? list.mid(0, 1) : list.mid(6);
+                }
+
+                value = list.join(0x20);
+                break;
+            }
+
         }
 
-        string.replace(position, item.length(), value.isEmpty() && !condition ? "_NULL_" : value);
+        string.replace(position, capture.length(), value.isEmpty() && !condition ? "_NULL_" : value);
     }
 
     return Parser::stringValue(string);
