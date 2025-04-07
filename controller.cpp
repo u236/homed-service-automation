@@ -191,7 +191,7 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
 
             default:
             {
-                QList <QString> list = item.split(split);
+                QList <QString> list = item.split(split, Qt::SkipEmptyParts);
 
                 for (int i = 0; i < list.count(); i++)
                 {
