@@ -209,7 +209,7 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
 
                     switch (operatList.indexOf(list.at(3)))
                     {
-                        case 0: check = list.at(4) == "defined" ? !list.at(2).isEmpty() : list.at(4) == "undefined" ? list.at(2).isEmpty() : false; break;
+                        case 0: check = list.at(4) == "defined" ? list.at(2) != EMPTY_PATTERN_VALUE : list.at(4) == "undefined" ? list.at(2) == EMPTY_PATTERN_VALUE : false; break;
                         case 1: check = list.at(2) == list.at(4); break;
                         case 2: check = list.at(2) != list.at(4); break;
                         case 3: check = list.at(2).toDouble() > list.at(4).toDouble(); break;
@@ -227,7 +227,7 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
 
         }
 
-        string.replace(position, capture.length(), value.isEmpty() && !condition ? "_NULL_" : value);
+        string.replace(position, capture.length(), value.isEmpty() && !condition ? EMPTY_PATTERN_VALUE : value);
     }
 
     return Parser::stringValue(string);

@@ -2,6 +2,7 @@
 #define CONTROLLER_H
 
 #define SERVICE_VERSION         "2.0.6"
+#define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 
 #include "automation.h"

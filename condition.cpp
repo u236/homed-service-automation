@@ -1,4 +1,5 @@
 #include "condition.h"
+#include "controller.h"
 
 bool ConditionObject::match(const QVariant &value, QVariant match, Statement statement)
 {
@@ -7,7 +8,7 @@ bool ConditionObject::match(const QVariant &value, QVariant match, Statement sta
         QList <QString> list = {"detected", "low", "occupied", "on", "open", "wet"};
         match = list.contains(match.toString()) ? true : false;
     }
-    else if (match.isNull() || match.toString() == "_NULL_")
+    else if (match.isNull() || match.toString() == EMPTY_PATTERN_VALUE)
         match = QVariant();
 
     switch (statement)
