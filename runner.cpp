@@ -49,7 +49,7 @@ void Runner::runActions(void)
                         QJsonArray array;
 
                         for (int i = 0; i < list.count(); i++)
-                            array.append(QJsonValue::fromVariant(Parser::stringValue(list.at(i))));
+                            array.append(QJsonValue::fromVariant(Parser::stringValue(list.at(i).trimmed())));
 
                         value = array;
                     }
