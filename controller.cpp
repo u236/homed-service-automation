@@ -449,6 +449,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 continue;
             }
 
+            logWarning << automation << "restarted";
             QMetaObject::invokeMethod(runner, "runActions");
         }
     }

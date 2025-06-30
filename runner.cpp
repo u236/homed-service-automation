@@ -17,6 +17,8 @@ Runner::~Runner(void)
 
 void Runner::runActions(void)
 {
+    m_timer->stop();
+
     for (int i = automation()->actionList()->index(); i < automation()->actionList()->count(); i++)
     {
         const Action &item = automation()->actionList()->at(i);
@@ -112,10 +114,10 @@ void Runner::runActions(void)
 
             case ActionObject::Type::delay:
             {
-                DelayAction *action = reinterpret_cast <DelayAction*> (item.data());
+                int delay = parsePattern(reinterpret_cast <DelayAction*> (item.data())->value().toString()).toInt();
                 automation()->actionList()->setIndex(++i);
-                logInfo << automation() << "timer" << (m_timer->isActive() ? "restarted" : "started");
-                m_timer->start(parsePattern(action->value().toString()).toInt() * 1000);
+                logInfo << automation() << "timer started for" << delay << "seconds";
+                m_timer->start(delay * 1000);
                 return;
             }
         }
