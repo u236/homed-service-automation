@@ -513,6 +513,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 QJsonObject data = json.value("data").toObject();
                 QString name = data.value("name").toString().trimmed();
                 Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
+                Runner *runner = reinterpret_cast <Runner*> (automation->runner());
 
                 if (automation != other && !other.isNull())
                 {
@@ -520,6 +521,9 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                     publishEvent(name, Event::nameDuplicate);
                     break;
                 }
+
+                if (runner)
+                    runner->abort();
 
                 automation = m_automations->parse(data);
 
@@ -740,7 +744,15 @@ void Controller::telegramAction(const QString &message, const QString &file, con
 void Controller::finished(void)
 {
     Runner *runner = reinterpret_cast <Runner*> (sender());
+
     runner->wait();
+
+    if (runner->aborted())
+    {
+        runner->deleteLater();
+        return;
+    }
+
     delete runner;
 }
 

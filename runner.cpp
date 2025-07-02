@@ -3,7 +3,7 @@
 #include "logger.h"
 #include "runner.h"
 
-Runner::Runner(Controller *controller, const Automation &automation) : QThread(nullptr), m_controller(controller), m_automation(automation)
+Runner::Runner(Controller *controller, const Automation &automation) : QThread(nullptr), m_controller(controller), m_automation(automation), m_aborted(false)
 {
     connect(this, &Runner::started, this, &Runner::threadStarted);
     moveToThread(this);
@@ -13,6 +13,13 @@ Runner::~Runner(void)
 {
     logInfo << automation() << "completed";
     automation()->setRunner(nullptr);
+}
+
+void Runner::abort(void)
+{
+    logInfo << automation() << "aborted";
+    m_aborted = true;
+    quit();
 }
 
 void Runner::runActions(void)
@@ -97,6 +104,9 @@ void Runner::runActions(void)
                     logWarning << automation() << "shell action process" << process.processId() << "timed out";
                     system(QString("kill -9 -%1").arg(process.processId()).toUtf8().constData());
                 }
+
+                if (m_aborted)
+                    return;
 
                 automation()->setShellOutput(process.readAll());
                 break;

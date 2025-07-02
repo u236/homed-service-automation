@@ -16,12 +16,16 @@ public:
 
     inline QTimer *timer(void) { return m_timer; }
     inline Automation automation(void) { return m_automation; }
+    inline bool aborted(void) { return m_aborted; }
+
+    void abort(void);
 
 private:
 
     QTimer *m_timer;
     Controller *m_controller;
     QWeakPointer <AutomationObject> m_automation;
+    bool m_aborted;
 
     inline QVariant parsePattern(QString string) { return m_controller->parsePattern(m_automation, string); }
 
