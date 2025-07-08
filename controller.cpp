@@ -513,7 +513,6 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 QJsonObject data = json.value("data").toObject();
                 QString name = data.value("name").toString().trimmed();
                 Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
-                Runner *runner = reinterpret_cast <Runner*> (automation->runner());
 
                 if (automation != other && !other.isNull())
                 {
@@ -522,8 +521,8 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                     break;
                 }
 
-                if (runner)
-                    runner->abort();
+                if (!automation.isNull() && automation->runner())
+                    reinterpret_cast <Runner*> (automation->runner())->abort();
 
                 automation = m_automations->parse(data);
 
