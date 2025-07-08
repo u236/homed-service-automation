@@ -36,7 +36,8 @@ public:
         differs,
         above,
         below,
-        between
+        between,
+        outside
     };
 
     ConditionObject(Type type) :

@@ -30,6 +30,7 @@ public:
         above,
         below,
         between,
+        outside,
         changes,
         updates
     };

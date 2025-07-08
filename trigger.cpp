@@ -21,6 +21,13 @@ bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, St
             return (force ? oldValue != newValue : (!oldValue.isValid() || a < min || a > max)) && b >= min && b <= max;
         }
 
+        case Statement::outside:
+        {
+            QList <QVariant> list = value.toList();
+            double a = oldValue.toDouble(), b = newValue.toDouble(), min = qMin(list.value(0).toDouble(), list.value(1).toDouble()), max = qMax(list.value(0).toDouble(), list.value(1).toDouble());
+            return (force ? oldValue != newValue : (!oldValue.isValid() || a >= min || a <= max)) && b < min && b > max;
+        }
+
         case Statement::changes:
         {
             double a = oldValue.toDouble(), b = newValue.toDouble(), change = value.toDouble();

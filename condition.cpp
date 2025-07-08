@@ -23,6 +23,12 @@ bool ConditionObject::match(const QVariant &value, QVariant match, Statement sta
             QList <QVariant> list = match.toList();
             return value.toDouble() >= qMin(list.value(0).toDouble(), list.value(1).toDouble()) && value.toDouble() <= qMax(list.value(0).toDouble(), list.value(1).toDouble());
         }
+
+        case Statement::outside:
+        {
+            QList <QVariant> list = match.toList();
+            return value.toDouble() < qMin(list.value(0).toDouble(), list.value(1).toDouble()) || value.toDouble() > qMax(list.value(0).toDouble(), list.value(1).toDouble());
+        }
     }
 
     return false;
@@ -55,6 +61,13 @@ bool DateCondition::match(const QDate &value)
             QDate start = QDate::fromString(list.value(0).toString(), "d.M"), end = QDate::fromString(list.value(1).toString(), "d.M");
             return start > end ? value >= start || value <= end : value >= start && value <= end;
         }
+
+        case Statement::outside:
+        {
+            QList <QVariant> list = m_value.toList();
+            QDate start = QDate::fromString(list.value(0).toString(), "d.M"), end = QDate::fromString(list.value(1).toString(), "d.M");
+            return start > end ? value < start && value > end : value < start || value > end;
+        }
     }
 
     return false;
@@ -74,6 +87,13 @@ bool TimeCondition::match(const QTime &value, Sun *sun)
             QList <QVariant> list = m_value.toList();
             QTime start = sun->fromString(list.value(0).toString()), end = sun->fromString(list.value(1).toString());
             return start > end ? value >= start || value <= end : value >= start && value <= end;
+        }
+
+        case Statement::outside:
+        {
+            QList <QVariant> list = m_value.toList();
+            QTime start = sun->fromString(list.value(0).toString()), end = sun->fromString(list.value(1).toString());
+            return start > end ? value < start && value > end : value < start || value > end;
         }
     }
 
