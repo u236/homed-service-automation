@@ -334,6 +334,49 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
     }
 }
 
+Runner *Controller::findRunner(const Automation &automation, bool pending)
+{
+    for (int i = 0; i < m_runners.count(); i++)
+    {
+        Runner *runner = m_runners.at(i);
+
+        if (runner->automation() != automation || (pending && runner->isFinished()))
+            continue;
+
+        return m_runners.at(i);
+    }
+
+    return nullptr;
+}
+
+void Controller::abortRunners(const Automation &automation)
+{
+    for (int i = 0; i < m_runners.count(); i++)
+        if (m_runners.at(i)->automation() == automation)
+            m_runners.at(i)->abort();
+}
+
+void Controller::addRunner(const Automation &automation, const QString &triggerName, bool start)
+{
+    Runner *runner = new Runner(this, automation, triggerName);
+
+    connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
+    connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
+    connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
+    connect(runner, &Runner::finished, this, &Controller::finished);
+
+    automation->updateCounter();
+    m_runners.append(runner);
+
+    if (!start)
+    {
+        logInfo << runner << "queued";
+        return;
+    }
+
+    runner->start();
+}
+
 void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
 {
     for (int i = 0; i < m_automations->count(); i++)
@@ -346,7 +389,8 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
         for (int j = 0; j < automation->triggers().count(); j++)
         {
             const Trigger &trigger = automation->triggers().at(j);
-            Runner *runner = reinterpret_cast <Runner*> (automation->runner());
+            Runner *runner = findRunner(automation);
+            bool start = true;
 
             if (trigger->type() != type)
                 continue;
@@ -426,21 +470,18 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             automation->updateLastTriggered();
             m_automations->store();
 
-            if (runner && !automation->restart())
+            if (runner)
             {
-                logWarning << automation << "already running";
-                continue;
+                switch (automation->mode())
+                {
+                    case AutomationObject::Mode::single:   logWarning << runner << "already running"; continue;
+                    case AutomationObject::Mode::restart:  abortRunners(automation); break;
+                    case AutomationObject::Mode::queued:   start = false; break;
+                    case AutomationObject::Mode::parallel: break;
+                }
             }
 
-            if (runner)
-                runner->abort(true);
-
-            runner = new Runner(this, automation, trigger->name());
-            connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
-            connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
-            connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
-            connect(runner, &Runner::finished, this, &Controller::finished);
-            runner->start();
+            addRunner(automation, trigger->name(), start);
         }
     }
 }
@@ -511,9 +552,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                     break;
                 }
 
-                if (!automation.isNull() && automation->runner())
-                    reinterpret_cast <Runner*> (automation->runner())->abort();
-
+                abortRunners(automation);
                 automation = m_automations->parse(data);
 
                 if (automation.isNull())
@@ -732,16 +771,13 @@ void Controller::telegramAction(const QString &message, const QString &file, con
 
 void Controller::finished(void)
 {
-    Runner *runner = reinterpret_cast <Runner*> (sender());
+    Runner *runner = reinterpret_cast <Runner*> (sender()), *next = findRunner(runner->automation(), true);
 
+    if (next)
+        next->start();
+
+    m_runners.removeOne(runner);
     runner->wait();
-
-    if (runner->aborted())
-    {
-        runner->deleteLater();
-        return;
-    }
-
     delete runner;
 }
 

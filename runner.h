@@ -1,6 +1,7 @@
 #ifndef RUNNER_H
 #define RUNNER_H
 
+#include <QProcess>
 #include <QThread>
 #include "automation.h"
 
@@ -16,18 +17,20 @@ public:
     ~Runner(void);
 
     inline Automation automation(void) { return m_automation; }
-    inline bool aborted(void) { return m_aborted; }
+    inline qint64 id(void) { return m_id; }
 
-    void abort(bool restart = false);
+    void abort(void);
 
 private:
 
+    QProcess *m_process;
     QTimer *m_timer;
     Controller *m_controller;
 
     QWeakPointer <AutomationObject> m_automation;
-    QString m_triggerName, m_shellOutput;
+    qint64 m_id;
 
+    QString m_triggerName, m_shellOutput;
     ActionList *m_actions;
     bool m_aborted;
 
@@ -37,6 +40,7 @@ private slots:
 
     void runActions(void);
     void threadStarted(void);
+    void threadFinished(void);
     void timeout(void);
 
 signals:
@@ -46,5 +50,7 @@ signals:
     void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats);
 
 };
+
+inline QDebug operator << (QDebug debug, Runner *runner) { return debug << runner->automation() << QString("#%1").arg(runner->id()).toUtf8().constData(); }
 
 #endif

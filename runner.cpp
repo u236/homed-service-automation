@@ -1,24 +1,31 @@
 #include <unistd.h>
 #include "controller.h"
 #include "logger.h"
-#include "runner.h"
 
-Runner::Runner(Controller *controller, const Automation &automation, const QString &triggerName) : QThread(nullptr), m_controller(controller), m_automation(automation), m_triggerName(triggerName), m_actions(&automation->actions()), m_aborted(false)
+Runner::Runner(Controller *controller, const Automation &automation, const QString &triggerName) : QThread(nullptr), m_controller(controller), m_automation(automation), m_id(automation->counter()), m_triggerName(triggerName), m_actions(&automation->actions()), m_aborted(false)
 {
     connect(this, &Runner::started, this, &Runner::threadStarted);
+    connect(this, &Runner::finished, this, &Runner::threadFinished);
+
     moveToThread(this);
 }
 
 Runner::~Runner(void)
 {
-    logInfo << automation() << "completed";
-    automation()->setRunner(nullptr);
+    if (m_aborted)
+        return;
+
+    logInfo << this << "completed";
 }
 
-void Runner::abort(bool restart)
+void Runner::abort(void)
 {
-    logInfo << automation() << (restart ? "restated" : "aborted");
+    logInfo << this << "aborted";
     m_aborted = true;
+
+    if (m_process->isOpen())
+        m_process->kill();
+
     quit();
 }
 
@@ -29,8 +36,6 @@ QVariant Runner::parsePattern(QString string)
 
 void Runner::runActions(void)
 {
-    m_timer->stop();
-
     for (int i = m_actions->index(); i < m_actions->count(); i++)
     {
         const Action &item = m_actions->at(i);
@@ -98,22 +103,21 @@ void Runner::runActions(void)
             case ActionObject::Type::shell:
             {
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
-                QProcess process;
 
-                process.setProcessChannelMode(QProcess::MergedChannels);
-                process.start("/bin/sh", {"-c", parsePattern(action->command()).toString()});
-                setpgid(process.processId(), process.processId());
+                m_process->setProcessChannelMode(QProcess::MergedChannels);
+                m_process->start("/bin/sh", {"-c", parsePattern(action->command()).toString()});
+                setpgid(m_process->processId(), m_process->processId());
 
-                if (!process.waitForFinished(action->timeout() * 1000))
+                if (!m_process->waitForFinished(action->timeout() * 1000))
                 {
-                    logWarning << automation() << "shell action process" << process.processId() << "timed out";
-                    system(QString("kill -9 -%1").arg(process.processId()).toUtf8().constData());
+                    logWarning << this << "shell action process" << m_process->processId() << "timed out";
+                    system(QString("kill -9 -%1").arg(m_process->processId()).toUtf8().constData());
                 }
 
                 if (m_aborted)
                     return;
 
-                m_shellOutput = process.readAll();
+                m_shellOutput = m_process->readAll();
                 break;
             }
 
@@ -130,7 +134,7 @@ void Runner::runActions(void)
             case ActionObject::Type::delay:
             {
                 int delay = parsePattern(reinterpret_cast <DelayAction*> (item.data())->value().toString()).toInt();
-                logInfo << automation() << "timer started for" << delay << "seconds";
+                logInfo << this << "timer started for" << delay << "seconds";
                 m_actions->setIndex(++i);
                 m_timer->start(delay * 1000);
                 return;
@@ -150,18 +154,25 @@ void Runner::runActions(void)
 
 void Runner::threadStarted(void)
 {
+    logInfo << this << "started";
+
+    m_process = new QProcess(this);
     m_timer = new QTimer(this);
+
     connect(m_timer, &QTimer::timeout, this, &Runner::timeout);
 
     m_timer->setSingleShot(true);
-    automation()->setRunner(this);
-
     m_actions->setIndex(0);
     runActions();
 }
 
+void Runner::threadFinished(void)
+{
+    m_timer->stop();
+}
+
 void Runner::timeout(void)
 {
-    logInfo << automation() << "timer stopped";
+    logInfo << this << "timer stopped";
     runActions();
 }

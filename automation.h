@@ -48,37 +48,46 @@ class AutomationObject : public QObject
 
 public:
 
-    AutomationObject(const QString &name, const QString &note, bool active, qint32 debounce, bool restart, qint64 lastTriggered) :
-        QObject(nullptr), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_restart(restart), m_lastTriggered(lastTriggered), m_runner(nullptr) {}
+    enum class Mode
+    {
+        single,
+        restart,
+        queued,
+        parallel
+    };
 
+    AutomationObject(Mode mode, const QString &name, const QString &note, bool active, qint32 debounce, qint64 lastTriggered) :
+        QObject(nullptr), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_lastTriggered(lastTriggered), m_counter(1) {}
+
+    inline Mode mode(void) { return m_mode; }
     inline QString name(void) { return m_name; }
     inline QString note(void) { return m_note; }
-    inline bool active(void) { return m_active; }
 
+    inline bool active(void) { return m_active; }
     inline qint32 debounce(void) { return m_debounce; }
-    inline bool restart(void) { return m_restart; }
 
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
     inline void updateLastTriggered(void) { m_lastTriggered = QDateTime::currentMSecsSinceEpoch(); }
 
-    inline void *runner(void) { return m_runner; }
-    inline void setRunner(void *value) { m_runner = value; }
+    inline qint64 counter(void) { return m_counter; }
+    inline void updateCounter(void) { m_counter++; }
 
     inline QList <Trigger> &triggers(void) { return m_triggers; }
     inline QList <Condition> &conditions(void) { return m_conditions; }
     inline ActionList &actions(void) { return m_actions; }
 
+    Q_ENUM(Mode)
+
 private:
 
+    Mode m_mode;
     QString m_name, m_note;
-    bool m_active;
 
+    bool m_active;
     qint32 m_debounce;
-    bool m_restart;
 
     QWeakPointer <TriggerObject> m_lastTrigger;
-    qint64 m_lastTriggered;
-    void *m_runner;
+    qint64 m_lastTriggered, m_counter;
 
     QList <Trigger> m_triggers;
     QList <Condition> m_conditions;
@@ -101,6 +110,8 @@ public:
     void init(void);
     void store(bool sync = false);
 
+    AutomationObject::Mode getMode(const QJsonObject &json);
+
     Automation byName(const QString &name, int *index = nullptr);
     Automation parse(const QJsonObject &json);
 
@@ -108,7 +119,7 @@ private:
 
     QTimer *m_timer;
 
-    QMetaEnum m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
+    QMetaEnum m_automationModes, m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
     QFile m_file;
     qint64 m_telegramChat;
     bool m_sync;

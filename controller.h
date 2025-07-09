@@ -6,6 +6,7 @@
 #define SUBSCRIPTION_DELAY      1000
 
 #include "homed.h"
+#include "runner.h"
 #include "telegram.h"
 
 class Controller : public HOMEd
@@ -56,8 +57,14 @@ private:
     bool m_startup;
 
     QList <QString> m_types, m_subscriptions;
+    QList <Runner*> m_runners;
+
     QMap <QString, Device> m_devices;
     QMap <QString, QByteArray> m_topics;
+
+    Runner *findRunner(const Automation &automation, bool pending = false);
+    void abortRunners(const Automation &automation);
+    void addRunner(const Automation &automation, const QString &triggerName, bool start);
 
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
     void publishEvent(const QString &name, Event event);

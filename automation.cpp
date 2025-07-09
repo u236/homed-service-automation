@@ -3,6 +3,8 @@
 
 AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(parent), m_timer(new QTimer(this)), m_sync(false)
 {
+    m_automationModes = QMetaEnum::fromType <AutomationObject::Mode> ();
+
     m_triggerTypes = QMetaEnum::fromType <TriggerObject::Type> ();
     m_conditionTypes = QMetaEnum::fromType <ConditionObject::Type> ();
     m_actionTypes = QMetaEnum::fromType <ActionObject::Type> ();
@@ -54,6 +56,14 @@ void AutomationList::store(bool sync)
     m_timer->start(STORE_DATABASE_DELAY);
 }
 
+AutomationObject::Mode AutomationList::getMode(const QJsonObject &json)
+{
+    if (json.value("restart").toBool())
+        return AutomationObject::Mode::restart;
+
+    return static_cast <AutomationObject::Mode> (m_automationModes.keyToValue(json.value("mode").toString("single").toUtf8().constData()));
+}
+
 Automation AutomationList::byName(const QString &name, int *index)
 {
     for (int i = 0; i < count(); i++)
@@ -72,7 +82,7 @@ Automation AutomationList::byName(const QString &name, int *index)
 
 Automation AutomationList::parse(const QJsonObject &json)
 {
-    Automation automation(new AutomationObject(json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("restart").toBool(), json.value("lastTriggered").toVariant().toLongLong()));
+    Automation automation(new AutomationObject(getMode(json), json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
     QJsonArray triggers = json.value("triggers").toArray();
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
@@ -697,7 +707,7 @@ QJsonArray AutomationList::serialize(void)
     for (int i = 0; i < count(); i++)
     {
         const Automation &automation = at(i);
-        QJsonObject json = {{"name", automation->name()}, {"active", automation->active()}, {"restart", automation->restart()}};
+        QJsonObject json = {{"mode", m_automationModes.valueToKey(static_cast <int> (automation->mode()))}, {"name", automation->name()}, {"active", automation->active()}};
         QJsonArray triggers;
 
         if (!automation->note().isEmpty())
