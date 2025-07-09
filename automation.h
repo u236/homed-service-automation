@@ -57,7 +57,7 @@ public:
     };
 
     AutomationObject(Mode mode, const QString &name, const QString &note, bool active, qint32 debounce, qint64 lastTriggered) :
-        QObject(nullptr), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_lastTriggered(lastTriggered), m_counter(1) {}
+        QObject(nullptr), m_mode(mode), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_lastTriggered(lastTriggered), m_counter(1) {}
 
     inline Mode mode(void) { return m_mode; }
     inline QString name(void) { return m_name; }

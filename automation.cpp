@@ -58,10 +58,12 @@ void AutomationList::store(bool sync)
 
 AutomationObject::Mode AutomationList::getMode(const QJsonObject &json)
 {
+    int value = m_automationModes.keyToValue(json.value("mode").toString().toUtf8().constData());
+
     if (json.value("restart").toBool())
         return AutomationObject::Mode::restart;
 
-    return static_cast <AutomationObject::Mode> (m_automationModes.keyToValue(json.value("mode").toString("single").toUtf8().constData()));
+    return value < 0 ? AutomationObject::Mode::single : static_cast <AutomationObject::Mode> (value);
 }
 
 Automation AutomationList::byName(const QString &name, int *index)
