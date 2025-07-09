@@ -82,6 +82,9 @@ Automation AutomationList::byName(const QString &name, int *index)
 
 Automation AutomationList::parse(const QJsonObject &json)
 {
+
+    logInfo << json.value("mode").toString("single") << m_automationModes.valueToKey(static_cast <int> (getMode(json)));
+
     Automation automation(new AutomationObject(getMode(json), json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
     QJsonArray triggers = json.value("triggers").toArray();
 
