@@ -8,7 +8,6 @@
 #include <QSettings>
 #include <QTimer>
 #include "action.h"
-#include "condition.h"
 #include "trigger.h"
 
 class DeviceObject;
@@ -59,20 +58,11 @@ public:
     inline qint32 debounce(void) { return m_debounce; }
     inline bool restart(void) { return m_restart; }
 
-    inline Trigger lastTrigger(void) { return m_lastTrigger; }
-    inline void setLastTrigger(const Trigger &value) { m_lastTrigger = value; }
-
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
     inline void updateLastTriggered(void) { m_lastTriggered = QDateTime::currentMSecsSinceEpoch(); }
 
-    inline ActionList *actionList(void) { return m_actionList; }
-    inline void setActionList(ActionList *value) { m_actionList = value; }
-
     inline void *runner(void) { return m_runner; }
     inline void setRunner(void *value) { m_runner = value; }
-
-    inline QString shellOutput(void) { return m_shellOutput; }
-    inline void setShellOutput(const QString &value) { m_shellOutput = value; }
 
     inline QList <Trigger> &triggers(void) { return m_triggers; }
     inline QList <Condition> &conditions(void) { return m_conditions; }
@@ -88,11 +78,7 @@ private:
 
     QWeakPointer <TriggerObject> m_lastTrigger;
     qint64 m_lastTriggered;
-
-    ActionList *m_actionList;
     void *m_runner;
-
-    QString m_shellOutput;
 
     QList <Trigger> m_triggers;
     QList <Condition> m_conditions;

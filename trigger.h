@@ -1,7 +1,6 @@
 #ifndef TRIGGER_H
 #define TRIGGER_H
 
-#include <QSharedPointer>
 #include "parser.h"
 #include "sun.h"
 

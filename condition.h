@@ -1,9 +1,6 @@
 #ifndef CONDITION_H
 #define CONDITION_H
 
-#include <QDateTime>
-#include <QSharedPointer>
-#include <QVariant>
 #include "parser.h"
 #include "sun.h"
 

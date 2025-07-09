@@ -1,6 +1,3 @@
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include "logger.h"
 #include "telegram.h"
 

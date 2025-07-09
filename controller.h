@@ -5,9 +5,7 @@
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 
-#include "automation.h"
 #include "homed.h"
-#include "sun.h"
 #include "telegram.h"
 
 class Controller : public HOMEd
@@ -40,8 +38,8 @@ public:
     Device findDevice(const QString &search);
     quint8 getEndpointId(const QString &endpoint);
 
-    QVariant parsePattern(const Automation &automation, QString string, bool condition = false);
-    bool checkConditions(const Automation &automation, const QList <Condition> &conditions, ConditionObject::Type type);
+    QVariant parsePattern(QString string, const QString &triggerName, const QString &shellOutput = QString(), bool condition = true);
+    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const QString &triggerName);
 
     Q_ENUM(Command)
     Q_ENUM(Event)

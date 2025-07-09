@@ -5,7 +5,6 @@
 #define GET_UPDATES_RETRY_TIMEOUT           15000
 
 #include <QProcess>
-#include <QSettings>
 #include "automation.h"
 
 class Telegram : public QObject

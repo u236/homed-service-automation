@@ -1,6 +1,5 @@
 #include "controller.h"
 #include "logger.h"
-#include "parser.h"
 #include "runner.h"
 
 Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
@@ -43,7 +42,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
     return 0;
 }
 
-QVariant Controller::parsePattern(const Automation &automation, QString string, bool condition)
+QVariant Controller::parsePattern(QString string, const QString &triggerName, const QString &shellOutput, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
     QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
@@ -54,7 +53,7 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
         while ((position = calculate.indexIn(string)) != -1)
         {
             QString item = calculate.cap();
-            double number = Expression(parsePattern(automation, item.mid(2, item.length() - 4), condition).toString()).result();
+            double number = Expression(parsePattern(item.mid(2, item.length() - 4), triggerName, shellOutput, condition).toString()).result();
             string.replace(position, item.length(), QString::number(number, 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
         }
     }
@@ -153,7 +152,7 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
 
             case 4: // shellOutput
             {
-                value = automation->shellOutput();
+                value = shellOutput;
                 break;
             }
 
@@ -182,7 +181,7 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
 
             case 9: // triggerName
             {
-                value = automation->lastTrigger()->name();
+                value = triggerName;
                 break;
             }
 
@@ -230,7 +229,7 @@ QVariant Controller::parsePattern(const Automation &automation, QString string, 
     return Parser::stringValue(string);
 }
 
-bool Controller::checkConditions(const Automation &automation, const QList <Condition> &conditions, ConditionObject::Type type)
+bool Controller::checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const QString &triggerName)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
@@ -246,7 +245,7 @@ bool Controller::checkConditions(const Automation &automation, const QList <Cond
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
                 const Device &device = findDevice(condition->endpoint());
 
-                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
+                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName) : condition->value()))
                     count++;
 
                 break;
@@ -256,7 +255,7 @@ bool Controller::checkConditions(const Automation &automation, const QList <Cond
             {
                 MqttCondition *condition = reinterpret_cast <MqttCondition*> (item.data());
 
-                if (condition->match(m_topics.value(condition->topic()), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
+                if (condition->match(m_topics.value(condition->topic()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName) : condition->value()))
                     count++;
 
                 break;
@@ -266,7 +265,7 @@ bool Controller::checkConditions(const Automation &automation, const QList <Cond
             {
                 StateCondition *condition = reinterpret_cast <StateCondition*> (item.data());
 
-                if (condition->match(m_automations->states().value(condition->name()), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
+                if (condition->match(m_automations->states().value(condition->name()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName) : condition->value()))
                     count++;
 
                 break;
@@ -306,7 +305,7 @@ bool Controller::checkConditions(const Automation &automation, const QList <Cond
             {
                 PatternCondition *condition = reinterpret_cast <PatternCondition*> (item.data());
 
-                if (condition->match(parsePattern(automation, condition->pattern(), true), condition->value().type() == QVariant::String ? parsePattern(automation, condition->value().toString(), true) : condition->value()))
+                if (condition->match(parsePattern(condition->pattern(), triggerName), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName) : condition->value()))
                     count++;
 
                 break;
@@ -318,7 +317,7 @@ bool Controller::checkConditions(const Automation &automation, const QList <Cond
             {
                 NestedCondition *condition = reinterpret_cast <NestedCondition*> (item.data());
 
-                if (checkConditions(automation, condition->conditions(), condition->type()))
+                if (checkConditions(condition->conditions(), condition->type(), triggerName))
                     count++;
 
                 break;
@@ -412,9 +411,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             else
                 logInfo << automation << "triggered by" << trigger->name();
 
-            automation->setLastTrigger(trigger);
-
-            if (!checkConditions(automation, automation->conditions(), ConditionObject::Type::AND))
+            if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger->name()))
             {
                 logInfo << automation << "conditions mismatch";
                 continue;
@@ -429,28 +426,21 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             automation->updateLastTriggered();
             m_automations->store();
 
-            if (runner && runner->timer()->isActive() && !automation->restart())
+            if (runner && !automation->restart())
             {
-                logWarning << automation << "timer already started";
+                logWarning << automation << "already running";
                 continue;
             }
 
-            automation->setActionList(&automation->actions());
-            automation->actionList()->setIndex(0);
+            if (runner)
+                runner->abort(true);
 
-            if (!runner)
-            {
-                runner = new Runner(this, automation);
-                connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
-                connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
-                connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
-                connect(runner, &Runner::finished, this, &Controller::finished);
-                runner->start();
-                continue;
-            }
-
-            logWarning << automation << "restarted";
-            QMetaObject::invokeMethod(runner, "runActions");
+            runner = new Runner(this, automation, trigger->name());
+            connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
+            connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
+            connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
+            connect(runner, &Runner::finished, this, &Controller::finished);
+            runner->start();
         }
     }
 }

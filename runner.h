@@ -3,7 +3,8 @@
 
 #include <QThread>
 #include "automation.h"
-#include "controller.h"
+
+class Controller;
 
 class Runner : public QThread
 {
@@ -11,23 +12,26 @@ class Runner : public QThread
 
 public:
 
-    Runner(Controller *controller, const Automation &automation);
+    Runner(Controller *controller, const Automation &automation, const QString &triggerName);
     ~Runner(void);
 
-    inline QTimer *timer(void) { return m_timer; }
     inline Automation automation(void) { return m_automation; }
     inline bool aborted(void) { return m_aborted; }
 
-    void abort(void);
+    void abort(bool restart = false);
 
 private:
 
     QTimer *m_timer;
     Controller *m_controller;
+
     QWeakPointer <AutomationObject> m_automation;
+    QString m_triggerName, m_shellOutput;
+
+    ActionList *m_actions;
     bool m_aborted;
 
-    inline QVariant parsePattern(QString string) { return m_controller->parsePattern(m_automation, string); }
+    QVariant parsePattern(QString string);
 
 private slots:
 

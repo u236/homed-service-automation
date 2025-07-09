@@ -1,5 +1,3 @@
-#include <QUuid>
-#include "automation.h"
 #include "controller.h"
 #include "logger.h"
 

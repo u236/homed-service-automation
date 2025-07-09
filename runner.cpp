@@ -1,9 +1,9 @@
 #include <unistd.h>
-#include <QProcess>
+#include "controller.h"
 #include "logger.h"
 #include "runner.h"
 
-Runner::Runner(Controller *controller, const Automation &automation) : QThread(nullptr), m_controller(controller), m_automation(automation), m_aborted(false)
+Runner::Runner(Controller *controller, const Automation &automation, const QString &triggerName) : QThread(nullptr), m_controller(controller), m_automation(automation), m_triggerName(triggerName), m_actions(&automation->actions()), m_aborted(false)
 {
     connect(this, &Runner::started, this, &Runner::threadStarted);
     moveToThread(this);
@@ -15,22 +15,27 @@ Runner::~Runner(void)
     automation()->setRunner(nullptr);
 }
 
-void Runner::abort(void)
+void Runner::abort(bool restart)
 {
-    logInfo << automation() << "aborted";
+    logInfo << automation() << (restart ? "restated" : "aborted");
     m_aborted = true;
     quit();
+}
+
+QVariant Runner::parsePattern(QString string)
+{
+    return m_controller->parsePattern(string, m_triggerName, m_shellOutput, false);
 }
 
 void Runner::runActions(void)
 {
     m_timer->stop();
 
-    for (int i = automation()->actionList()->index(); i < automation()->actionList()->count(); i++)
+    for (int i = m_actions->index(); i < m_actions->count(); i++)
     {
-        const Action &item = automation()->actionList()->at(i);
+        const Action &item = m_actions->at(i);
 
-        if (!item->triggerName().isEmpty() && item->triggerName() != automation()->lastTrigger()->name())
+        if (!item->triggerName().isEmpty() && item->triggerName() != m_triggerName)
             continue;
 
         switch (item->type())
@@ -108,16 +113,16 @@ void Runner::runActions(void)
                 if (m_aborted)
                     return;
 
-                automation()->setShellOutput(process.readAll());
+                m_shellOutput = process.readAll();
                 break;
             }
 
             case ActionObject::Type::condition:
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
-                automation()->actionList()->setIndex(++i);
-                automation()->setActionList(&action->actions(m_controller->checkConditions(automation(), action->conditions(), ConditionObject::Type::AND)));
-                automation()->actionList()->setIndex(0);
+                m_actions->setIndex(++i);
+                m_actions = &action->actions(m_controller->checkConditions(action->conditions(), ConditionObject::Type::AND, m_triggerName));
+                m_actions->setIndex(0);
                 runActions();
                 return;
             }
@@ -125,17 +130,17 @@ void Runner::runActions(void)
             case ActionObject::Type::delay:
             {
                 int delay = parsePattern(reinterpret_cast <DelayAction*> (item.data())->value().toString()).toInt();
-                automation()->actionList()->setIndex(++i);
                 logInfo << automation() << "timer started for" << delay << "seconds";
+                m_actions->setIndex(++i);
                 m_timer->start(delay * 1000);
                 return;
             }
         }
     }
 
-    if (automation()->actionList()->parent())
+    if (m_actions->parent())
     {
-        automation()->setActionList(automation()->actionList()->parent());
+        m_actions = m_actions->parent();
         runActions();
         return;
     }
@@ -150,6 +155,8 @@ void Runner::threadStarted(void)
 
     m_timer->setSingleShot(true);
     automation()->setRunner(this);
+
+    m_actions->setIndex(0);
     runActions();
 }
 
