@@ -119,7 +119,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
             {
                 QProcess *process(new QProcess(this));
                 connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
-                process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument({{"chat_id", chatId}, {"message_id", m_automations->messages().value(id)}}).toJson(QJsonDocument::Compact), m_token)});
+                process->start("sh", {"-c", QString("curl --http1.1 -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument({{"chat_id", chatId}, {"message_id", m_automations->messages().value(id)}}).toJson(QJsonDocument::Compact), m_token)});
             }
             else
             {
@@ -134,14 +134,14 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
         if (remove || update)
             process->setProperty("id", id);
 
-        process->start("sh", {"-c", QString("curl -X POST %1 -s https://api.telegram.org/bot%2/%3").arg(list.join(0x20), m_token, method)});
+        process->start("sh", {"-c", QString("curl --http1.1 -X POST %1 -s https://api.telegram.org/bot%2/%3").arg(list.join(0x20), m_token, method)});
     }
 }
 
 void Telegram::getUpdates(void)
 {
     m_buffer.clear();
-    m_process->start("sh", {"-c", QString("curl -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/getUpdates").arg(QJsonDocument({{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), m_token)});
+    m_process->start("sh", {"-c", QString("curl --http1.1 -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/getUpdates").arg(QJsonDocument({{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), m_token)});
 }
 
 void Telegram::finished(int exitCode, QProcess::ExitStatus)
