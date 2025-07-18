@@ -125,7 +125,7 @@ void Runner::runActions(void)
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
                 m_actions->setIndex(++i);
-                m_actions = &action->actions(m_controller->checkConditions(action->conditions(), ConditionObject::Type::AND, m_triggerName));
+                m_actions = &action->actions(m_controller->checkConditions(action->conditions(), ConditionObject::Type::AND, m_triggerName, m_shellOutput));
                 m_actions->setIndex(0);
                 runActions();
                 return;

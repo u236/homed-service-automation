@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.1.0"
+#define SERVICE_VERSION         "2.1.1"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 
@@ -39,8 +39,8 @@ public:
     Device findDevice(const QString &search);
     quint8 getEndpointId(const QString &endpoint);
 
-    QVariant parsePattern(QString string, const QString &triggerName, const QString &shellOutput = QString(), bool condition = true);
-    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const QString &triggerName);
+    QVariant parsePattern(QString string, const QString &triggerName, const QString &shellOutput, bool condition = true);
+    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const QString &triggerName, const QString &shellOutput = QString());
 
     Q_ENUM(Command)
     Q_ENUM(Event)
