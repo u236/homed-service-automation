@@ -35,6 +35,7 @@ private:
     bool m_aborted;
 
     QVariant parsePattern(QString string);
+    void killProcess(void);
 
 private slots:
 

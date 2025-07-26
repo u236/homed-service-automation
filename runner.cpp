@@ -24,7 +24,7 @@ void Runner::abort(void)
     m_aborted = true;
 
     if (m_process->isOpen())
-        m_process->kill();
+        killProcess();
 
     quit();
 }
@@ -32,6 +32,11 @@ void Runner::abort(void)
 QVariant Runner::parsePattern(QString string)
 {
     return m_controller->parsePattern(string, m_triggerName, m_shellOutput, false);
+}
+
+void Runner::killProcess(void)
+{
+    system(QString("kill -9 -%1").arg(m_process->processId()).toUtf8().constData());
 }
 
 void Runner::runActions(void)
@@ -111,7 +116,7 @@ void Runner::runActions(void)
                 if (!m_process->waitForFinished(action->timeout() * 1000))
                 {
                     logWarning << this << "shell action process" << m_process->processId() << "timed out";
-                    system(QString("kill -9 -%1").arg(m_process->processId()).toUtf8().constData());
+                    killProcess();
                 }
 
                 if (m_aborted)
