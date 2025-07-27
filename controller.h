@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.1.1"
+#define SERVICE_VERSION         "2.1.2"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 
@@ -40,7 +40,7 @@ public:
     quint8 getEndpointId(const QString &endpoint);
 
     QVariant parsePattern(QString string, const QString &triggerName, const QString &shellOutput, bool condition = true);
-    bool checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const QString &triggerName, const QString &shellOutput = QString());
+    bool checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QString &triggerName, const QString &shellOutput = QString());
 
     Q_ENUM(Command)
     Q_ENUM(Event)

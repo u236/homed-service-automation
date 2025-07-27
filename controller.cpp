@@ -229,7 +229,7 @@ QVariant Controller::parsePattern(QString string, const QString &triggerName, co
     return Parser::stringValue(string);
 }
 
-bool Controller::checkConditions(const QList <Condition> &conditions, ConditionObject::Type type, const QString &triggerName, const QString &shellOutput)
+bool Controller::checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QString &triggerName, const QString &shellOutput)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
@@ -317,7 +317,7 @@ bool Controller::checkConditions(const QList <Condition> &conditions, ConditionO
             {
                 NestedCondition *condition = reinterpret_cast <NestedCondition*> (item.data());
 
-                if (checkConditions(condition->conditions(), condition->type(), triggerName, shellOutput))
+                if (checkConditions(condition->type(), condition->conditions(), triggerName, shellOutput))
                     count++;
 
                 break;
@@ -455,7 +455,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             else
                 logInfo << automation << "triggered by" << trigger->name();
 
-            if (!checkConditions(automation->conditions(), ConditionObject::Type::AND, trigger->name()))
+            if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), trigger->name()))
             {
                 logInfo << automation << "conditions mismatch";
                 continue;

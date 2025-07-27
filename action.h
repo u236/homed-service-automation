@@ -181,13 +181,19 @@ class ConditionAction : public ActionObject
 
 public:
 
-    ConditionAction(ActionList *parent) :
-        ActionObject(Type::condition) { m_then.setParent(parent); m_else.setParent(parent); }
+    ConditionAction(ConditionObject::Type conditionType, bool hideElse, ActionList *parent) :
+        ActionObject(Type::condition), m_conditionType(conditionType), m_hideElse(hideElse) { m_then.setParent(parent); m_else.setParent(parent); }
+
+    inline ConditionObject::Type conditionType(void) { return m_conditionType; }
+    inline bool hideElse(void) { return m_hideElse; }
 
     inline QList <Condition> &conditions(void) { return m_conditions; }
     inline ActionList &actions(bool match) { return match ? m_then : m_else; }
 
 private:
+
+    ConditionObject::Type m_conditionType;
+    bool m_hideElse;
 
     QList <Condition> m_conditions;
     ActionList m_then, m_else;

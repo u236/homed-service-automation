@@ -453,7 +453,8 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
             case ActionObject::Type::condition:
             {
-                action = Action(new ConditionAction(&list));
+                ConditionObject::Type conditionType = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("conditionType").toString().toUtf8().constData()));
+                action = Action(new ConditionAction(static_cast <int> (conditionType) < 0 ? ConditionObject::Type::AND : conditionType, item.value("hideElse").toBool(), &list));
                 unserializeConditions(reinterpret_cast <ConditionAction*> (action.data())->conditions(), item.value("conditions").toArray());
                 unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(true), item.value("then").toArray());
                 unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(false), item.value("else").toArray());
@@ -679,6 +680,8 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
             case ActionObject::Type::condition:
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (list.at(i).data());
+                json.insert("conditionType", m_conditionTypes.valueToKey(static_cast <int> (action->conditionType())));
+                json.insert("hideElse", action->hideElse());
                 json.insert("conditions", serializeConditions(action->conditions()));
                 json.insert("then", serializeActions(action->actions(true)));
                 json.insert("else", serializeActions(action->actions(false)));
