@@ -40,7 +40,8 @@ public:
         telegram,
         shell,
         condition,
-        delay
+        delay,
+        exit
     };
 
     enum class Statement
@@ -213,6 +214,15 @@ public:
 private:
 
     QVariant m_value;
+
+};
+
+class ExitAction : public ActionObject
+{
+
+public:
+
+    ExitAction(void) : ActionObject(Type::exit) {}
 
 };
 

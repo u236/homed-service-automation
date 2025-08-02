@@ -144,6 +144,12 @@ void Runner::runActions(void)
                 m_timer->start(delay * 1000);
                 return;
             }
+
+            case ActionObject::Type::exit:
+            {
+                quit();
+                return;
+            }
         }
     }
 

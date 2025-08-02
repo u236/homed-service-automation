@@ -471,6 +471,12 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 action = Action(new DelayAction(value));
                 break;
             }
+
+            case ActionObject::Type::exit:
+            {
+                action = Action(new ExitAction);
+                break;
+            }
         }
 
         if (action.isNull())
@@ -694,6 +700,8 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
                 json.insert("delay", QJsonValue::fromVariant(action->value()));
                 break;
             }
+
+            case ActionObject::Type::exit: break;
         }
 
         if (!list.at(i)->triggerName().isEmpty())
