@@ -45,7 +45,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName", "triggerProperty"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
     int position;
 
     if (!string.startsWith("#!"))
@@ -185,6 +185,29 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
+            case 10: // triggerProperty
+            {
+                QString endpoint = meta.value("triggerEndpoint");
+                QString property = meta.value("triggerProperty");
+                const Device &device = findDevice(endpoint);
+
+                if (!property.isEmpty() && !device.isNull())
+                {
+                    QMap <QString, QVariant> map = device->properties().value(getEndpointId(endpoint));
+
+                    for (auto it = map.begin(); it != map.end(); it++)
+                    {
+                        if (it.key() != property)
+                            continue;
+
+                        value = it.value().type() == QVariant::List ? it.value().toStringList().join(',') : it.value().toString();
+                        break;
+                    }
+                }
+
+                break;
+            }
+
             default:
             {
                 QList <QString> list = item.split(split, Qt::SkipEmptyParts);
@@ -243,9 +266,10 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
             case ConditionObject::Type::property:
             {
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
-                const Device &device = findDevice(condition->endpoint());
+                QString endpoint = condition->endpoint() == "triggerEndpoint" ? meta.value("triggerEndpoint") : condition->endpoint(), property = condition->property() == "triggerProperty" ? meta.value("triggerProperty") : condition->property();
+                const Device &device = findDevice(endpoint);
 
-                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), meta) : condition->value()))
+                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(endpoint)).value(property), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), meta) : condition->value()))
                     count++;
 
                 break;
@@ -405,6 +429,8 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (item->endpoint() != a.toString() || item->property() != b.toString() || !item->match(c, d))
                         continue;
 
+                    meta.insert("triggerEndpoint", item->endpoint());
+                    meta.insert("triggerProperty", item->property());
                     break;
                 }
 

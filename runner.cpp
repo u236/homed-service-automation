@@ -53,12 +53,13 @@ void Runner::runActions(void)
             case ActionObject::Type::property:
             {
                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
-                const Device &device = m_controller->findDevice(action->endpoint());
+                QString endpoint = action->endpoint() == "triggerEndpoint" ? m_meta.value("triggerEndpoint") : action->endpoint(), property = action->property() == "triggerProperty" ? m_meta.value("triggerProperty") : action->property();
+                const Device &device = m_controller->findDevice(endpoint);
 
                 if (!device.isNull())
                 {
-                    quint8 endpointId = m_controller->getEndpointId(action->endpoint());
-                    QVariant value = action->value(device->properties().value(endpointId).value(action->property()));
+                    quint8 endpointId = m_controller->getEndpointId(endpoint);
+                    QVariant value = action->value(device->properties().value(endpointId).value(property));
                     QString string;
 
                     if (value.type() == QVariant::String)
@@ -78,7 +79,7 @@ void Runner::runActions(void)
                         value = array;
                     }
 
-                    emit publishMessage(m_controller->mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic()), QMap <QString, QVariant> {{action->property(), value}});
+                    emit publishMessage(m_controller->mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic()), QMap <QString, QVariant> {{property, value}});
                 }
 
                 break;
