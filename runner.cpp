@@ -41,7 +41,7 @@ void Runner::killProcess(void)
 
 void Runner::runActions(void)
 {
-    for (int i = m_actions->index(); i < m_actions->count(); i++)
+    for (int i = m_index.value(m_actions); i < m_actions->count(); i++)
     {
         const Action &item = m_actions->at(i);
 
@@ -130,9 +130,9 @@ void Runner::runActions(void)
             case ActionObject::Type::condition:
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
-                m_actions->setIndex(++i);
+                m_index.insert(m_actions, ++i);
                 m_actions = &action->actions(m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta));
-                m_actions->setIndex(0);
+                m_index.insert(m_actions, 0);
                 runActions();
                 return;
             }
@@ -141,7 +141,7 @@ void Runner::runActions(void)
             {
                 int delay = parsePattern(reinterpret_cast <DelayAction*> (item.data())->value().toString()).toInt();
                 logInfo << this << "timer started for" << delay << "seconds";
-                m_actions->setIndex(++i);
+                m_index.insert(m_actions, ++i);
                 m_timer->start(delay * 1000);
                 return;
             }
@@ -174,7 +174,6 @@ void Runner::threadStarted(void)
     connect(m_timer, &QTimer::timeout, this, &Runner::timeout);
 
     m_timer->setSingleShot(true);
-    m_actions->setIndex(0);
     runActions();
 }
 
