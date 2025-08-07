@@ -39,8 +39,8 @@ public:
     Device findDevice(const QString &search);
     quint8 getEndpointId(const QString &endpoint);
 
-    QVariant parsePattern(QString string, const QString &triggerName, const QString &shellOutput, bool condition = true);
-    bool checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QString &triggerName, const QString &shellOutput = QString());
+    QVariant parsePattern(QString string, const QMap <QString, QString> &meta, bool condition = true);
+    bool checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QMap <QString, QString> &meta);
 
     Q_ENUM(Command)
     Q_ENUM(Event)
@@ -64,7 +64,7 @@ private:
 
     Runner *findRunner(const Automation &automation, bool pending = false);
     void abortRunners(const Automation &automation);
-    void addRunner(const Automation &automation, const QString &triggerName, bool start);
+    void addRunner(const Automation &automation, const QMap <QString, QString> &meta, bool start);
 
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
     void publishEvent(const QString &name, Event event);

@@ -2,7 +2,7 @@
 #include "controller.h"
 #include "logger.h"
 
-Runner::Runner(Controller *controller, const Automation &automation, const QString &triggerName) : QThread(nullptr), m_controller(controller), m_automation(automation), m_id(automation->counter()), m_triggerName(triggerName), m_actions(&automation->actions()), m_aborted(false)
+Runner::Runner(Controller *controller, const Automation &automation, const QMap <QString, QString> &meta) : QThread(nullptr), m_controller(controller), m_automation(automation), m_id(automation->counter()), m_actions(&automation->actions()), m_aborted(false), m_meta(meta)
 {
     connect(this, &Runner::started, this, &Runner::threadStarted);
     connect(this, &Runner::finished, this, &Runner::threadFinished);
@@ -31,7 +31,7 @@ void Runner::abort(void)
 
 QVariant Runner::parsePattern(QString string)
 {
-    return m_controller->parsePattern(string, m_triggerName, m_shellOutput, false);
+    return m_controller->parsePattern(string, m_meta, false);
 }
 
 void Runner::killProcess(void)
@@ -45,7 +45,7 @@ void Runner::runActions(void)
     {
         const Action &item = m_actions->at(i);
 
-        if (!item->triggerName().isEmpty() && item->triggerName() != m_triggerName)
+        if (!item->triggerName().isEmpty() && item->triggerName() != m_meta.value("triggerName"))
             continue;
 
         switch (item->type())
@@ -122,7 +122,7 @@ void Runner::runActions(void)
                 if (m_aborted)
                     return;
 
-                m_shellOutput = m_process->readAll();
+                m_meta.insert("shellOutput", m_process->readAll());
                 break;
             }
 
@@ -130,7 +130,7 @@ void Runner::runActions(void)
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
                 m_actions->setIndex(++i);
-                m_actions = &action->actions(m_controller->checkConditions(action->conditionType(), action->conditions(), m_triggerName, m_shellOutput));
+                m_actions = &action->actions(m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta));
                 m_actions->setIndex(0);
                 runActions();
                 return;

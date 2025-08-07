@@ -13,7 +13,7 @@ class Runner : public QThread
 
 public:
 
-    Runner(Controller *controller, const Automation &automation, const QString &triggerName);
+    Runner(Controller *controller, const Automation &automation, const QMap <QString, QString> &meta);
     ~Runner(void);
 
     inline Automation automation(void) { return m_automation; }
@@ -30,9 +30,10 @@ private:
     QWeakPointer <AutomationObject> m_automation;
     qint64 m_id;
 
-    QString m_triggerName, m_shellOutput;
     ActionList *m_actions;
     bool m_aborted;
+
+    QMap <QString, QString> m_meta;
 
     QVariant parsePattern(QString string);
     void killProcess(void);

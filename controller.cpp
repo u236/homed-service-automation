@@ -42,7 +42,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
     return 0;
 }
 
-QVariant Controller::parsePattern(QString string, const QString &triggerName, const QString &shellOutput, bool condition)
+QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
     QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
@@ -53,7 +53,7 @@ QVariant Controller::parsePattern(QString string, const QString &triggerName, co
         while ((position = calculate.indexIn(string)) != -1)
         {
             QString item = calculate.cap();
-            double number = Expression(parsePattern(item.mid(2, item.length() - 4), triggerName, shellOutput, condition).toString()).result();
+            double number = Expression(parsePattern(item.mid(2, item.length() - 4), meta, condition).toString()).result();
             string.replace(position, item.length(), QString::number(number, 'f').remove(QRegExp("0+$")).remove(QRegExp("\\.$")));
         }
     }
@@ -152,7 +152,7 @@ QVariant Controller::parsePattern(QString string, const QString &triggerName, co
 
             case 4: // shellOutput
             {
-                value = shellOutput;
+                value = meta.value("shellOutput");
                 break;
             }
 
@@ -181,7 +181,7 @@ QVariant Controller::parsePattern(QString string, const QString &triggerName, co
 
             case 9: // triggerName
             {
-                value = triggerName;
+                value = meta.value("triggerName");
                 break;
             }
 
@@ -229,7 +229,7 @@ QVariant Controller::parsePattern(QString string, const QString &triggerName, co
     return Parser::stringValue(string);
 }
 
-bool Controller::checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QString &triggerName, const QString &shellOutput)
+bool Controller::checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QMap <QString, QString> &meta)
 {
     QDateTime now = QDateTime::currentDateTime();
     quint16 count = 0;
@@ -245,7 +245,7 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
                 PropertyCondition *condition = reinterpret_cast <PropertyCondition*> (item.data());
                 const Device &device = findDevice(condition->endpoint());
 
-                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName, shellOutput) : condition->value()))
+                if (!device.isNull() && condition->match(device->properties().value(getEndpointId(condition->endpoint())).value(condition->property()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), meta) : condition->value()))
                     count++;
 
                 break;
@@ -255,7 +255,7 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
             {
                 MqttCondition *condition = reinterpret_cast <MqttCondition*> (item.data());
 
-                if (condition->match(m_topics.value(condition->topic()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName, shellOutput) : condition->value()))
+                if (condition->match(m_topics.value(condition->topic()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), meta) : condition->value()))
                     count++;
 
                 break;
@@ -265,7 +265,7 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
             {
                 StateCondition *condition = reinterpret_cast <StateCondition*> (item.data());
 
-                if (condition->match(m_automations->states().value(condition->name()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName, shellOutput) : condition->value()))
+                if (condition->match(m_automations->states().value(condition->name()), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), meta) : condition->value()))
                     count++;
 
                 break;
@@ -305,7 +305,7 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
             {
                 PatternCondition *condition = reinterpret_cast <PatternCondition*> (item.data());
 
-                if (condition->match(parsePattern(condition->pattern(), triggerName, shellOutput), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), triggerName, shellOutput) : condition->value()))
+                if (condition->match(parsePattern(condition->pattern(), meta), condition->value().type() == QVariant::String ? parsePattern(condition->value().toString(), meta) : condition->value()))
                     count++;
 
                 break;
@@ -317,7 +317,7 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
             {
                 NestedCondition *condition = reinterpret_cast <NestedCondition*> (item.data());
 
-                if (checkConditions(condition->type(), condition->conditions(), triggerName, shellOutput))
+                if (checkConditions(condition->type(), condition->conditions(), meta))
                     count++;
 
                 break;
@@ -356,9 +356,9 @@ void Controller::abortRunners(const Automation &automation)
             m_runners.at(i)->abort();
 }
 
-void Controller::addRunner(const Automation &automation, const QString &triggerName, bool start)
+void Controller::addRunner(const Automation &automation, const QMap <QString, QString> &meta, bool start)
 {
-    Runner *runner = new Runner(this, automation, triggerName);
+    Runner *runner = new Runner(this, automation, meta);
 
     connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
@@ -389,6 +389,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
         for (int j = 0; j < automation->triggers().count(); j++)
         {
             const Trigger &trigger = automation->triggers().at(j);
+            QMap <QString, QString> meta;
             Runner *runner = findRunner(automation);
             bool start = true;
 
@@ -450,12 +451,14 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 case TriggerObject::Type::startup: break;
             }
 
+            meta.insert("triggerName", trigger->name());
+
             if (trigger->name().isEmpty())
                 logInfo << automation << "triggered by" << QString("[%1]").arg(j + 1).toUtf8().constData();
             else
                 logInfo << automation << "triggered by" << trigger->name();
 
-            if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), trigger->name()))
+            if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), meta))
             {
                 logInfo << automation << "conditions mismatch";
                 continue;
@@ -481,7 +484,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 }
             }
 
-            addRunner(automation, trigger->name(), start);
+            addRunner(automation, meta, start);
         }
     }
 }
