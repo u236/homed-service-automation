@@ -16,13 +16,9 @@ public:
     inline ActionList *parent(void) { return m_parent; }
     inline void setParent(ActionList *value) { m_parent = value; }
 
-    inline quint32 index(void) { return m_index; }
-    inline void setIndex(quint32 value) { m_index = value; }
-
 private:
 
     ActionList *m_parent;
-    quint32 m_index;
 
 };
 

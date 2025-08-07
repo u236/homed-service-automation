@@ -33,6 +33,7 @@ private:
     ActionList *m_actions;
     bool m_aborted;
 
+    QMap <ActionList*, quint32> m_index;
     QMap <QString, QString> m_meta;
 
     QVariant parsePattern(QString string);
