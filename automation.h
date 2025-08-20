@@ -56,10 +56,11 @@ public:
         parallel
     };
 
-    AutomationObject(Mode mode, const QString &name, const QString &note, bool active, qint32 debounce, qint64 lastTriggered) :
-        QObject(nullptr), m_mode(mode), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_lastTriggered(lastTriggered), m_counter(1) {}
+    AutomationObject(Mode mode, const QString &uuid, const QString &name, const QString &note, bool active, qint32 debounce, qint64 lastTriggered) :
+        QObject(nullptr), m_mode(mode), m_uuid(uuid), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_lastTriggered(lastTriggered), m_counter(1) {}
 
     inline Mode mode(void) { return m_mode; }
+    inline QString uuid(void) { return m_uuid; }
     inline QString name(void) { return m_name; }
     inline QString note(void) { return m_note; }
 
@@ -81,7 +82,7 @@ public:
 private:
 
     Mode m_mode;
-    QString m_name, m_note;
+    QString m_uuid, m_name, m_note;
 
     bool m_active;
     qint32 m_debounce;
@@ -112,7 +113,8 @@ public:
 
     AutomationObject::Mode getMode(const QJsonObject &json);
 
-    Automation byName(const QString &name, int *index = nullptr);
+    Automation byUuid(const QString &uuid, int *index = nullptr);
+    Automation byName(const QString &name);
     Automation parse(const QJsonObject &json);
 
 private:

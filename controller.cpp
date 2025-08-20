@@ -572,7 +572,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 int index = -1;
                 QJsonObject data = json.value("data").toObject();
                 QString name = data.value("name").toString().trimmed();
-                Automation automation = m_automations->byName(json.value("automation").toString(), &index), other = m_automations->byName(name);
+                Automation automation = m_automations->byUuid(json.value("automation").toString(), &index), other = m_automations->byName(name);
 
                 if (automation != other && !other.isNull())
                 {
@@ -611,7 +611,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             case Command::removeAutomation:
             {
                 int index = -1;
-                const Automation &automation = m_automations->byName(json.value("automation").toString(), &index);
+                const Automation &automation = m_automations->byUuid(json.value("automation").toString(), &index);
 
                 if (index >= 0)
                 {
