@@ -56,6 +56,8 @@ void Runner::runActions(void)
                 QString endpoint = action->endpoint() == "triggerEndpoint" ? m_meta.value("triggerEndpoint") : action->endpoint(), property = action->property() == "triggerProperty" ? m_meta.value("triggerProperty") : action->property();
                 const Device &device = m_controller->findDevice(endpoint);
 
+                logInfo << "here" << action->endpoint() << action->property();
+
                 if (!device.isNull())
                 {
                     quint8 endpointId = m_controller->getEndpointId(endpoint);

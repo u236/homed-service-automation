@@ -709,6 +709,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             if (!m_devices.contains(key))
             {
                 m_devices.insert(key, Device(new DeviceObject(key, topic, name)));
+                logInfo << "add device" << key;
                 check = true;
             }
 
