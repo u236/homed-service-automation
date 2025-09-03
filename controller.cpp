@@ -582,7 +582,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 }
 
                 abortRunners(automation);
-                automation = m_automations->parse(data);
+                automation = m_automations->parse(data, automation.isNull());
 
                 if (automation.isNull())
                 {

@@ -91,9 +91,10 @@ Automation AutomationList::byName(const QString &name)
     return Automation();
 }
 
-Automation AutomationList::parse(const QJsonObject &json)
+Automation AutomationList::parse(const QJsonObject &json, bool add)
 {
-    Automation automation(new AutomationObject(getMode(json), json.value("uuid").toString(QUuid::createUuid().toString(QUuid::StringFormat::Id128)).trimmed(), json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
+    QString uuid = json.value("uuid").toString().trimmed();
+    Automation automation(new AutomationObject(getMode(json), add || uuid.isEmpty() ? QUuid::createUuid().toString(QUuid::StringFormat::Id128) : uuid, json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
     QJsonArray triggers = json.value("triggers").toArray();
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
@@ -190,7 +191,7 @@ Automation AutomationList::parse(const QJsonObject &json)
     }
 
     unserializeConditions(automation->conditions(), json.value("conditions").toArray());
-    unserializeActions(automation->actions(), json.value("actions").toArray());
+    unserializeActions(automation->actions(), json.value("actions").toArray(), add);
 
     if (automation->name().isEmpty() || automation->triggers().isEmpty() || automation->actions().isEmpty())
         return Automation();
@@ -370,14 +371,17 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
     }
 }
 
-void AutomationList::unserializeActions(ActionList &list, const QJsonArray &actions)
+void AutomationList::unserializeActions(ActionList &list, const QJsonArray &actions, bool add)
 {
     for (auto it = actions.begin(); it != actions.end(); it++)
     {
         QJsonObject item = it->toObject();
-        QString uuid = item.value("uuid").toString(QUuid::createUuid().toString(QUuid::StringFormat::Id128)).trimmed();
+        QString uuid = item.value("uuid").toString().trimmed();
         ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
         Action action;
+
+        if (add || uuid.isEmpty())
+            uuid = QUuid::createUuid().toString(QUuid::StringFormat::Id128);
 
         switch (type)
         {
@@ -465,8 +469,8 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 ConditionObject::Type conditionType = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("conditionType").toString().toUtf8().constData()));
                 action = Action(new ConditionAction(static_cast <int> (conditionType) < 0 ? ConditionObject::Type::AND : conditionType, item.value("hideElse").toBool(), &list));
                 unserializeConditions(reinterpret_cast <ConditionAction*> (action.data())->conditions(), item.value("conditions").toArray());
-                unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(true), item.value("then").toArray());
-                unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(false), item.value("else").toArray());
+                unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(true), item.value("then").toArray(), add);
+                unserializeActions(reinterpret_cast <ConditionAction*> (action.data())->actions(false), item.value("else").toArray(), add);
                 break;
             }
 

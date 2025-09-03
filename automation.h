@@ -115,7 +115,7 @@ public:
 
     Automation byUuid(const QString &uuid, int *index = nullptr);
     Automation byName(const QString &name);
-    Automation parse(const QJsonObject &json);
+    Automation parse(const QJsonObject &json, bool add = false);
 
 private:
 
@@ -133,7 +133,7 @@ private:
     void parsePattern(const QString &string);
 
     void unserializeConditions(QList <Condition> &list, const QJsonArray &conditions);
-    void unserializeActions(ActionList &list, const QJsonArray &actions);
+    void unserializeActions(ActionList &list, const QJsonArray &actions, bool add);
     void unserialize(const QJsonArray &automations);
 
     QJsonArray serializeConditions(const QList <Condition> &list);    
