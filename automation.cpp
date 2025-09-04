@@ -373,6 +373,8 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
 
 void AutomationList::unserializeActions(ActionList &list, const QJsonArray &actions, bool add)
 {
+    QList <QString> uuidList;
+
     for (auto it = actions.begin(); it != actions.end(); it++)
     {
         QJsonObject item = it->toObject();
@@ -380,8 +382,10 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
         ActionObject::Type type = static_cast <ActionObject::Type> (m_actionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
         Action action;
 
-        if (add || uuid.isEmpty())
+        if (add || uuid.isEmpty() || uuidList.contains(uuid))
             uuid = QUuid::createUuid().toString(QUuid::StringFormat::Id128);
+
+        uuidList.append(uuid);
 
         switch (type)
         {
