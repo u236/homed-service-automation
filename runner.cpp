@@ -45,7 +45,7 @@ void Runner::runActions(void)
     {
         const Action &item = m_actions->at(i);
 
-        if (!item->triggerName().isEmpty() && item->triggerName() != m_meta.value("triggerName"))
+        if (!item->active() || (!item->triggerName().isEmpty() && item->triggerName() != m_meta.value("triggerName")))
             continue;
 
         switch (item->type())

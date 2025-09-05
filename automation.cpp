@@ -187,6 +187,7 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
             continue;
 
         trigger->setName(item.value("name").toString().trimmed());
+        trigger->setActive(item.value("active").toBool(true));
         automation->triggers().append(trigger);
     }
 
@@ -222,6 +223,8 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
     {
         QJsonObject item = it->toObject();
         ConditionObject::Type type = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("type").toString().toUtf8().constData()));
+        Condition condition;
+        bool nested = false;
 
         switch (type)
         {
@@ -239,7 +242,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                     if (!value.isValid())
                         continue;
 
-                    list.append(Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    condition = Condition(new PropertyCondition(endpoint, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value));
                     parsePattern(value.toString());
                     break;
                 }
@@ -261,7 +264,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                     if (!value.isValid())
                         continue;
 
-                    list.append(Condition(new MqttCondition(topic, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    condition = Condition(new MqttCondition(topic, property, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value));
                     parsePattern(value.toString());
                     emit addSubscription(topic);
                     break;
@@ -284,7 +287,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                     if (!value.isValid())
                         continue;
 
-                    list.append(Condition(new StateCondition(name, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    condition = Condition(new StateCondition(name, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value));
                     parsePattern(value.toString());
                     break;
                 }
@@ -301,7 +304,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                     if (!value.isValid())
                         continue;
 
-                    list.append(Condition(new DateCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    condition = Condition(new DateCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value));
                     break;
                 }
 
@@ -317,7 +320,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                     if (!value.isValid())
                         continue;
 
-                    list.append(Condition(new TimeCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    condition = Condition(new TimeCondition(static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value));
                     break;
                 }
 
@@ -331,7 +334,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                 if (!value.isValid())
                     continue;
 
-                list.append(Condition(new WeekCondition(value)));
+                condition = Condition(new WeekCondition(value));
                 break;
             }
 
@@ -349,7 +352,7 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
                     if (!value.isValid())
                         continue;
 
-                    list.append(Condition(new PatternCondition(pattern, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value)));
+                    condition = Condition(new PatternCondition(pattern, static_cast <ConditionObject::Statement> (m_conditionStatements.value(i)), value));
                     parsePattern(pattern);
                     parsePattern(value.toString());
                     break;
@@ -362,12 +365,15 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
             case ConditionObject::Type::OR:
             case ConditionObject::Type::NOT:
             {
-                Condition condition(new NestedCondition(type));
+                condition = Condition(new NestedCondition(type));
                 unserializeConditions(reinterpret_cast <NestedCondition*> (condition.data())->conditions(), item.value("conditions").toArray());
-                list.append(condition);
+                nested = true;
                 break;
             }
         }
+
+        condition->setActive(nested ? true : item.value("active").toBool(true));
+        list.append(condition);
     }
 }
 
@@ -501,6 +507,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
         action->setUuid(uuid);
         action->setTriggerName(item.value("triggerName").toString().trimmed());
+        action->setActive(type == ActionObject::Type::condition ? true : item.value("active").toBool(true));
         list.append(action);
     }
 }
@@ -538,6 +545,7 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
     {
         ConditionObject::Type type = list.at(i)->type();
         QJsonObject json = {{"type", m_conditionTypes.valueToKey(static_cast <int> (type))}};
+        bool nested = false;
 
         switch (type)
         {
@@ -606,9 +614,13 @@ QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
             {
                 NestedCondition *condition = reinterpret_cast <NestedCondition*> (list.at(i).data());
                 json.insert("conditions", serializeConditions(condition->conditions()));
+                nested = true;
                 break;
             }
         }
+
+        if (!nested)
+            json.insert("active", list.at(i)->active());
 
         array.append(json);
     }
@@ -724,6 +736,9 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
         if (!list.at(i)->triggerName().isEmpty())
             json.insert("triggerName", list.at(i)->triggerName());
 
+        if (type != ActionObject::Type::condition)
+            json.insert("active", list.at(i)->active());
+
         array.append(json);
     }
 
@@ -752,7 +767,7 @@ QJsonArray AutomationList::serialize(void)
         for (int j = 0; j < automation->triggers().count(); j++)
         {
             TriggerObject::Type type = automation->triggers().at(j)->type();
-            QJsonObject item = {{"type", m_triggerTypes.valueToKey(static_cast <int> (type))}};
+            QJsonObject item = {{"type", m_triggerTypes.valueToKey(static_cast <int> (type))}, {"active", automation->triggers().at(j)->active()}};
 
             switch (type)
             {

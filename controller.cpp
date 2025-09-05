@@ -255,11 +255,17 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 bool Controller::checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QMap <QString, QString> &meta)
 {
     QDateTime now = QDateTime::currentDateTime();
-    quint16 count = 0;
+    int total = conditions.count(), count = 0;
 
     for (int i = 0; i < conditions.count(); i++)
     {
         const Condition &item = conditions.at(i);
+
+        if (!item->active())
+        {
+            total--;
+            continue;
+        }
 
         switch (item->type())
         {
@@ -349,9 +355,12 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
         }
     }
 
+    if (!total)
+        return true;
+
     switch (type)
     {
-        case ConditionObject::Type::AND: return count == conditions.count();
+        case ConditionObject::Type::AND: return count == total;
         case ConditionObject::Type::OR:  return count != 0;
         case ConditionObject::Type::NOT: return count == 0;
         default: return false;
@@ -417,7 +426,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             Runner *runner = findRunner(automation);
             bool start = true;
 
-            if (trigger->type() != type)
+            if (!trigger->active() || trigger->type() != type)
                 continue;
 
             switch (type)

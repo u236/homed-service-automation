@@ -42,6 +42,9 @@ public:
     inline QString name(void) { return m_name; }
     inline void setName(const QString &value) { m_name = value; }
 
+    inline bool active(void) { return m_active; }
+    inline void setActive(bool value) { m_active = value; }
+
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
@@ -53,6 +56,7 @@ private:
 
     Type m_type;
     QString m_name;
+    bool m_active;
 
 };
 

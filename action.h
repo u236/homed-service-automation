@@ -58,6 +58,9 @@ public:
     inline QString triggerName(void) { return m_triggerName; }
     inline void setTriggerName(const QString &value) { m_triggerName = value; }
 
+    inline bool active(void) { return m_active; }
+    inline void setActive(bool value) { m_active = value; }
+
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
@@ -65,6 +68,7 @@ private:
 
     Type m_type;
     QString m_uuid, m_triggerName;
+    bool m_active;
 
 };
 

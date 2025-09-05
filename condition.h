@@ -42,6 +42,9 @@ public:
 
     inline Type type(void) { return m_type; }
 
+    inline bool active(void) { return m_active; }
+    inline void setActive(bool value) { m_active = value; }
+
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
@@ -52,6 +55,7 @@ protected:
 private:
 
     Type m_type;
+    bool m_active;
 
 };
 
