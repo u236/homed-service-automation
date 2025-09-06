@@ -255,17 +255,14 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 bool Controller::checkConditions(ConditionObject::Type type, const QList <Condition> &conditions, const QMap <QString, QString> &meta)
 {
     QDateTime now = QDateTime::currentDateTime();
-    int total = conditions.count(), count = 0;
+    int count = 0, total = 0;
 
     for (int i = 0; i < conditions.count(); i++)
     {
         const Condition &item = conditions.at(i);
 
         if (!item->active())
-        {
-            total--;
             continue;
-        }
 
         switch (item->type())
         {
@@ -353,6 +350,8 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
                 break;
             }
         }
+
+        total++;
     }
 
     if (!total)
