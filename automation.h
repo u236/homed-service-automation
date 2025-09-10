@@ -131,6 +131,7 @@ private:
     QMap <QString, QVariant> m_states;
 
     void parsePattern(const QString &string);
+    QByteArray randomData(int length);
 
     void unserializeConditions(QList <Condition> &list, const QJsonArray &conditions);
     void unserializeActions(ActionList &list, const QJsonArray &actions, bool add);
