@@ -1,3 +1,4 @@
+#include <QRandomGenerator>
 #include "controller.h"
 #include "logger.h"
 
@@ -94,7 +95,7 @@ Automation AutomationList::byName(const QString &name)
 Automation AutomationList::parse(const QJsonObject &json, bool add)
 {
     QString uuid = json.value("uuid").toString().trimmed();
-    Automation automation(new AutomationObject(getMode(json), add || uuid.isEmpty() ? QUuid::createUuid().toString(QUuid::StringFormat::Id128) : uuid, json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
+    Automation automation(new AutomationObject(getMode(json), add || uuid.isEmpty() ? randomData(16).toHex() : uuid, json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
     QJsonArray triggers = json.value("triggers").toArray();
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
@@ -198,6 +199,16 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
         return Automation();
 
     return automation;
+}
+
+QByteArray AutomationList::randomData(int length)
+{
+    QByteArray data;
+
+    for (int i = 0; i < length; i++)
+        data.append(static_cast <char> (QRandomGenerator::global()->generate()));
+
+    return data;
 }
 
 void AutomationList::parsePattern(const QString &string)
@@ -389,7 +400,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
         Action action;
 
         if (add || uuid.isEmpty() || uuidList.contains(uuid))
-            uuid = QUuid::createUuid().toString(QUuid::StringFormat::Id128);
+            uuid = randomData(16).toHex();
 
         uuidList.append(uuid);
 
@@ -522,7 +533,7 @@ void AutomationList::unserialize(const QJsonArray &automations)
         Automation automation = byUuid(json.value("uuid").toString().trimmed());
 
         if (!automation.isNull())
-            continue;
+            json.remove("uuid");
 
         automation = parse(json);
 

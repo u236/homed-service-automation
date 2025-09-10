@@ -130,6 +130,7 @@ private:
     QMap <QString, qint64> m_messages;
     QMap <QString, QVariant> m_states;
 
+    QByteArray randomData(int length);
     void parsePattern(const QString &string);
 
     void unserializeConditions(QList <Condition> &list, const QJsonArray &conditions);
