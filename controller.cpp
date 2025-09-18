@@ -187,8 +187,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 
             case 10: // triggerProperty
             {
-                QString endpoint = meta.value("triggerEndpoint");
-                QString property = meta.value("triggerProperty");
+                QString endpoint = meta.value("triggerEndpoint"), property = meta.value("triggerProperty");
                 const Device &device = findDevice(endpoint);
 
                 if (!property.isEmpty() && !device.isNull())
