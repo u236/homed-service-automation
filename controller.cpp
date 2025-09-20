@@ -487,19 +487,23 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             meta.insert("triggerName", trigger->name());
 
             if (trigger->name().isEmpty())
-                logInfo << automation << "triggered by" << QString("[%1]").arg(j + 1).toUtf8().constData();
+            {
+                logDebug(automation->log()) << automation << "triggered by" << QString("[%1]").arg(j + 1).toUtf8().constData();
+            }
             else
-                logInfo << automation << "triggered by" << trigger->name();
+            {
+                logDebug(automation->log()) << automation << "triggered by" << trigger->name();
+            }
 
             if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), meta))
             {
-                logInfo << automation << "conditions mismatch";
+                logDebug(automation->log()) << automation << "conditions mismatch";
                 continue;
             }
 
             if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
             {
-                logInfo << automation << "debounced";
+                logDebug(automation->log()) << automation << "debounced";
                 continue;
             }
 
@@ -510,7 +514,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
             {
                 switch (automation->mode())
                 {
-                    case AutomationObject::Mode::single:   logWarning << runner << "already running"; continue;
+                    case AutomationObject::Mode::single:   logDebug(automation->log()) << runner << "already running"; continue;
                     case AutomationObject::Mode::restart:  abortRunners(automation); break;
                     case AutomationObject::Mode::queued:   start = false; break;
                     case AutomationObject::Mode::parallel: break;

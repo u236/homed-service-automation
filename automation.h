@@ -56,8 +56,8 @@ public:
         parallel
     };
 
-    AutomationObject(Mode mode, const QString &uuid, const QString &name, const QString &note, bool active, qint32 debounce, qint64 lastTriggered) :
-        QObject(nullptr), m_mode(mode), m_uuid(uuid), m_name(name), m_note(note), m_active(active), m_debounce(debounce), m_lastTriggered(lastTriggered), m_counter(1) {}
+    AutomationObject(Mode mode, const QString &uuid, const QString &name, const QString &note, bool active, bool log, qint32 debounce, qint64 lastTriggered) :
+        QObject(nullptr), m_mode(mode), m_uuid(uuid), m_name(name), m_note(note), m_active(active), m_log(log), m_debounce(debounce), m_lastTriggered(lastTriggered), m_counter(1) {}
 
     inline Mode mode(void) { return m_mode; }
     inline QString uuid(void) { return m_uuid; }
@@ -65,6 +65,8 @@ public:
     inline QString note(void) { return m_note; }
 
     inline bool active(void) { return m_active; }
+    inline bool log(void) { return m_log; }
+
     inline qint32 debounce(void) { return m_debounce; }
 
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
@@ -84,7 +86,7 @@ private:
     Mode m_mode;
     QString m_uuid, m_name, m_note;
 
-    bool m_active;
+    bool m_active, m_log;
     qint32 m_debounce;
 
     QWeakPointer <TriggerObject> m_lastTrigger;

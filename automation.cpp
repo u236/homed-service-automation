@@ -95,7 +95,7 @@ Automation AutomationList::byName(const QString &name)
 Automation AutomationList::parse(const QJsonObject &json, bool add)
 {
     QString uuid = json.value("uuid").toString().trimmed();
-    Automation automation(new AutomationObject(getMode(json), add || uuid.isEmpty() ? randomData(16).toHex() : uuid, json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
+    Automation automation(new AutomationObject(getMode(json), add || uuid.isEmpty() ? randomData(16).toHex() : uuid, json.value("name").toString().trimmed(), json.value("note").toString(), json.value("active").toBool(), json.value("log").toBool(), json.value("debounce").toInt(), json.value("lastTriggered").toVariant().toLongLong()));
     QJsonArray triggers = json.value("triggers").toArray();
 
     for (auto it = triggers.begin(); it != triggers.end(); it++)
@@ -763,7 +763,7 @@ QJsonArray AutomationList::serialize(void)
     for (int i = 0; i < count(); i++)
     {
         const Automation &automation = at(i);
-        QJsonObject json = {{"mode", m_automationModes.valueToKey(static_cast <int> (automation->mode()))}, {"uuid", automation->uuid()}, {"name", automation->name()}, {"active", automation->active()}};
+        QJsonObject json = {{"mode", m_automationModes.valueToKey(static_cast <int> (automation->mode()))}, {"uuid", automation->uuid()}, {"name", automation->name()}, {"active", automation->active()}, {"log", automation->log()}};
         QJsonArray triggers;
 
         if (!automation->note().isEmpty())

@@ -15,12 +15,12 @@ Runner::~Runner(void)
     if (m_aborted)
         return;
 
-    logInfo << this << "completed";
+    logDebug(automation()->log()) << this << "completed";
 }
 
 void Runner::abort(void)
 {
-    logInfo << this << "aborted";
+    logDebug(automation()->log()) << this << "aborted";
     m_aborted = true;
 
     if (m_process->isOpen())
@@ -118,7 +118,7 @@ void Runner::runActions(void)
 
                 if (!m_process->waitForFinished(action->timeout() * 1000))
                 {
-                    logWarning << this << "shell action process" << m_process->processId() << "timed out";
+                    logDebug(automation()->log()) << this << "shell action process" << m_process->processId() << "timed out";
                     killProcess();
                 }
 
@@ -143,7 +143,7 @@ void Runner::runActions(void)
             case ActionObject::Type::delay:
             {
                 int delay = parsePattern(reinterpret_cast <DelayAction*> (item.data())->value().toString()).toInt();
-                logInfo << this << "timer started for" << delay << "seconds";
+                logDebug(automation()->log()) << this << "timer started for" << delay << "seconds";
                 m_index.insert(m_actions, ++i);
                 m_timer->start(delay * 1000);
                 return;
@@ -169,7 +169,7 @@ void Runner::runActions(void)
 
 void Runner::threadStarted(void)
 {
-    logInfo << this << "started";
+    logDebug(automation()->log()) << this << "started";
 
     m_process = new QProcess(this);
     m_timer = new QTimer(this);
@@ -187,6 +187,6 @@ void Runner::threadFinished(void)
 
 void Runner::timeout(void)
 {
-    logInfo << this << "timer stopped";
+    logDebug(automation()->log()) << this << "timer stopped";
     runActions();
 }
