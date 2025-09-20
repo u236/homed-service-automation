@@ -2,7 +2,7 @@
 #include "logger.h"
 #include "runner.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
+Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_mutex(new QMutex), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
 {
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
     m_types = {"zigbee", "modbus", "custom"};

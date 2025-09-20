@@ -5,6 +5,7 @@
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 
+#include <QMutex>
 #include "homed.h"
 #include "runner.h"
 #include "telegram.h"
@@ -34,6 +35,7 @@ public:
 
     Controller(const QString &configFile);
 
+    inline QMutex *mutex(void) { return m_mutex; }
     inline Telegram *telegram(void) { return m_telegram; }
 
     Device findDevice(const QString &search);
@@ -48,6 +50,8 @@ public:
 private:
 
     QTimer *m_subscribeTimer, *m_updateTimer;
+    QMutex *m_mutex;
+
     AutomationList *m_automations;
     Telegram *m_telegram;
     Sun *m_sun;
