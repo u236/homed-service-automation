@@ -45,7 +45,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerName", "triggerProperty"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
     int position;
 
     if (!string.startsWith("#!"))
@@ -179,13 +179,20 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 9: // triggerName
+            case 9: // triggerMessage
+            {
+                QString message = meta.value("triggerMessage"), property = itemList.value(1).trimmed();
+                value = property.isEmpty() ? message : Parser::jsonValue(message.toUtf8(), property).toString();
+                break;
+            }
+
+            case 10: // triggerName
             {
                 value = meta.value("triggerName");
                 break;
             }
 
-            case 10: // triggerProperty
+            case 11: // triggerProperty
             {
                 QString endpoint = meta.value("triggerEndpoint"), property = meta.value("triggerProperty");
                 const Device &device = findDevice(endpoint);
@@ -448,6 +455,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (item->topic() != a.toString() || !item->match(b.toByteArray(), c.toByteArray()))
                         continue;
 
+                    meta.insert("triggerMessage", c.toString());
                     break;
                 }
 
@@ -559,11 +567,17 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     QString subTopic = topic.name().replace(0, mqttTopic().length(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
 
-    if (m_subscriptions.contains(topic.name()))
+    for (int i = 0; i < m_subscriptions.count(); i++)
     {
-        QByteArray check = m_topics.value(topic.name());
-        m_topics.insert(topic.name(), message);
-        handleTrigger(TriggerObject::Type::mqtt, topic.name(), check, message);
+        const QString &item = m_subscriptions.at(i);
+
+        if (item.endsWith('#') ? topic.name().startsWith(item.mid(0, item.indexOf("#"))) : topic.name() == item)
+        {
+            QByteArray check = m_topics.value(topic.name());
+            m_topics.insert(topic.name(), message);
+            handleTrigger(TriggerObject::Type::mqtt, item, check, message);
+            break;
+        }
     }
 
     if (subTopic == QString("command/%1").arg(serviceTopic()))
