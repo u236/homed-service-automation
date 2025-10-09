@@ -131,7 +131,7 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
             {
                 QString topic = item.value("topic").toString().trimmed(), property = item.value("property").toString().trimmed();
 
-                if (topic.isEmpty())
+                if (topic.isEmpty() || topic == "#")
                     continue;
 
                 for (int i = 0; i < m_triggerStatements.keyCount(); i++)
