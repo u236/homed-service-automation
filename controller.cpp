@@ -45,7 +45,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
     int position;
 
     if (!string.startsWith("#!"))
@@ -181,7 +181,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 
             case 9: // triggerMessage
             {
-                QString message = meta.value("triggerMessage"), property = itemList.value(1).trimmed();
+                QString property = itemList.value(1).trimmed(), message = meta.value("triggerMessage");
                 value = property.isEmpty() ? message : Parser::jsonValue(message.toUtf8(), property).toString();
                 break;
             }
@@ -211,6 +211,13 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                     }
                 }
 
+                break;
+            }
+
+            case 12: // triggerTopic
+            {
+                QString index = itemList.value(1).trimmed(), topic = meta.value("triggerTopic");
+                value = index.isEmpty() ? topic : topic.split('/').value(index.toInt());
                 break;
             }
 
@@ -456,6 +463,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                         continue;
 
                     meta.insert("triggerMessage", c.toString());
+                    meta.insert("triggerTopic", d.toString());
                     break;
                 }
 
@@ -575,7 +583,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         {
             QByteArray check = m_topics.value(topic.name());
             m_topics.insert(topic.name(), message);
-            handleTrigger(TriggerObject::Type::mqtt, item, check, message);
+            handleTrigger(TriggerObject::Type::mqtt, item, check, message, topic.name());
             break;
         }
     }
