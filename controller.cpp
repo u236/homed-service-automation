@@ -199,7 +199,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 
                 if (!property.isEmpty() && !device.isNull())
                 {
-                    QMap <QString, QVariant> map = device->properties().value(getEndpointId(endpoint));
+                    const QMap <QString, QVariant> &map = device->properties().value(getEndpointId(endpoint));
 
                     for (auto it = map.begin(); it != map.end(); it++)
                     {
