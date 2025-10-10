@@ -1,3 +1,4 @@
+#include <csignal>
 #include <unistd.h>
 #include "controller.h"
 #include "logger.h"
@@ -24,7 +25,7 @@ void Runner::abort(void)
     m_aborted = true;
 
     if (m_process->isOpen())
-        killProcess();
+        killpg(m_process->processId(), SIGKILL);
 
     quit();
 }
@@ -33,11 +34,6 @@ QVariant Runner::parsePattern(QString string)
 {
     QMutexLocker(m_controller->mutex());
     return m_controller->parsePattern(string, m_meta, false);
-}
-
-void Runner::killProcess(void)
-{
-    system(QString("kill -9 -%1").arg(m_process->processId()).toUtf8().constData());
 }
 
 void Runner::runActions(void)
@@ -119,7 +115,7 @@ void Runner::runActions(void)
                 if (!m_process->waitForFinished(action->timeout() * 1000))
                 {
                     logDebug(automation()->log()) << this << "shell action process" << m_process->processId() << "timed out";
-                    killProcess();
+                    killpg(m_process->processId(), SIGKILL);
                 }
 
                 if (m_aborted)

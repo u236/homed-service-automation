@@ -37,7 +37,6 @@ private:
     QMap <QString, QString> m_meta;
 
     QVariant parsePattern(QString string);
-    void killProcess(void);
 
 private slots:
 

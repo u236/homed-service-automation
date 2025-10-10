@@ -74,6 +74,10 @@ private:
     void publishEvent(const QString &name, Event event);
     void updateSun(void);
 
+public slots:
+
+    void quit(void) override;
+
 private slots:
 
     void mqttConnected(void) override;

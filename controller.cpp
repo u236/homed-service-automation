@@ -558,6 +558,14 @@ void Controller::updateSun(void)
     logInfo << "Sunrise set to" << m_sun->sunrise().toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sun->sunset().toString("hh:mm").toUtf8().constData();
 }
 
+void Controller::quit(void)
+{
+    for (int i = 0; i < m_runners.count(); i++)
+        m_runners.at(i)->abort();
+
+    HOMEd::quit();
+}
+
 void Controller::mqttConnected(void)
 {
     mqttSubscribe(mqttTopic("command/%1").arg(serviceTopic()));
