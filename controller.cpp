@@ -420,6 +420,7 @@ void Controller::addRunner(const Automation &automation, const QMap <QString, QS
     }
 
     runner->start();
+    QThread::msleep(RUNNER_STARTUP_DELAY);
 }
 
 void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
@@ -657,6 +658,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 if (index >= 0)
                 {
                     m_automations->removeAt(index);
+                    abortRunners(automation);
                     logInfo << automation << "removed";
                     publishEvent(automation->name(), Event::removed);
                     m_automations->store(true);

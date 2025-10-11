@@ -21,15 +21,14 @@ Runner::~Runner(void)
 
 void Runner::abort(void)
 {
+    if (m_processId)
+        killpg(m_processId, SIGKILL);
+
     if (m_aborted)
         return;
 
     logDebug(automation()->log()) << this << "aborted";
     m_aborted = true;
-
-    if (m_processId)
-        killpg(m_processId, SIGKILL);
-
     quit();
 }
 
@@ -44,6 +43,9 @@ void Runner::runActions(void)
     for (int i = m_index.value(m_actions); i < m_actions->count(); i++)
     {
         const Action &item = m_actions->at(i);
+
+        if (m_aborted)
+            return;
 
         if (!item->active() || (!item->triggerName().isEmpty() && item->triggerName() != m_meta.value("triggerName")))
             continue;
@@ -123,9 +125,6 @@ void Runner::runActions(void)
                     logDebug(automation()->log()) << this << "shell action process" << m_processId << "timed out";
                     killpg(m_processId, SIGKILL);
                 }
-
-                if (m_aborted)
-                    return;
 
                 m_meta.insert("shellOutput", process.readAll());
                 break;
