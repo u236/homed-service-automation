@@ -118,7 +118,7 @@ void Runner::runActions(void)
                 process.start("/bin/sh", {"-c", parsePattern(action->command()).toString()});
 
                 m_processId = process.processId();
-                setpgid(m_processId, m_processId);
+                setpgid(m_processId, 0);
 
                 if (!process.waitForFinished(action->timeout() * 1000))
                 {
