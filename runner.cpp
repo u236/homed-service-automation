@@ -3,7 +3,7 @@
 #include "controller.h"
 #include "logger.h"
 
-Runner::Runner(Controller *controller, const Automation &automation, const QMap <QString, QString> &meta) : QThread(nullptr), m_controller(controller), m_automation(automation), m_id(automation->counter()), m_actions(&automation->actions()), m_aborted(false), m_meta(meta)
+Runner::Runner(Controller *controller, const Automation &automation, const QMap <QString, QString> &meta) : QThread(nullptr), m_controller(controller), m_automation(automation), m_id(automation->counter()), m_processId(0), m_actions(&automation->actions()), m_aborted(false), m_meta(meta)
 {
     connect(this, &Runner::started, this, &Runner::threadStarted);
     connect(this, &Runner::finished, this, &Runner::threadFinished);
@@ -21,11 +21,14 @@ Runner::~Runner(void)
 
 void Runner::abort(void)
 {
+    if (m_aborted)
+        return;
+
     logDebug(automation()->log()) << this << "aborted";
     m_aborted = true;
 
-    if (m_process->isOpen())
-        killpg(m_process->processId(), SIGKILL);
+    if (m_processId)
+        killpg(m_processId, SIGKILL);
 
     quit();
 }
@@ -106,22 +109,25 @@ void Runner::runActions(void)
 
             case ActionObject::Type::shell:
             {
+                QProcess process;
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
 
-                m_process->setProcessChannelMode(QProcess::MergedChannels);
-                m_process->start("/bin/sh", {"-c", parsePattern(action->command()).toString()});
-                setpgid(m_process->processId(), m_process->processId());
+                process.setProcessChannelMode(QProcess::MergedChannels);
+                process.start("/bin/sh", {"-c", parsePattern(action->command()).toString()});
 
-                if (!m_process->waitForFinished(action->timeout() * 1000))
+                m_processId = process.processId();
+                setpgid(m_processId, m_processId);
+
+                if (!process.waitForFinished(action->timeout() * 1000))
                 {
-                    logDebug(automation()->log()) << this << "shell action process" << m_process->processId() << "timed out";
-                    killpg(m_process->processId(), SIGKILL);
+                    logDebug(automation()->log()) << this << "shell action process" << m_processId << "timed out";
+                    killpg(m_processId, SIGKILL);
                 }
 
                 if (m_aborted)
                     return;
 
-                m_meta.insert("shellOutput", m_process->readAll());
+                m_meta.insert("shellOutput", process.readAll());
                 break;
             }
 
@@ -167,9 +173,7 @@ void Runner::threadStarted(void)
 {
     logDebug(automation()->log()) << this << "started";
 
-    m_process = new QProcess(this);
     m_timer = new QTimer(this);
-
     connect(m_timer, &QTimer::timeout, this, &Runner::timeout);
 
     m_timer->setSingleShot(true);

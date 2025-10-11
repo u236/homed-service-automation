@@ -23,12 +23,11 @@ public:
 
 private:
 
-    QProcess *m_process;
     QTimer *m_timer;
     Controller *m_controller;
 
     QWeakPointer <AutomationObject> m_automation;
-    qint64 m_id;
+    qint64 m_id, m_processId;
 
     ActionList *m_actions;
     bool m_aborted;
