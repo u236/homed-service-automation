@@ -570,7 +570,6 @@ void Controller::quit(void)
 void Controller::mqttConnected(void)
 {
     mqttSubscribe(mqttTopic("command/%1").arg(serviceTopic()));
-    mqttSubscribe(mqttTopic("service/#"));
 
     m_devices.clear();
     m_automations->store();
@@ -855,6 +854,8 @@ void Controller::finished(void)
 
 void Controller::updateSubscriptions(void)
 {
+    mqttSubscribe(mqttTopic("service/#"));
+
     for (int i = 0; i < m_subscriptions.count(); i++)
     {
         logInfo << "MQTT subscribed to" << m_subscriptions.at(i);
