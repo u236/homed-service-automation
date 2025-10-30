@@ -869,8 +869,6 @@ QJsonArray AutomationList::serialize(void)
 void AutomationList::writeDatabase(void)
 {
     QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}}, messages;
-    QByteArray data;
-    bool check = true;
 
     emit statusUpdated(json);
 
@@ -879,30 +877,14 @@ void AutomationList::writeDatabase(void)
 
     m_sync = false;
 
-    if (!m_file.open(QFile::WriteOnly))
-    {
-        logWarning << "Database not stored, file" << m_file.fileName() << "open error:" << m_file.errorString();
-        return;
-    }
-
     for (auto it = m_messages.begin(); it != m_messages.end(); it++)
         messages.insert(it.key(), QJsonValue::fromVariant(it.value()));
 
     if (!messages.isEmpty())
         json.insert("messages", messages);
 
-    data = QJsonDocument(json).toJson(QJsonDocument::Compact);
-
-    if (m_file.write(data) != data.length())
-    {
-        logWarning << "Database not stored, file" << m_file.fileName() << "open error:" << m_file.errorString();
-        check = false;
-    }
-
-    m_file.close();
-
-    if (!check)
+    if (reinterpret_cast <Controller*> (parent())->writeFile(m_file, QJsonDocument(json).toJson(QJsonDocument::Compact)))
         return;
 
-    system("sync");
+    logWarning << "Database not stored";
 }
