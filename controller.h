@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.3.0"
+#define SERVICE_VERSION         "2.3.1"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 #define RUNNER_STARTUP_DELAY    10
@@ -50,7 +50,7 @@ public:
 
 private:
 
-    QTimer *m_subscribeTimer, *m_updateTimer;
+    QTimer *m_timer;
     QMutex *m_mutex;
 
     AutomationList *m_automations;
@@ -93,8 +93,7 @@ private slots:
     void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats);
     void finished(void);
 
-    void updateSubscriptions(void);
-    void updateTime(void);
+    void update(void);
 
 };
 

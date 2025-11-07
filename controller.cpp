@@ -2,7 +2,7 @@
 #include "logger.h"
 #include "runner.h"
 
-Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, configFile, true), m_subscribeTimer(new QTimer(this)), m_updateTimer(new QTimer(this)), m_mutex(new QMutex), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
+Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, configFile, true), m_timer(new QTimer(this)), m_mutex(new QMutex), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
 {
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
     m_types = {"zigbee", "modbus", "custom"};
@@ -13,12 +13,10 @@ Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, confi
     connect(m_automations, &AutomationList::addSubscription, this, &Controller::addSubscription);
 
     connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
-    connect(m_subscribeTimer, &QTimer::timeout, this, &Controller::updateSubscriptions);
-    connect(m_updateTimer, &QTimer::timeout, this, &Controller::updateTime);
+    connect(m_timer, &QTimer::timeout, this, &Controller::update);
 
     m_automations->init();
-    m_subscribeTimer->setSingleShot(true);
-    m_updateTimer->start(1000);
+    m_timer->start(1000);
 }
 
 Device Controller::findDevice(const QString &search)
@@ -569,12 +567,24 @@ void Controller::quit(void)
 
 void Controller::mqttConnected(void)
 {
+    if (!m_startup)
+    {
+        handleTrigger(TriggerObject::Type::startup);
+        m_startup = true;
+    }
+
     mqttSubscribe(mqttTopic("command/%1").arg(serviceTopic()));
+    mqttSubscribe(mqttTopic("service/#"));
 
     m_devices.clear();
     m_automations->store();
 
-    m_subscribeTimer->start(SUBSCRIPTION_DELAY);
+    for (int i = 0; i < m_subscriptions.count(); i++)
+    {
+        logInfo << "MQTT subscribed to" << m_subscriptions.at(i);
+        mqttSubscribe(m_subscriptions.at(i));
+    }
+
     mqttPublishStatus();
 }
 
@@ -852,24 +862,7 @@ void Controller::finished(void)
     delete runner;
 }
 
-void Controller::updateSubscriptions(void)
-{
-    mqttSubscribe(mqttTopic("service/#"));
-
-    for (int i = 0; i < m_subscriptions.count(); i++)
-    {
-        logInfo << "MQTT subscribed to" << m_subscriptions.at(i);
-        mqttSubscribe(m_subscriptions.at(i));
-    }
-
-    if (!m_startup)
-    {
-        handleTrigger(TriggerObject::Type::startup);
-        m_startup = true;
-    }
-}
-
-void Controller::updateTime(void)
+void Controller::update(void)
 {
     QDateTime now = QDateTime::currentDateTime();
 
