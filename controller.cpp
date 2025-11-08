@@ -107,14 +107,20 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 
             case 3: // property
             {
-                QString endpoint = itemList.value(1).trimmed();
+                QString endpoint = itemList.value(1).trimmed(), propertyName = itemList.value(2).trimmed();
                 const Device &device = findDevice(endpoint);
 
-                if (!device.isNull())
+                if (itemList.count() > 3)
+                    value = itemList.value(3).trimmed();
+
+                if (device.isNull())
+                    break;
+
+                if (propertyName != "deviceName")
                 {
                     QString property;
                     QMap <QString, QVariant> map;
-                    QList <QString> list = itemList.value(2).trimmed().split(0x20);
+                    QList <QString> list = propertyName.split(0x20);
                     quint8 endpointId = static_cast <quint8> (list.last().toInt());
 
                     if (!endpointId)
@@ -141,9 +147,8 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                         break;
                     }
                 }
-
-                if (value.isEmpty())
-                    value = itemList.value(3).trimmed();
+                else
+                    value = device->name();
 
                 break;
             }
