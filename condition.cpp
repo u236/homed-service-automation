@@ -6,7 +6,7 @@ bool ConditionObject::match(const QVariant &value, QVariant match, Statement sta
     if (value.type() == QVariant::Bool && match.type() == QVariant::String)
     {
         QList <QString> list = {"detected", "low", "occupied", "on", "open", "wet"};
-        match = list.contains(match.toString()) ? true : false;
+        match = list.contains(match.toString());
     }
     else if (match.isNull() || match.toString() == EMPTY_PATTERN_VALUE)
         match = QVariant();

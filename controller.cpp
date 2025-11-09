@@ -728,18 +728,18 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
         for (auto it = devices.begin(); it != devices.end(); it++)
         {
-            QJsonObject device = it->toObject();
-            QString name = device.value("name").toString(), id, key, topic;
+            QJsonObject item = it->toObject();
+            QString name = item.value("name").toString(), id, key, topic;
             bool check = false;
 
-            if (type == "zigbee" && (device.value("removed").toBool() || !device.value("logicalType").toInt()))
+            if (type == "zigbee" && (item.value("removed").toBool() || !item.value("logicalType").toInt()))
                 continue;
 
             switch (m_types.indexOf(type))
             {
-                case 0: id = device.value("ieeeAddress").toString(); break; // zigbee
-                case 1: id = QString("%1.%2").arg(device.value("portId").toInt()).arg(device.value("slaveId").toInt()); break; // modbus
-                case 2: id = device.value("id").toString(); break; // custom
+                case 0: id = item.value("ieeeAddress").toString(); break;                                                  // zigbee
+                case 1: id = QString("%1.%2").arg(item.value("portId").toInt()).arg(item.value("slaveId").toInt()); break; // modbus
+                case 2: id = item.value("id").toString(); break;                                                           // custom
             }
 
             if (name.isEmpty())
@@ -748,22 +748,25 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             key = QString("%1/%2").arg(type, id);
             topic = QString("%1/%2").arg(service, names ? name : id);
 
-            if (m_devices.contains(key) && m_devices.value(key)->topic() != topic)
+            if (m_devices.contains(key))
             {
                 const Device &device = m_devices.value(key);
 
-                if (!device->topic().isEmpty())
+                if (device->topic() != topic)
                 {
-                    mqttUnsubscribe(mqttTopic("fd/%1").arg(device->topic()));
-                    mqttUnsubscribe(mqttTopic("fd/%1/#").arg(device->topic()));
+                    if (!device->topic().isEmpty())
+                    {
+                        mqttUnsubscribe(mqttTopic("fd/%1").arg(device->topic()));
+                        mqttUnsubscribe(mqttTopic("fd/%1/#").arg(device->topic()));
+                    }
+
+                    device->setTopic(topic);
+                    check = true;
                 }
 
-                device->setTopic(topic);
                 device->setName(name);
-                check = true;
             }
-
-            if (!m_devices.contains(key))
+            else
             {
                 m_devices.insert(key, Device(new DeviceObject(key, topic, name)));
                 check = true;

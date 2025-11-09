@@ -5,7 +5,7 @@ bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, St
     if (newValue.type() == QVariant::Bool && value.type() == QVariant::String)
     {
         QList <QString> list = {"detected", "low", "occupied", "on", "open", "wet"};
-        value = list.contains(value.toString()) ? true : false;
+        value = list.contains(value.toString());
     }
 
     switch (statement)
