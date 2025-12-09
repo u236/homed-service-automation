@@ -180,13 +180,13 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
         {
             QJsonObject item = it->toObject(), data;
             qint64 chat;
-            bool check = item.contains("message");
+            bool callback = item.contains("callback_query"), channel = item.contains("channel_post");
 
             m_offset = item.value("update_id").toVariant().toLongLong() + 1;
-            data = item.value(check ? "message" : "callback_query").toObject();
-            chat = check ? data.value("chat").toObject().value("id").toVariant().toLongLong() : data.value("message").toObject().value("chat").toObject().value("id").toVariant().toLongLong();
+            data = item.value(callback ? "callback_query" : channel ? "channel_post" : "message").toObject();
+            chat = callback ? data.value("message").toObject().value("chat").toObject().value("id").toVariant().toLongLong() : data.value("chat").toObject().value("id").toVariant().toLongLong();
 
-            if (check)
+            if (!callback && !channel)
             {
                 for (int i = 0; i < list.count(); i++)
                 {
@@ -199,10 +199,10 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
                 }
             }
 
-            if (!data.contains(check ? "text" : "data"))
+            if (!data.contains(callback ? "data" : "text"))
                 continue;
 
-            emit messageReceived(data.value(check ? "text" : "data").toString(), chat);
+            emit messageReceived(data.value(callback ? "data" : "text").toString(), chat);
         }
 
         getUpdates();
