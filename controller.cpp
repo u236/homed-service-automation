@@ -43,7 +43,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"}, operatList = {"is", "==", "!=", ">", ">=", "<", "<="};
+    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
     int position;
 
     if (!string.startsWith("#!"))
@@ -238,24 +238,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                     list.replace(i, item.mid(1, item.length() - 2));
                 }
 
-                while (list.count() >= 7 && list.at(1) == "if" && list.at(5) == "else")
-                {
-                    bool check = false;
-
-                    switch (operatList.indexOf(list.at(3)))
-                    {
-                        case 0: check = list.at(4) == "defined" ? list.at(2) != EMPTY_PATTERN_VALUE : list.at(4) == "undefined" ? list.at(2) == EMPTY_PATTERN_VALUE : false; break;
-                        case 1: check = list.at(2) == list.at(4); break;
-                        case 2: check = list.at(2) != list.at(4); break;
-                        case 3: check = list.at(2).toDouble() > list.at(4).toDouble(); break;
-                        case 4: check = list.at(2).toDouble() >= list.at(4).toDouble(); break;
-                        case 5: check = list.at(2).toDouble() < list.at(4).toDouble(); break;
-                        case 6: check = list.at(2).toDouble() <= list.at(4).toDouble(); break;
-                    }
-
-                    list = check ? list.mid(0, 1) : list.mid(6);
-                }
-
+                Parser::checkConditions(list, EMPTY_PATTERN_VALUE);
                 value = list.join(0x20);
                 break;
             }
