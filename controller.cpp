@@ -43,7 +43,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
-    QList <QString> valueList = {"colorTemperature", "file", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
+    QList <QString> valueList = {"colorTemperature", "file", "level", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
     int position;
 
     if (!string.startsWith("#!"))
@@ -65,15 +65,16 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
         switch (index)
         {
             case 0: // colorTemperature
+            case 2: // level
             {
-                double sunrise = m_sun->sunrise().msecsSinceStartOfDay(), sunset = m_sun->sunset().msecsSinceStartOfDay(), position = 1 - sin(M_PI * (QDateTime::currentDateTime().time().msecsSinceStartOfDay() - sunrise) / (sunset - sunrise));
                 int min = itemList.value(1).toInt(), max = itemList.value(2).toInt();
+                double position = m_sun->position();
 
                 if (!min)
-                    min = 153;
+                    min = index ? 100 : 153;
 
                 if (!max)
-                    max = 500;
+                    max = index ? 255 : 500;
 
                 value = QString::number(round(position < 1 ? min + (max - min) * position : max));
                 break;
@@ -92,7 +93,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 2: // mqtt
+            case 3: // mqtt
             {
                 auto it = m_topics.find(itemList.value(1).trimmed());
 
@@ -105,7 +106,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 3: // property
+            case 4: // property
             {
                 QString endpoint = itemList.value(1).trimmed(), propertyName = itemList.value(2).trimmed();
                 const Device &device = findDevice(endpoint);
@@ -153,21 +154,21 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 4: // shellOutput
+            case 5: // shellOutput
             {
                 value = meta.value("shellOutput");
                 break;
             }
 
-            case 5: // state
+            case 6: // state
             {
                 value = m_automations->states().value(itemList.value(1).trimmed()).toString();
                 break;
             }
 
-            case 6: // sunrise
-            case 7: // sunset
-            case 8: // timestamp
+            case 7: // sunrise
+            case 8: // sunset
+            case 9: // timestamp
             {
                 QDateTime dateTime = QDateTime::currentDateTime();
                 QString format = itemList.value(1).trimmed();
@@ -182,20 +183,20 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 9: // triggerMessage
+            case 10: // triggerMessage
             {
                 QString property = itemList.value(1).trimmed(), message = meta.value("triggerMessage");
                 value = property.isEmpty() ? message : Parser::jsonValue(message.toUtf8(), property).toString();
                 break;
             }
 
-            case 10: // triggerName
+            case 11: // triggerName
             {
                 value = meta.value("triggerName");
                 break;
             }
 
-            case 11: // triggerProperty
+            case 12: // triggerProperty
             {
                 QString endpoint = meta.value("triggerEndpoint"), property = meta.value("triggerProperty");
                 const Device &device = findDevice(endpoint);
@@ -217,7 +218,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 12: // triggerTopic
+            case 13: // triggerTopic
             {
                 QString index = itemList.value(1).trimmed(), topic = meta.value("triggerTopic");
                 value = index.isEmpty() ? topic : topic.split('/').value(index.toInt());
