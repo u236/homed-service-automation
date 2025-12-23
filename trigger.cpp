@@ -10,23 +10,23 @@ bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, St
 
     switch (statement)
     {
-        case Statement::equals:  return oldValue != value && newValue == value;
-        case Statement::differs: return (!oldValue.isValid() || oldValue == value) && newValue != value;
-        case Statement::above:   return (force ? oldValue != newValue : (!oldValue.isValid() || oldValue.toDouble() < value.toDouble())) && newValue.toDouble() >= value.toDouble();
-        case Statement::below:   return (force ? oldValue != newValue : (!oldValue.isValid() || oldValue.toDouble() > value.toDouble())) && newValue.toDouble() <= value.toDouble();
+        case Statement::equals:  return (force || !oldValue.isValid() || oldValue != value) && newValue == value;
+        case Statement::differs: return (force || !oldValue.isValid() || oldValue == value) && newValue != value;
+        case Statement::above:   return (force || !oldValue.isValid() || oldValue.toDouble() < value.toDouble()) && newValue.toDouble() >= value.toDouble();
+        case Statement::below:   return (force || !oldValue.isValid() || oldValue.toDouble() > value.toDouble()) && newValue.toDouble() <= value.toDouble();
 
         case Statement::between:
         {
             QList <QVariant> list = value.toList();
             double a = oldValue.toDouble(), b = newValue.toDouble(), min = qMin(list.value(0).toDouble(), list.value(1).toDouble()), max = qMax(list.value(0).toDouble(), list.value(1).toDouble());
-            return (force ? oldValue != newValue : (!oldValue.isValid() || a < min || a > max)) && b >= min && b <= max;
+            return (force || !oldValue.isValid() || a < min || a > max) && b >= min && b <= max;
         }
 
         case Statement::outside:
         {
             QList <QVariant> list = value.toList();
             double a = oldValue.toDouble(), b = newValue.toDouble(), min = qMin(list.value(0).toDouble(), list.value(1).toDouble()), max = qMax(list.value(0).toDouble(), list.value(1).toDouble());
-            return (force ? oldValue != newValue : !oldValue.isValid() || (a >= min && a <= max)) && (b < min || b > max);
+            return (force || !oldValue.isValid() || (a >= min && a <= max)) && (b < min || b > max);
         }
 
         case Statement::changes:
