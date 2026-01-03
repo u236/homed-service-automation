@@ -179,6 +179,7 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
         for (auto it = array.begin(); it != array.end(); it++)
         {
             QJsonObject item = it->toObject(), data;
+            QString message;
             qint64 chat;
             bool callback = item.contains("callback_query"), channel = item.contains("channel_post");
 
@@ -202,7 +203,16 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
             if (!data.contains(callback ? "data" : "text"))
                 continue;
 
-            emit messageReceived(data.value(callback ? "data" : "text").toString(), chat);
+            message = data.value(callback ? "data" : "text").toString();
+
+            if (message == "/getThreadId" && data.contains("message_thread_id"))
+            {
+                qint64 threadId = data.value("message_thread_id").toVariant().toLongLong();
+                sendMessage(QString("Thread ID: `%1`").arg(threadId), QString(), QString(), QString(), threadId, false, false, false, {chat});
+                continue;
+            }
+
+            emit messageReceived(message, chat);
         }
 
         getUpdates();
