@@ -29,8 +29,9 @@ private:
     QString m_token;
     qint64 m_chat, m_offset;
     qint32 m_timeout;
+    bool m_debug;
 
-    void deleteMessage(qint64 chatId, qint64 messageId);
+    void sendRequest(QProcess *process, const QString &request);
 
 private slots:
 

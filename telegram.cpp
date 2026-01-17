@@ -6,6 +6,7 @@ Telegram::Telegram(QSettings *config, AutomationList *automations, QObject *pare
     m_token = config->value("telegram/token").toString();
     m_chat = config->value("telegram/chat").toLongLong();
     m_timeout = config->value("telegram/timeout", 60).toInt();
+    m_debug = config->value("telegram/debug", false).toBool();
 
     if (m_token.isEmpty() || !m_chat || !config->value("telegram/update", true).toBool())
         return;
@@ -119,7 +120,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
             {
                 QProcess *process(new QProcess(this));
                 connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
-                process->start("sh", {"-c", QString("curl --http1.1 -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument({{"chat_id", chatId}, {"message_id", m_automations->messages().value(id)}}).toJson(QJsonDocument::Compact), m_token)});
+                sendRequest(process, QString("curl --http1.1 -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/deleteMessage").arg(QJsonDocument({{"chat_id", chatId}, {"message_id", m_automations->messages().value(id)}}).toJson(QJsonDocument::Compact), m_token));
             }
             else
             {
@@ -134,14 +135,20 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
         if (remove || update)
             process->setProperty("id", id);
 
-        process->start("sh", {"-c", QString("curl --http1.1 -X POST %1 -s https://api.telegram.org/bot%2/%3").arg(list.join(0x20), m_token, method)});
+        sendRequest(process, QString("curl --http1.1 -X POST %1 -s https://api.telegram.org/bot%2/%3").arg(list.join(0x20), m_token, method));
     }
+}
+
+void Telegram::sendRequest(QProcess *process, const QString &request)
+{
+    logDebug(m_debug) << "Telegram Bot API request:" << request.toUtf8().constData();
+    process->start("sh", {"-c", request});
 }
 
 void Telegram::getUpdates(void)
 {
     m_buffer.clear();
-    m_process->start("sh", {"-c", QString("curl --http1.1 -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/getUpdates").arg(QJsonDocument({{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), m_token)});
+    sendRequest(m_process, QString("curl --http1.1 -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/getUpdates").arg(QJsonDocument({{"timeout", m_timeout}, {"offset", m_offset}}).toJson(QJsonDocument::Compact), m_token));
 }
 
 void Telegram::finished(int exitCode, QProcess::ExitStatus)
@@ -150,9 +157,11 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
 
     if (process != m_process)
     {
-        QJsonObject json = QJsonDocument::fromJson(process->readAllStandardOutput()).object();
+        QByteArray response = process->readAllStandardOutput();
+        QJsonObject json = QJsonDocument::fromJson(response).object();
         QString id = process->property("id").toString();
 
+        logDebug(m_debug) << "Telegram Bot API response:" << response.constData();
         process->deleteLater();
 
         if (!json.value("ok").toBool())
@@ -172,6 +181,8 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
         QList <QString> list = {"audio", "document", "photo", "video"};
         QJsonObject json = QJsonDocument::fromJson(m_buffer).object();
         QJsonArray array = json.value("result").toArray();
+
+        logDebug(m_debug) << "Telegram Bot API response:" << m_buffer.constData();
 
         if (!json.value("ok").toBool())
             logWarning << "Telegram updates request error, description:" << (json.contains("description") ? json.value("description").toString() : "(empty)");
