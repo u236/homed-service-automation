@@ -59,11 +59,18 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
             for (int j = 0; j < items.count(); j++)
             {
                 QList <QString> item = items.at(j).split(':');
+                QJsonObject json;
 
                 if (item.value(0).isEmpty())
                     continue;
 
-                line.append(QJsonObject{{"text", item.value(0).trimmed()}, {"callback_data", item.value(item.count() > 1 ? 1 : 0).trimmed()}});
+                json.insert("text", item.value(0).trimmed());
+                json.insert("callback_data", item.value(item.count() > 1 ? 1 : 0).trimmed());
+
+                if (!item.value(2).isEmpty())
+                    json.insert("style", item.value(2).trimmed());
+
+                line.append(json);
             }
 
             if (line.isEmpty())
