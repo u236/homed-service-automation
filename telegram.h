@@ -26,7 +26,7 @@ private:
     QProcess *m_process;
     QTimer *m_timer;
 
-    QString m_token;
+    QString m_proxy, m_token;
     qint64 m_chat, m_offset;
     qint32 m_timeout;
     bool m_debug;
