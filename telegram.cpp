@@ -153,7 +153,7 @@ void Telegram::sendRequest(QProcess *process, const QString &request)
     QString command;
 
     if (!m_proxy.isEmpty())
-        list.append(QString("--socks5 %1").arg(m_proxy));
+        list.append(QString("--proxy %1").arg(m_proxy));
 
     list.append(request);
     command = list.join(0x20);
