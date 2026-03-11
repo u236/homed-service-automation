@@ -581,6 +581,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 {
     QString subTopic = topic.name().replace(0, mqttTopic().length(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
+    bool check = false;
 
     for (int i = 0; i < m_subscriptions.count(); i++)
     {
@@ -588,12 +589,13 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
         if (item.endsWith('#') ? topic.name().startsWith(item.mid(0, item.indexOf("#"))) : topic.name() == item)
         {
-            QByteArray check = m_topics.value(topic.name());
-            m_topics.insert(topic.name(), message);
-            handleTrigger(TriggerObject::Type::mqtt, item, check, message, topic.name());
-            break;
+            handleTrigger(TriggerObject::Type::mqtt, item, m_topics.value(topic.name()), message, topic.name());
+            check = true;
         }
     }
+
+    if (check)
+        m_topics.insert(topic.name(), message);
 
     if (subTopic == QString("command/%1").arg(serviceTopic()))
     {
