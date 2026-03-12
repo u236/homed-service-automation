@@ -1,6 +1,7 @@
 #ifndef RUNNER_H
 #define RUNNER_H
 
+#include <atomic>
 #include <QProcess>
 #include <QThread>
 #include "automation.h"
@@ -27,10 +28,12 @@ private:
     Controller *m_controller;
 
     QWeakPointer <AutomationObject> m_automation;
-    qint64 m_id, m_processId;
+    qint64 m_id;
+
+    std::atomic <qint64> m_processId;
+    std::atomic <bool> m_aborted;
 
     ActionList *m_actions;
-    bool m_aborted;
 
     QMap <ActionList*, quint32> m_index;
     QMap <QString, QString> m_meta;

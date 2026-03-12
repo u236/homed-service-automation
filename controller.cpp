@@ -175,8 +175,8 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 
                 switch (index)
                 {
-                    case 6: dateTime.setTime(m_sun->sunrise()); break;
-                    case 7: dateTime.setTime(m_sun->sunset()); break;
+                    case 7: dateTime.setTime(m_sun->sunrise()); break;
+                    case 8: dateTime.setTime(m_sun->sunset()); break;
                 }
 
                 value = format.isEmpty() ? QString::number(dateTime.toSecsSinceEpoch()) : dateTime.toString(format);
@@ -657,8 +657,8 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
                 if (index >= 0)
                 {
-                    m_automations->removeAt(index);
                     abortRunners(automation);
+                    m_automations->removeAt(index);
                     logInfo << automation << "removed";
                     publishEvent(automation->name(), Event::removed);
                     m_automations->store(true);

@@ -3,7 +3,7 @@
 #include "controller.h"
 #include "logger.h"
 
-Runner::Runner(Controller *controller, const Automation &automation, const QMap <QString, QString> &meta) : QThread(nullptr), m_controller(controller), m_automation(automation), m_id(automation->counter()), m_processId(0), m_actions(&automation->actions()), m_aborted(false), m_meta(meta)
+Runner::Runner(Controller *controller, const Automation &automation, const QMap <QString, QString> &meta) : QThread(nullptr), m_controller(controller), m_automation(automation), m_id(automation->counter()), m_processId(0), m_aborted(false), m_actions(&automation->actions()), m_meta(meta)
 {
     connect(this, &Runner::started, this, &Runner::threadStarted);
     connect(this, &Runner::finished, this, &Runner::threadFinished);
@@ -34,7 +34,7 @@ void Runner::abort(void)
 
 QVariant Runner::parsePattern(QString string)
 {
-    QMutexLocker(m_controller->mutex());
+    QMutexLocker locker(m_controller->mutex());
     return m_controller->parsePattern(string, m_meta, false);
 }
 
@@ -54,7 +54,7 @@ void Runner::runActions(void)
         {
             case ActionObject::Type::property:
             {
-                QMutexLocker(m_controller->mutex());
+                QMutexLocker locker(m_controller->mutex());
                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
                 QString endpoint = action->endpoint() == "triggerEndpoint" ? m_meta.value("triggerEndpoint") : action->endpoint(), property = action->property() == "triggerProperty" ? m_meta.value("triggerProperty") : action->property();
                 const Device &device = m_controller->findDevice(endpoint);
@@ -132,7 +132,7 @@ void Runner::runActions(void)
 
             case ActionObject::Type::condition:
             {
-                QMutexLocker(m_controller->mutex());
+                QMutexLocker locker(m_controller->mutex());
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
                 m_index.insert(m_actions, ++i);
                 m_actions = &action->actions(m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta));
