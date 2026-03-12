@@ -34,7 +34,6 @@ void Runner::abort(void)
 
 QVariant Runner::parsePattern(QString string)
 {
-    QMutexLocker locker(m_controller->mutex());
     return m_controller->parsePattern(string, m_meta, false);
 }
 
@@ -54,7 +53,6 @@ void Runner::runActions(void)
         {
             case ActionObject::Type::property:
             {
-                QMutexLocker locker(m_controller->mutex());
                 PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
                 QString endpoint = action->endpoint() == "triggerEndpoint" ? m_meta.value("triggerEndpoint") : action->endpoint(), property = action->property() == "triggerProperty" ? m_meta.value("triggerProperty") : action->property();
                 const Device &device = m_controller->findDevice(endpoint);
@@ -132,7 +130,6 @@ void Runner::runActions(void)
 
             case ActionObject::Type::condition:
             {
-                QMutexLocker locker(m_controller->mutex());
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
                 m_index.insert(m_actions, ++i);
                 m_actions = &action->actions(m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta));
