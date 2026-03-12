@@ -38,7 +38,10 @@ private:
     QMap <ActionList*, quint32> m_index;
     QMap <QString, QString> m_meta;
 
+    void propertyMessage(PropertyAction *action, QString &topic, QVariant &message);
+
     QVariant parsePattern(QString string);
+    bool checkConditions(ConditionAction *action);
 
 private slots:
 

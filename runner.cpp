@@ -32,9 +32,50 @@ void Runner::abort(void)
     quit();
 }
 
+void Runner::propertyMessage(PropertyAction *action, QString &topic, QVariant &message)
+{
+    QMutexLocker locker(m_controller->mutex());
+    QString endpoint = action->endpoint() == "triggerEndpoint" ? m_meta.value("triggerEndpoint") : action->endpoint(), property = action->property() == "triggerProperty" ? m_meta.value("triggerProperty") : action->property();
+    const Device &device = m_controller->findDevice(endpoint);
+
+    if (!device.isNull())
+    {
+        quint8 endpointId = m_controller->getEndpointId(endpoint);
+        QVariant value = action->value(device->properties().value(endpointId).value(property));
+        QString string;
+
+        if (value.type() == QVariant::String)
+        {
+            value = m_controller->parsePattern(value.toString(), m_meta, false);
+            string = value.toString();
+        }
+
+        if (string.contains(','))
+        {
+            QList <QString> list = string.split(',');
+            QJsonArray array;
+
+            for (int i = 0; i < list.count(); i++)
+                array.append(QJsonValue::fromVariant(Parser::stringValue(list.at(i).trimmed())));
+
+            value = array;
+        }
+
+        topic = m_controller->mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic());
+        message = QMap <QString, QVariant> {{property, value}};
+    }
+}
+
 QVariant Runner::parsePattern(QString string)
 {
+    QMutexLocker locker(m_controller->mutex());
     return m_controller->parsePattern(string, m_meta, false);
+}
+
+bool Runner::checkConditions(ConditionAction *action)
+{
+    QMutexLocker locker(m_controller->mutex());
+    return m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta);
 }
 
 void Runner::runActions(void)
@@ -53,35 +94,13 @@ void Runner::runActions(void)
         {
             case ActionObject::Type::property:
             {
-                PropertyAction *action = reinterpret_cast <PropertyAction*> (item.data());
-                QString endpoint = action->endpoint() == "triggerEndpoint" ? m_meta.value("triggerEndpoint") : action->endpoint(), property = action->property() == "triggerProperty" ? m_meta.value("triggerProperty") : action->property();
-                const Device &device = m_controller->findDevice(endpoint);
+                QString topic;
+                QVariant message;
 
-                if (!device.isNull())
-                {
-                    quint8 endpointId = m_controller->getEndpointId(endpoint);
-                    QVariant value = action->value(device->properties().value(endpointId).value(property));
-                    QString string;
+                propertyMessage(reinterpret_cast <PropertyAction*> (item.data()), topic, message);
 
-                    if (value.type() == QVariant::String)
-                    {
-                        value = m_controller->parsePattern(value.toString(), m_meta, false);
-                        string = value.toString();
-                    }
-
-                    if (string.contains(','))
-                    {
-                        QList <QString> list = string.split(',');
-                        QJsonArray array;
-
-                        for (int i = 0; i < list.count(); i++)
-                            array.append(QJsonValue::fromVariant(Parser::stringValue(list.at(i).trimmed())));
-
-                        value = array;
-                    }
-
-                    emit publishMessage(m_controller->mqttTopic("td/").append(endpointId ? QString("%1/%2").arg(device->topic()).arg(endpointId) : device->topic()), QMap <QString, QVariant> {{property, value}});
-                }
+                if (!topic.isEmpty())
+                    emit publishMessage(topic, message);
 
                 break;
             }
@@ -132,7 +151,7 @@ void Runner::runActions(void)
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
                 m_index.insert(m_actions, ++i);
-                m_actions = &action->actions(m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta));
+                m_actions = &action->actions(checkConditions(action));
                 m_index.insert(m_actions, 0);
                 runActions();
                 return;
