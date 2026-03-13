@@ -53,7 +53,9 @@ void AutomationList::init(void)
 
 void AutomationList::store(bool sync)
 {
-    m_sync = sync;
+    if (sync)
+        m_sync = true;
+
     m_timer->start(STORE_DATABASE_DELAY);
 }
 
