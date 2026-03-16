@@ -14,7 +14,6 @@ Telegram::Telegram(QSettings *config, AutomationList *automations, QObject *pare
 
     connect(m_process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
     connect(m_process, &QProcess::readyReadStandardOutput, this, &Telegram::readyRead);
-    connect(m_process, &QProcess::readyReadStandardError, this, &Telegram::pollError);
     connect(m_timer, &QTimer::timeout, this, &Telegram::getUpdates);
 
     m_timer->setSingleShot(true);
@@ -174,26 +173,35 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
 
     if (process != m_process)
     {
-        QByteArray response = process->readAllStandardOutput();
-        QJsonObject json = QJsonDocument::fromJson(response).object();
-        QString id = process->property("id").toString();
-
-        logDebug(m_debug) << "Telegram Bot API response:" << response.constData();
         process->deleteLater();
 
-        if (!json.value("ok").toBool())
+        if (!exitCode)
         {
-            logWarning << "Telegram message request error, description:" << (json.contains("description") ? json.value("description").toString() : "(empty)");
-            return;
-        }
+            QByteArray response = process->readAllStandardOutput();
+            QJsonObject json = QJsonDocument::fromJson(response).object();
+            QString id = process->property("id").toString();
 
-        if (!id.isEmpty())
-        {
-            m_automations->messages().insert(id, json.value("result").toObject().value("message_id").toVariant().toLongLong());
-            m_automations->store(true);
+            logDebug(m_debug) << "Telegram Bot API response:" << response.constData();
+
+            if (!json.value("ok").toBool())
+            {
+                logWarning << "Telegram message request error, description:" << (json.contains("description") ? json.value("description").toString() : "(empty)");
+                return;
+            }
+
+            if (!id.isEmpty())
+            {
+                m_automations->messages().insert(id, json.value("result").toObject().value("message_id").toVariant().toLongLong());
+                m_automations->store(true);
+            }
         }
+        else
+            logWarning << "Telegram message process failed, curl exit code:" << exitCode;
+
+        return;
     }
-    else if (!exitCode || exitCode == CURL_OPERATION_TIMEOUT_EXIT_CODE)
+
+    if (!exitCode || exitCode == CURL_OPERATION_TIMEOUT_EXIT_CODE)
     {
         QList <QString> list = {"audio", "document", "photo", "video"};
         QJsonObject json = QJsonDocument::fromJson(m_buffer).object();
@@ -247,7 +255,7 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
     }
     else
     {
-        logWarning << "Telegram getUpdates process failed, exit code:" << exitCode;
+        logWarning << "Telegram getUpdates process failed, curl exit code:" << exitCode;
         m_timer->start(GET_UPDATES_RETRY_TIMEOUT);
     }
 }
@@ -255,9 +263,4 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
 void Telegram::readyRead(void)
 {
     m_buffer.append(m_process->readAllStandardOutput());
-}
-
-void Telegram::pollError(void)
-{
-    logWarning << "Telegram getUpdates process error:" << m_process->readAllStandardError();
 }

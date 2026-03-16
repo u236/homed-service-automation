@@ -38,7 +38,6 @@ private slots:
     void getUpdates(void);
     void finished(int exitCode, QProcess::ExitStatus exitStatus);
     void readyRead(void);
-    void pollError(void);
 
 signals:
 
