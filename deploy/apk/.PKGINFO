@@ -1,8 +1,0 @@
-pkgname = homed-automation
-pkgver =
-arch =
-pkgdesc = HOMEd Automation Service
-maintainer = u236 <mail@u236.org>
-depend = curl
-depend = homed-qt
-backup = etc/homed/homed-automation.conf

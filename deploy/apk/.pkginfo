@@ -1,0 +1,4 @@
+name = homed-automation
+description = HOMEd Automation Service
+maintainer = u236 <mail@u236.org>
+depends = curl homed-qt
