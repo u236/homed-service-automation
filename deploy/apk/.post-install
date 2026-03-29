@@ -1,0 +1,6 @@
+#!/bin/sh
+
+/etc/init.d/homed-automation enable
+/etc/init.d/homed-automation start
+
+exit 0
