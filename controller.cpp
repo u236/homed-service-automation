@@ -5,8 +5,6 @@
 Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, configFile, true), m_timer(new QTimer(this)), m_mutex(new QMutex), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
 {
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
-    m_types = {"zigbee", "modbus", "custom"};
-
     updateSun();
 
     connect(m_automations, &AutomationList::statusUpdated, this, &Controller::statusUpdated);
@@ -683,7 +681,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     {
         QString type = subTopic.split('/').value(1), service = subTopic.mid(subTopic.indexOf('/') + 1);
 
-        if (!m_types.contains(type))
+        if (!deviceServices().contains(type))
             return;
 
         if (json.value("status").toString() == "online")
@@ -712,24 +710,17 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
         QJsonArray devices = json.value("devices").toArray();
         bool names = json.value("names").toBool();
 
-        if (!m_types.contains(type))
+        if (!deviceServices().contains(type))
             return;
 
         for (auto it = devices.begin(); it != devices.end(); it++)
         {
             QJsonObject item = it->toObject();
-            QString name = item.value("name").toString(), id, key, topic;
+            QString name = item.value("name").toString(), id = deviceId(item, type), key, topic;
             bool check = false;
 
             if (type == "zigbee" && (item.value("removed").toBool() || !item.value("logicalType").toInt()))
                 continue;
-
-            switch (m_types.indexOf(type))
-            {
-                case 0: id = item.value("ieeeAddress").toString(); break;                                                  // zigbee
-                case 1: id = QString("%1.%2").arg(item.value("portId").toInt()).arg(item.value("slaveId").toInt()); break; // modbus
-                case 2: id = item.value("id").toString(); break;                                                           // custom
-            }
 
             if (name.isEmpty())
                 name = id;

@@ -61,7 +61,7 @@ private:
     QDateTime m_dateTime;
     bool m_startup;
 
-    QList <QString> m_types, m_subscriptions;
+    QList <QString> m_subscriptions;
     QList <Runner*> m_runners;
 
     QMap <QString, Device> m_devices;
