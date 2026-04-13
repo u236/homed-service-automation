@@ -7,9 +7,7 @@ Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, confi
     m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
     updateSun();
 
-    connect(m_automations, &AutomationList::statusUpdated, this, &Controller::statusUpdated);
     connect(m_automations, &AutomationList::addSubscription, this, &Controller::addSubscription);
-
     connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
     connect(m_timer, &QTimer::timeout, this, &Controller::update);
 
@@ -572,7 +570,7 @@ void Controller::mqttConnected(void)
         mqttSubscribe(m_subscriptions.at(i));
     }
 
-    mqttPublishStatus();
+    mqttPublishService();
 }
 
 void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &topic)
@@ -782,11 +780,6 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 handleTrigger(TriggerObject::Type::property, endpointId ? QString("%1/%2").arg(device->key()).arg(endpointId) : device->key(), it.key(), check.value(it.key()), it.value());
         }
     }
-}
-
-void Controller::statusUpdated(const QJsonObject &json)
-{
-    mqttPublish(mqttTopic("status/%1").arg(serviceTopic()), json, true);
 }
 
 void Controller::addSubscription(const QString &topic)

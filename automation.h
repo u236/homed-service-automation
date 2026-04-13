@@ -149,7 +149,6 @@ private slots:
 
 signals:
 
-    void statusUpdated(const QJsonObject &json);
     void addSubscription(const QString &topic);
 
 };

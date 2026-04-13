@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.3.7"
+#define SERVICE_VERSION         "2.3.8"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 #define RUNNER_STARTUP_DELAY    10
@@ -84,7 +84,6 @@ private slots:
     void mqttConnected(void) override;
     void mqttReceived(const QByteArray &message, const QMqttTopicName &topic) override;
 
-    void statusUpdated(const QJsonObject &json);
     void addSubscription(const QString &topic);
     void telegramReceived(const QString &message, qint64 chat);
 

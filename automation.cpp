@@ -870,9 +870,10 @@ QJsonArray AutomationList::serialize(void)
 
 void AutomationList::writeDatabase(void)
 {
+    HOMEd *homed = reinterpret_cast <HOMEd*> (parent());
     QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}}, messages;
 
-    emit statusUpdated(json);
+    homed->mqttPublishStatus(json);
 
     if (!m_sync)
         return;
@@ -885,7 +886,7 @@ void AutomationList::writeDatabase(void)
     if (!messages.isEmpty())
         json.insert("messages", messages);
 
-    if (reinterpret_cast <HOMEd*> (parent())->writeFile(m_file, QJsonDocument(json).toJson(QJsonDocument::Compact)))
+    if (homed->writeFile(m_file, QJsonDocument(json).toJson(QJsonDocument::Compact)))
         return;
 
     logWarning << "Database not stored";
