@@ -545,8 +545,15 @@ void Controller::updateSun(void)
 void Controller::quit(void)
 {
     for (int i = 0; i < m_runners.count(); i++)
+    {
+        disconnect(m_runners.at(i), &Runner::finished, this, &Controller::finished);
         m_runners.at(i)->abort();
+        m_runners.at(i)->wait();
+        delete m_runners.at(i);
+    }
 
+    delete m_telegram;
+    delete m_automations;
     HOMEd::quit();
 }
 
