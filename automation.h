@@ -33,12 +33,12 @@ public:
     inline QString name(void) { return m_name; }
     inline void setName(const QString &value) { m_name = value; }
 
-    inline QMap <quint8, QVariantMap> &properties(void) { return m_properties; }
+    inline QMap <quint8, QMap <QString, QVariant>> &properties(void) { return m_properties; }
 
 private:
 
     QString m_key, m_topic, m_name;
-    QMap <quint8, QVariantMap> m_properties;
+    QMap <quint8, QMap <QString, QVariant>> m_properties;
 
 };
 

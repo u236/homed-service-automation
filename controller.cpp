@@ -767,19 +767,27 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     }
     else if (subTopic.startsWith("fd/"))
     {
-        QString endpoint = subTopic.mid(subTopic.indexOf('/') + 1);
-        const Device &device = findDevice(endpoint);
+        QString string = subTopic.mid(subTopic.indexOf('/') + 1);
+        const Device &device = findDevice(string);
 
         if (!device.isNull())
         {
-            quint8 endpointId = getEndpointId(endpoint);
-            QMap <QString, QVariant> data = json.toVariantMap(), properties = device->properties().value(endpointId), check = properties;
+            quint8 endpointId = getEndpointId(string);
             QList <QString> list = {"action", "event", "scene"};
+            QMap <QString, QVariant> data = json.toVariantMap(), properties = device->properties().value(endpointId), check = properties;
 
             properties.insert(data);
 
-            for (int i = 0; i < list.count(); i++)
-                properties.remove(list.at(i));
+            for (auto it = properties.begin(); it != properties.end(); NULL)
+            {
+                if (list.contains(it.key().split('_').value(0)))
+                {
+                    it = properties.erase(it);
+                    continue;
+                }
+
+                it++;
+            }
 
             device->properties().insert(endpointId, properties);
 
