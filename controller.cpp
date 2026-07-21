@@ -38,12 +38,14 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
-    QRegExp calculate("\\[\\[([^\\]]*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
+    QRegExp calculate("\\[\\[(.*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
     QList <QString> valueList = {"colorTemperature", "file", "level", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
     int position;
 
     if (!string.startsWith("#!"))
     {
+        calculate.setMinimal(true);
+
         while ((position = calculate.indexIn(string)) != -1)
         {
             QString item = calculate.cap();
