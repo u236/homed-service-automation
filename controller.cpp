@@ -535,6 +535,8 @@ void Controller::publishEvent(const QString &name, Event event)
 
 void Controller::updateSun(void)
 {
+    QMutexLocker locker(m_mutex);
+
     m_sun->setDate(QDate::currentDate());
     m_sun->setOffset(QDateTime::currentDateTime().offsetFromUtc());
 
@@ -561,6 +563,8 @@ void Controller::quit(void)
 
 void Controller::mqttConnected(void)
 {
+    QMutexLocker locker(m_mutex);
+
     if (!m_startup)
     {
         handleTrigger(TriggerObject::Type::startup);
@@ -584,6 +588,7 @@ void Controller::mqttConnected(void)
 
 void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &topic)
 {
+    QMutexLocker locker(m_mutex);
     QByteArray check = m_topics.value(topic.name());
     QString subTopic = topic.name().replace(0, mqttTopic().length(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
@@ -830,6 +835,7 @@ void Controller::publishMessage(const QString &topic, const QVariant &data, bool
 
 void Controller::updateState(const QString &name, const QVariant &value)
 {
+    QMutexLocker locker(m_mutex);
     QVariant check = m_automations->states().value(name);
 
     if (value.isValid())

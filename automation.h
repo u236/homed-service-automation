@@ -66,7 +66,6 @@ public:
 
     inline bool active(void) { return m_active; }
     inline bool log(void) { return m_log; }
-
     inline qint32 debounce(void) { return m_debounce; }
 
     inline qint64 lastTriggered(void) { return m_lastTriggered; }
@@ -88,8 +87,6 @@ private:
 
     bool m_active, m_log;
     qint32 m_debounce;
-
-    QWeakPointer <TriggerObject> m_lastTrigger;
     qint64 m_lastTriggered, m_counter;
 
     QList <Trigger> m_triggers;

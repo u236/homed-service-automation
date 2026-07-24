@@ -43,7 +43,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
 
     if (!message.isEmpty())
     {
-        messageList.append(QString("-F %1='%2'").arg(file.isEmpty() ? "text" : "caption", message));
+        messageList.append(QString("-F %1='%2'").arg(file.isEmpty() ? "text" : "caption", QString(message).replace("'", "'\\''")));
         messageList.append("-F parse_mode=Markdown");
     }
 
