@@ -364,6 +364,11 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
     }
 }
 
+QString Controller::triggerString(const Automation &automation, const Trigger &trigger)
+{
+    return trigger->name().isEmpty() ? QString("[%1]").arg(automation->triggers().indexOf(trigger) + 1) : QString("\"%1\"").arg(trigger->name());
+}
+
 Runner *Controller::findRunner(const Automation &automation, bool pending)
 {
     for (int i = 0; i < m_runners.count(); i++)
@@ -413,16 +418,8 @@ void Controller::runAutomation(const Automation &automation, const Trigger &trig
     Runner *runner = findRunner(automation);
     bool start = true;
 
+    logDebug(automation->log()) << automation << "triggered by" << triggerString(automation, trigger).toUtf8().constData();
     meta.insert("triggerName", trigger->name());
-
-    if (trigger->name().isEmpty())
-    {
-        logDebug(automation->log()) << automation << "triggered by" << QString("[%1]").arg(automation->triggers().indexOf(trigger) + 1).toUtf8().constData();
-    }
-    else
-    {
-        logDebug(automation->log()) << automation << "triggered by" << trigger->name();
-    }
 
     if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), meta))
     {
@@ -453,7 +450,7 @@ void Controller::runAutomation(const Automation &automation, const Trigger &trig
     addRunner(automation, meta, start);
 }
 
-void Controller::holdTrigger(const Trigger &trigger, bool match)
+void Controller::holdTrigger(const Automation &automation, const Trigger &trigger, bool match)
 {
     if (!match)
     {
@@ -465,6 +462,7 @@ void Controller::holdTrigger(const Trigger &trigger, bool match)
     if (trigger->time())
         return;
 
+    logDebug(automation->log()) << automation << "holding" << triggerString(automation, trigger).toUtf8().constData() << "for" << trigger->hold() << "seconds";
     trigger->setTime(QDateTime::currentMSecsSinceEpoch());
     trigger->setPending(true);
 }
@@ -497,7 +495,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
 
                     if (item->hold() && item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates)
                     {
-                        holdTrigger(trigger, item->match(d));
+                        holdTrigger(automation, trigger, item->match(d));
                         continue;
                     }
 
@@ -518,7 +516,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
 
                     if (item->hold() && item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates)
                     {
-                        holdTrigger(trigger, item->match(c.toByteArray()));
+                        holdTrigger(automation, trigger, item->match(c.toByteArray()));
                         continue;
                     }
 
