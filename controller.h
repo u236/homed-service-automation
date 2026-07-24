@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.3.9"
+#define SERVICE_VERSION         "2.4.0"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 #define RUNNER_STARTUP_DELAY    10
@@ -70,8 +70,11 @@ private:
     Runner *findRunner(const Automation &automation, bool pending = false);
     void abortRunners(const Automation &automation);
     void addRunner(const Automation &automation, const QMap <QString, QString> &meta, bool start);
+    void runAutomation(const Automation &automation, const Trigger &trigger, QMap <QString, QString> &meta);
 
+    void holdTrigger(const Trigger &trigger, bool match);
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
+
     void publishEvent(const QString &name, Event event);
     void updateSun(void);
 

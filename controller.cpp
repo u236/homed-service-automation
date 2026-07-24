@@ -408,6 +408,67 @@ void Controller::addRunner(const Automation &automation, const QMap <QString, QS
     QThread::msleep(RUNNER_STARTUP_DELAY);
 }
 
+void Controller::runAutomation(const Automation &automation, const Trigger &trigger, QMap <QString, QString> &meta)
+{
+    Runner *runner = findRunner(automation);
+    bool start = true;
+
+    meta.insert("triggerName", trigger->name());
+
+    if (trigger->name().isEmpty())
+    {
+        logDebug(automation->log()) << automation << "triggered by" << QString("[%1]").arg(automation->triggers().indexOf(trigger) + 1).toUtf8().constData();
+    }
+    else
+    {
+        logDebug(automation->log()) << automation << "triggered by" << trigger->name();
+    }
+
+    if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), meta))
+    {
+        logDebug(automation->log()) << automation << "conditions mismatch";
+        return;
+    }
+
+    if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
+    {
+        logDebug(automation->log()) << automation << "debounced";
+        return;
+    }
+
+    automation->updateLastTriggered();
+    m_automations->store();
+
+    if (runner)
+    {
+        switch (automation->mode())
+        {
+            case AutomationObject::Mode::single:   logDebug(automation->log()) << runner << "already running"; return;
+            case AutomationObject::Mode::restart:  abortRunners(automation); break;
+            case AutomationObject::Mode::queued:   start = false; break;
+            case AutomationObject::Mode::parallel: break;
+        }
+    }
+
+    addRunner(automation, meta, start);
+}
+
+void Controller::holdTrigger(const Trigger &trigger, bool match)
+{
+    if (!match)
+    {
+        trigger->setTime(0);
+        trigger->setPending(false);
+        return;
+    }
+
+    if (trigger->time())
+        return;
+
+    trigger->setTime(QDateTime::currentMSecsSinceEpoch());
+    trigger->setPending(true);
+}
+
 void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
 {
     for (int i = 0; i < m_automations->count(); i++)
@@ -421,8 +482,6 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
         {
             const Trigger &trigger = automation->triggers().at(j);
             QMap <QString, QString> meta;
-            Runner *runner = findRunner(automation);
-            bool start = true;
 
             if (!trigger->active() || trigger->type() != type)
                 continue;
@@ -433,7 +492,16 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 {
                     PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
 
-                    if (item->endpoint() != a.toString() || item->property() != b.toString() || !item->match(c, d))
+                    if (item->endpoint() != a.toString() || item->property() != b.toString())
+                        continue;
+
+                    if (item->hold() && item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates)
+                    {
+                        holdTrigger(trigger, item->match(d));
+                        continue;
+                    }
+
+                    if (!item->match(c, d))
                         continue;
 
                     meta.insert("triggerEndpoint", item->endpoint());
@@ -445,7 +513,16 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 {
                     MqttTrigger *item = reinterpret_cast <MqttTrigger*> (trigger.data());
 
-                    if (item->topic() != a.toString() || !item->match(b.toByteArray(), c.toByteArray()))
+                    if (item->topic() != a.toString())
+                        continue;
+
+                    if (item->hold() && item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates)
+                    {
+                        holdTrigger(trigger, item->match(c.toByteArray()));
+                        continue;
+                    }
+
+                    if (!item->match(b.toByteArray(), c.toByteArray()))
                         continue;
 
                     meta.insert("triggerMessage", c.toString());
@@ -486,44 +563,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 case TriggerObject::Type::startup: break;
             }
 
-            meta.insert("triggerName", trigger->name());
-
-            if (trigger->name().isEmpty())
-            {
-                logDebug(automation->log()) << automation << "triggered by" << QString("[%1]").arg(j + 1).toUtf8().constData();
-            }
-            else
-            {
-                logDebug(automation->log()) << automation << "triggered by" << trigger->name();
-            }
-
-            if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), meta))
-            {
-                logDebug(automation->log()) << automation << "conditions mismatch";
-                continue;
-            }
-
-            if (automation->debounce() * 1000 + automation->lastTriggered() > QDateTime::currentMSecsSinceEpoch())
-            {
-                logDebug(automation->log()) << automation << "debounced";
-                continue;
-            }
-
-            automation->updateLastTriggered();
-            m_automations->store();
-
-            if (runner)
-            {
-                switch (automation->mode())
-                {
-                    case AutomationObject::Mode::single:   logDebug(automation->log()) << runner << "already running"; continue;
-                    case AutomationObject::Mode::restart:  abortRunners(automation); break;
-                    case AutomationObject::Mode::queued:   start = false; break;
-                    case AutomationObject::Mode::parallel: break;
-                }
-            }
-
-            addRunner(automation, meta, start);
+            runAutomation(automation, trigger, meta);
         }
     }
 }
@@ -879,5 +919,47 @@ void Controller::update(void)
         handleTrigger(TriggerObject::Type::time, time);
         handleTrigger(TriggerObject::Type::interval, time);
         m_dateTime = now;
+    }
+
+    for (int i = 0; i < m_automations->count(); i++)
+    {
+        const Automation &automation = m_automations->at(i);
+
+        if (!automation->active())
+            continue;
+
+        for (int j = 0; j < automation->triggers().count(); j++)
+        {
+            const Trigger &trigger = automation->triggers().at(j);
+            QMap <QString, QString> meta;
+
+            if (!trigger->active() || !trigger->hold() || !trigger->pending() || trigger->hold() * 1000 + trigger->time() > now.toMSecsSinceEpoch())
+                continue;
+
+            switch (trigger->type())
+            {
+                case TriggerObject::Type::property:
+                {
+                    PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
+                    meta.insert("triggerEndpoint", item->endpoint());
+                    meta.insert("triggerProperty", item->property());
+                    break;
+                }
+
+                case TriggerObject::Type::mqtt:
+                {
+                    MqttTrigger *item = reinterpret_cast <MqttTrigger*> (trigger.data());
+                    meta.insert("triggerTopic", item->topic());
+                    meta.insert("triggerMessage", QString(m_topics.value(item->topic())));
+                    break;
+                }
+
+                default:
+                    continue;
+            }
+
+            runAutomation(automation, trigger, meta);
+            trigger->setPending(false);
+        }
     }
 }

@@ -191,6 +191,7 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
 
         trigger->setName(item.value("name").toString().trimmed());
         trigger->setActive(item.value("active").toBool(true));
+        trigger->setHold(item.value("hold").toInt());
         automation->triggers().append(trigger);
     }
 
@@ -849,6 +850,9 @@ QJsonArray AutomationList::serialize(void)
 
             if (!automation->triggers().at(j)->name().isEmpty())
                 item.insert("name", automation->triggers().at(j)->name());
+
+            if (automation->triggers().at(j)->hold())
+                item.insert("hold", automation->triggers().at(j)->hold());
 
             triggers.append(item);
         }

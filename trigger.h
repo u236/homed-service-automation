@@ -36,7 +36,7 @@ public:
     };
 
     TriggerObject(Type type) :
-        QObject(nullptr), m_type(type) {}
+        QObject(nullptr), m_type(type), m_hold(0), m_time(0), m_pending(false) {}
 
     inline Type type(void) { return m_type; }
 
@@ -45,6 +45,15 @@ public:
 
     inline bool active(void) { return m_active; }
     inline void setActive(bool value) { m_active = value; }
+
+    inline qint64 hold(void) { return m_hold; }
+    inline void setHold(qint64 value) { m_hold = value; }
+
+    inline qint64 time(void) { return m_time; }
+    inline void setTime(qint64 value) { m_time = value; }
+
+    inline bool pending(void) { return m_pending; }
+    inline void setPending(bool value) { m_pending = value; }
 
     Q_ENUM(Type)
     Q_ENUM(Statement)
@@ -58,6 +67,9 @@ private:
     Type m_type;
     QString m_name;
     bool m_active;
+
+    qint64 m_hold, m_time;
+    bool m_pending;
 
 };
 
@@ -84,7 +96,8 @@ public:
     inline QVariant value(void) { return m_value; }
     inline bool force(void) { return m_force; }
 
-    inline bool match(const QVariant &oldValue, const QVariant &newValue) {{ return TriggerObject::match(oldValue, newValue, m_statement, m_value, m_force); }}
+    inline bool match(const QVariant &value) { return TriggerObject::match(QVariant(), value, m_statement, m_value, false); }
+    inline bool match(const QVariant &oldValue, const QVariant &newValue) { return TriggerObject::match(oldValue, newValue, m_statement, m_value, m_force); }
 
 private:
 
@@ -109,7 +122,8 @@ public:
     inline QVariant value(void) { return m_value; }
     inline bool force(void) { return m_force; }
 
-    inline bool match(const QByteArray &oldMessage, const QByteArray &newMessage) {{ return TriggerObject::match(parse(oldMessage), parse(newMessage), m_statement, m_value, m_force); }}
+    inline bool match(const QByteArray &message) { return TriggerObject::match(QVariant(), parse(message), m_statement, m_value, false); }
+    inline bool match(const QByteArray &oldMessage, const QByteArray &newMessage) { return TriggerObject::match(parse(oldMessage), parse(newMessage), m_statement, m_value, m_force); }
 
 private:
 
