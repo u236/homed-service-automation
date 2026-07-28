@@ -817,7 +817,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
         if (!device.isNull())
         {
-            quint8 endpointId = getEndpointId(string);
+            quint8 endpointId = getEndpointId(string.replace(device->topic(), device->key()));
             QList <QString> list = {"action", "event", "scene"};
             QMap <QString, QVariant> data = json.toVariantMap(), properties = device->properties().value(endpointId), check = properties;
 
