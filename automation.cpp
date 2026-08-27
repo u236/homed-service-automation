@@ -528,8 +528,6 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
 void AutomationList::unserialize(const QJsonArray &automations)
 {
-    quint16 count = 0;
-
     for (auto it = automations.begin(); it != automations.end(); it++)
     {
         QJsonObject json = it->toObject();
@@ -544,11 +542,12 @@ void AutomationList::unserialize(const QJsonArray &automations)
             continue;
 
         append(automation);
-        count++;
     }
 
-    if (count)
-        logInfo << count << "automations loaded";
+    if (!count())
+        return;
+
+    logInfo << count() << "automations loaded";
 }
 
 QJsonArray AutomationList::serializeConditions(const QList <Condition> &list)
