@@ -1,10 +1,11 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.4.1"
+#define SERVICE_VERSION         "2.5.0"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 #define RUNNER_STARTUP_DELAY    10
+#define FRAME_REQUEST_TIMEOUT   10000
 
 #include <QMutex>
 #include "homed.h"
@@ -94,10 +95,15 @@ private slots:
 
     void publishMessage(const QString &topic, const QVariant &data, bool retain);
     void updateState(const QString &name, const QVariant &value);
+    void frameRequest(const QString &id, const QString &device);
     void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats);
-    void finished(void);
 
+    void finished(void);
     void update(void);
+
+signals:
+
+    void frameReceived(const QString &id, const QByteArray &data);
 
 };
 

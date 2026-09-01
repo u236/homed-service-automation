@@ -398,6 +398,7 @@ void Controller::addRunner(const Automation &automation, const QMap <QString, QS
     connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
+    connect(runner, &Runner::frameRequest, this, &Controller::frameRequest, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::finished, this, &Controller::finished);
 
     automation->updateCounter();
@@ -609,6 +610,7 @@ void Controller::mqttConnected(void)
         m_startup = true;
     }
 
+    mqttSubscribe(mqttTopic("camera"));
     mqttSubscribe(mqttTopic("command/%1").arg(serviceTopic()));
     mqttSubscribe(mqttTopic("service/#"));
 
@@ -646,6 +648,12 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
             handleTrigger(TriggerObject::Type::mqtt, item, check, message, topic.name());
         }
+    }
+
+    if (subTopic == "camera")
+    {
+        emit frameReceived(json.value("id").toString(), QByteArray::fromBase64(json.value("data").toString().toUtf8()));
+        return;
     }
 
     if (subTopic == QString("command/%1").arg(serviceTopic()))
@@ -885,6 +893,11 @@ void Controller::updateState(const QString &name, const QVariant &value)
         return;
 
     m_automations->store(true);
+}
+
+void Controller::frameRequest(const QString &id, const QString &device)
+{
+    mqttPublish(mqttTopic("command/camera"), {{"action", "getFrame"}, {"id", id}, {"device", device}});
 }
 
 void Controller::telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats)

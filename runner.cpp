@@ -1,5 +1,6 @@
 #include <csignal>
 #include <unistd.h>
+#include <QDir>
 #include "controller.h"
 #include "logger.h"
 
@@ -66,16 +67,60 @@ void Runner::propertyMessage(PropertyAction *action, QString &topic, QVariant &m
     }
 }
 
+QString Runner::parseFrame(QString string)
+{
+    QRegExp replace("\\{\\{\\s*camera\\s*\\|([^\\{\\}]*)\\}\\}");
+    int position;
+
+    while ((position = replace.indexIn(string)) != -1)
+        string.replace(position, replace.cap().length(), requestFrame(replace.cap(1).trimmed()));
+
+    return string;
+}
+
 QVariant Runner::parsePattern(QString string)
 {
+    QString data = parseFrame(string);
     QMutexLocker locker(m_controller->mutex());
-    return m_controller->parsePattern(string, m_meta, false);
+    return m_controller->parsePattern(data, m_meta, false);
 }
 
 bool Runner::checkConditions(ConditionAction *action)
 {
     QMutexLocker locker(m_controller->mutex());
     return m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta);
+}
+
+QString Runner::requestFrame(const QString &device)
+{
+    QFile file(QString("%1/homed-automation-%2.jpg").arg(QDir::tempPath(), QString(device).replace(QRegExp("[^0-9a-zA-Z]"), "_")));
+    QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    QByteArray frame;
+    QEventLoop loop;
+    QTimer timer;
+
+    if (m_frames.contains(device))
+        return m_frames.value(device);
+
+    connect(m_controller, &Controller::frameReceived, &loop, [&] (const QString &id, const QByteArray &data) { if (id != uuid) return; frame = data; loop.quit(); });
+    connect(&timer, &QTimer::timeout, &loop, &QEventLoop::quit);
+
+    emit frameRequest(uuid, device);
+
+    timer.start(FRAME_REQUEST_TIMEOUT);
+    loop.exec();
+
+    if (frame.isEmpty() || !file.open(QFile::WriteOnly))
+    {
+        logWarning << this << device << "frame request failed";
+        return m_controller->basePath().append("share/homed-automation/camera.jpg");
+    }
+
+    file.write(frame);
+    file.close();
+
+    m_frames.insert(device, file.fileName());
+    return file.fileName();
 }
 
 void Runner::runActions(void)
@@ -163,6 +208,7 @@ void Runner::runActions(void)
                 logDebug(automation()->log()) << this << "timer started for" << delay << "seconds";
                 m_index.insert(m_actions, ++i);
                 m_timer->start(delay * 1000);
+                m_frames.clear();
                 return;
             }
 

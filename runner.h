@@ -1,8 +1,6 @@
 #ifndef RUNNER_H
 #define RUNNER_H
 
-#include <atomic>
-#include <QProcess>
 #include <QThread>
 #include "automation.h"
 
@@ -36,12 +34,15 @@ private:
     ActionList *m_actions;
 
     QMap <ActionList*, quint32> m_index;
-    QMap <QString, QString> m_meta;
+    QMap <QString, QString> m_meta, m_frames;
 
     void propertyMessage(PropertyAction *action, QString &topic, QVariant &message);
 
+    QString parseFrame(QString string);
     QVariant parsePattern(QString string);
     bool checkConditions(ConditionAction *action);
+
+    QString requestFrame(const QString &device);
 
 private slots:
 
@@ -54,6 +55,7 @@ signals:
 
     void publishMessage(const QString &topic, const QVariant &data, bool retain = false);
     void updateState(const QString &name, const QVariant &value);
+    void frameRequest(const QString &id, const QString &device);
     void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats);
 
 };
