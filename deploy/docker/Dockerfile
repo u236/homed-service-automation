@@ -1,6 +1,7 @@
 FROM    127.0.0.1:5000/homed-service:latest
 ARG     TARGETARCH
 RUN     rm /var/lib/dpkg/info/libc-bin.*
+RUN     sed -i '/bullseye-security/d' /etc/apt/sources.list
 RUN     apt update
 RUN     apt install -y curl locales
 RUN     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
