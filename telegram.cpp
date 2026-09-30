@@ -201,7 +201,7 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
         return;
     }
 
-    if (!exitCode || exitCode == CURL_OPERATION_TIMEOUT_EXIT_CODE)
+    if (!exitCode || exitCode == CURL_OPERATION_TIMEOUT)
     {
         QList <QString> list = {"audio", "document", "photo", "video"};
         QJsonObject json = QJsonDocument::fromJson(m_buffer).object();

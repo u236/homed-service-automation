@@ -1,8 +1,8 @@
 #ifndef TELEGRAM_H
 #define TELEGRAM_H
 
-#define CURL_OPERATION_TIMEOUT_EXIT_CODE    28
-#define GET_UPDATES_RETRY_TIMEOUT           15000
+#define CURL_OPERATION_TIMEOUT          28
+#define GET_UPDATES_RETRY_TIMEOUT       15000
 
 #include <QProcess>
 #include "automation.h"
