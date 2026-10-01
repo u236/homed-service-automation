@@ -495,9 +495,16 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (item->endpoint() != a.toString() || item->property() != b.toString())
                         continue;
 
-                    if (item->hold() && item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates)
+                    if (item->hold())
                     {
-                        holdTrigger(automation, trigger, item->match(d));
+                        bool check = item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates, match = check ? item->match(d) : item->match(c, d);
+
+                        if (!check && match)
+                            trigger->setTime(0);
+
+                        if (check || match)
+                            holdTrigger(automation, trigger, match);
+
                         continue;
                     }
 
@@ -516,9 +523,16 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (item->topic() != a.toString())
                         continue;
 
-                    if (item->hold() && item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates)
+                    if (item->hold())
                     {
-                        holdTrigger(automation, trigger, item->match(c.toByteArray()));
+                        bool check = item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates, match = check ? item->match(c.toByteArray()) : item->match(b.toByteArray(), c.toByteArray());
+
+                        if (!check && match)
+                            trigger->setTime(0);
+
+                        if (check || match)
+                            holdTrigger(automation, trigger, match);
+
                         continue;
                     }
 
