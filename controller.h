@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.5.0"
+#define SERVICE_VERSION         "2.6.0"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 #define RUNNER_STARTUP_DELAY    10
@@ -68,7 +68,7 @@ private:
     QMap <QString, Device> m_devices;
     QMap <QString, QByteArray> m_topics;
 
-    QString triggerString(const Automation &automation, const Trigger &trigger);
+    QString triggerString(const Automation &automation, const Trigger &trigger, const QString &name = QString());
 
     Runner *findRunner(const Automation &automation, bool pending = false);
     void abortRunners(const Automation &automation);

@@ -192,7 +192,9 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
         trigger->setName(item.value("name").toString().trimmed());
         trigger->setActive(item.value("active").toBool(true));
         trigger->setHold(item.value("hold").toInt());
+
         automation->triggers().append(trigger);
+        parsePattern(trigger->name());
     }
 
     unserializeConditions(automation->conditions(), json.value("conditions").toArray());

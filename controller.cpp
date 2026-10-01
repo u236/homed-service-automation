@@ -364,9 +364,9 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
     }
 }
 
-QString Controller::triggerString(const Automation &automation, const Trigger &trigger)
+QString Controller::triggerString(const Automation &automation, const Trigger &trigger, const QString &name)
 {
-    return trigger->name().isEmpty() ? QString("[%1]").arg(automation->triggers().indexOf(trigger) + 1) : QString("\"%1\"").arg(trigger->name());
+    return name.isEmpty() ? QString("[%1]").arg(automation->triggers().indexOf(trigger) + 1) : QString("\"%1\"").arg(name);
 }
 
 Runner *Controller::findRunner(const Automation &automation, bool pending)
@@ -417,10 +417,11 @@ void Controller::addRunner(const Automation &automation, const QMap <QString, QS
 void Controller::runAutomation(const Automation &automation, const Trigger &trigger, QMap <QString, QString> &meta)
 {
     Runner *runner = findRunner(automation);
+    QString name = parsePattern(trigger->name(), meta, false).toString();
     bool start = true;
 
-    logDebug(automation->log()) << automation << "triggered by" << triggerString(automation, trigger).toUtf8().constData();
-    meta.insert("triggerName", trigger->name());
+    logDebug(automation->log()) << automation << "triggered by" << triggerString(automation, trigger, name).toUtf8().constData();
+    meta.insert("triggerName", name);
 
     if (!checkConditions(ConditionObject::Type::AND, automation->conditions(), meta))
     {
