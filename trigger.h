@@ -17,6 +17,7 @@ public:
     {
         property,
         mqtt,
+        state,
         telegram,
         time,
         interval,
@@ -55,6 +56,8 @@ public:
     inline bool pending(void) { return m_pending; }
     inline void setPending(bool value) { m_pending = value; }
 
+    inline QMap <QString, QString> &meta(void) { return m_meta; }
+
     Q_ENUM(Type)
     Q_ENUM(Statement)
 
@@ -70,6 +73,8 @@ private:
 
     qint64 m_hold, m_time;
     bool m_pending;
+
+    QMap <QString, QString> m_meta;
 
 };
 
@@ -133,6 +138,31 @@ private:
     bool m_force;
 
     inline QVariant parse(const QByteArray &message) { return m_property.isEmpty() ? message : Parser::jsonValue(message, m_property); }
+
+};
+
+class StateTrigger : public TriggerObject
+{
+
+public:
+
+    StateTrigger(const QString &state, Statement statement, const QVariant &value, bool force) :
+        TriggerObject(Type::state), m_state(state), m_statement(statement), m_value(value), m_force(force) {}
+
+    inline QString state(void) { return m_state; }
+    inline Statement statement(void) { return m_statement; }
+    inline QVariant value(void) { return m_value; }
+    inline bool force(void) { return m_force; }
+
+    inline bool match(const QVariant &value) { return TriggerObject::match(QVariant(), value, m_statement, m_value, false); }
+    inline bool match(const QVariant &oldValue, const QVariant &newValue) { return TriggerObject::match(oldValue, newValue, m_statement, m_value, m_force); }
+
+private:
+
+    QString m_state;
+    Statement m_statement;
+    QVariant m_value;
+    bool m_force;
 
 };
 

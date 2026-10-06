@@ -151,6 +151,27 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
                 break;
             }
 
+            case TriggerObject::Type::state:
+            {
+                QString state = item.value("state").toString().trimmed();
+
+                if (state.isEmpty())
+                    continue;
+
+                for (int i = 0; i < m_triggerStatements.keyCount(); i++)
+                {
+                    QVariant value = item.value(m_triggerStatements.key(i)).toVariant();
+
+                    if (!value.isValid())
+                        continue;
+
+                    trigger = Trigger(new StateTrigger(state, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value, item.value("force").toBool()));
+                    break;
+                }
+
+                break;
+            }
+
             case TriggerObject::Type::telegram:
             {
                 QString message = item.value("message").toString().trimmed();
@@ -808,6 +829,19 @@ QJsonArray AutomationList::serialize(void)
 
                     if (!trigger->property().isEmpty())
                         item.insert("property", trigger->property());
+
+                    if (trigger->force())
+                        item.insert("force", true);
+
+                    break;
+                }
+
+                case TriggerObject::Type::state:
+                {
+                    StateTrigger *trigger = reinterpret_cast <StateTrigger*> (automation->triggers().at(j).data());
+
+                    item.insert("state", trigger->state());
+                    item.insert(m_triggerStatements.valueToKey(static_cast <int> (trigger->statement())), QJsonValue::fromVariant(trigger->value()));
 
                     if (trigger->force())
                         item.insert("force", true);

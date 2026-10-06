@@ -452,7 +452,7 @@ void Controller::runAutomation(const Automation &automation, const Trigger &trig
     addRunner(automation, meta, start);
 }
 
-void Controller::holdTrigger(const Automation &automation, const Trigger &trigger, bool match)
+void Controller::holdTrigger(const Automation &automation, const Trigger &trigger, bool match, const QMap <QString, QString> &meta)
 {
     if (!match)
     {
@@ -467,6 +467,7 @@ void Controller::holdTrigger(const Automation &automation, const Trigger &trigge
     logDebug(automation->log()) << automation << "holding" << triggerString(automation, trigger).toUtf8().constData() << "for" << trigger->hold() << "seconds";
     trigger->setTime(QDateTime::currentMSecsSinceEpoch());
     trigger->setPending(true);
+    trigger->meta() = meta;
 }
 
 void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
@@ -495,6 +496,9 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (item->endpoint() != a.toString() || item->property() != b.toString())
                         continue;
 
+                    meta.insert("triggerEndpoint", item->endpoint());
+                    meta.insert("triggerProperty", item->property());
+
                     if (item->hold())
                     {
                         bool check = item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates, match = check ? item->match(d) : item->match(c, d);
@@ -503,7 +507,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                             trigger->setTime(0);
 
                         if (check || match)
-                            holdTrigger(automation, trigger, match);
+                            holdTrigger(automation, trigger, match, meta);
 
                         continue;
                     }
@@ -511,8 +515,6 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (!item->match(c, d))
                         continue;
 
-                    meta.insert("triggerEndpoint", item->endpoint());
-                    meta.insert("triggerProperty", item->property());
                     break;
                 }
 
@@ -523,6 +525,9 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (item->topic() != a.toString())
                         continue;
 
+                    meta.insert("triggerMessage", c.toString());
+                    meta.insert("triggerTopic", d.toString());
+
                     if (item->hold())
                     {
                         bool check = item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates, match = check ? item->match(c.toByteArray()) : item->match(b.toByteArray(), c.toByteArray());
@@ -531,7 +536,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                             trigger->setTime(0);
 
                         if (check || match)
-                            holdTrigger(automation, trigger, match);
+                            holdTrigger(automation, trigger, match, meta);
 
                         continue;
                     }
@@ -539,8 +544,32 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (!item->match(b.toByteArray(), c.toByteArray()))
                         continue;
 
-                    meta.insert("triggerMessage", c.toString());
-                    meta.insert("triggerTopic", d.toString());
+                    break;
+                }
+
+                case TriggerObject::Type::state:
+                {
+                    StateTrigger *item = reinterpret_cast <StateTrigger*> (trigger.data());
+
+                    if (item->state() != a.toString())
+                        continue;
+
+                    if (item->hold())
+                    {
+                        bool check = item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates, match = check ? item->match(c) : item->match(b, c);
+
+                        if (!check && match)
+                            trigger->setTime(0);
+
+                        if (check || match)
+                            holdTrigger(automation, trigger, match, meta);
+
+                        continue;
+                    }
+
+                    if (!item->match(b, c))
+                        continue;
+
                     break;
                 }
 
@@ -743,8 +772,14 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
             case Command::removeState:
             {
-                if (m_automations->states().remove(json.value("state").toString()))
+                QString name = json.value("state").toString();
+                QVariant check = m_automations->states().value(name);
+
+                if (m_automations->states().remove(name))
+                {
+                    handleTrigger(TriggerObject::Type::state, name, check);
                     m_automations->store(true);
+                }
 
                 break;
             }
@@ -904,6 +939,8 @@ void Controller::updateState(const QString &name, const QVariant &value)
     else
         m_automations->states().remove(name);
 
+    handleTrigger(TriggerObject::Type::state, name, check, m_automations->states().value(name));
+
     if (check == m_automations->states().value(name))
         return;
 
@@ -957,32 +994,13 @@ void Controller::update(void)
         for (int j = 0; j < automation->triggers().count(); j++)
         {
             const Trigger &trigger = automation->triggers().at(j);
-            QMap <QString, QString> meta;
+            QMap <QString, QString> meta = trigger->meta();
 
             if (!trigger->active() || !trigger->hold() || !trigger->pending() || trigger->hold() * 1000 + trigger->time() > now.toMSecsSinceEpoch())
                 continue;
 
-            switch (trigger->type())
-            {
-                case TriggerObject::Type::property:
-                {
-                    PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
-                    meta.insert("triggerEndpoint", item->endpoint());
-                    meta.insert("triggerProperty", item->property());
-                    break;
-                }
-
-                case TriggerObject::Type::mqtt:
-                {
-                    MqttTrigger *item = reinterpret_cast <MqttTrigger*> (trigger.data());
-                    meta.insert("triggerTopic", item->topic());
-                    meta.insert("triggerMessage", QString(m_topics.value(item->topic())));
-                    break;
-                }
-
-                default:
-                    continue;
-            }
+            if (trigger->type() == TriggerObject::Type::mqtt)
+                meta.insert("triggerMessage", QString(m_topics.value(meta.value("triggerTopic"))));
 
             runAutomation(automation, trigger, meta);
             trigger->setPending(false);

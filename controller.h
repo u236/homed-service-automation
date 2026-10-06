@@ -75,7 +75,7 @@ private:
     void addRunner(const Automation &automation, const QMap <QString, QString> &meta, bool start);
 
     void runAutomation(const Automation &automation, const Trigger &trigger, QMap <QString, QString> &meta);
-    void holdTrigger(const Automation &automation, const Trigger &trigger, bool match);
+    void holdTrigger(const Automation &automation, const Trigger &trigger, bool match, const QMap <QString, QString> &meta);
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant());
 
     void publishEvent(const QString &name, Event event);

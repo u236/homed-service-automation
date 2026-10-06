@@ -2,6 +2,9 @@
 
 bool TriggerObject::match(const QVariant &oldValue, const QVariant &newValue, Statement statement, QVariant value, bool force)
 {
+    if (!newValue.isValid() && statement != Statement::updates)
+        return false;
+
     if (newValue.type() == QVariant::Bool && value.type() == QVariant::String)
     {
         QList <QString> list = {"detected", "low", "occupied", "on", "open", "wet"};
