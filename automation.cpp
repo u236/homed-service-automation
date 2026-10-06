@@ -409,6 +409,9 @@ void AutomationList::unserializeConditions(QList <Condition> &list, const QJsonA
             }
         }
 
+        if (condition.isNull())
+            continue;
+
         condition->setActive(nested ? true : item.value("active").toBool(true));
         list.append(condition);
     }
