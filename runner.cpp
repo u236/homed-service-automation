@@ -231,17 +231,19 @@ void Runner::runActions(void)
                 {
                     int count = parsePattern(action->count().toString()).toInt();
 
-                    if (count < 1)
+                    if (count < 1 && !action->atLeastOnce())
                         break;
 
-                    it = m_loops.insert(&action->actions(), {static_cast <quint32> (count), 0});
+                    it = m_loops.insert(&action->actions(), {static_cast <quint32> (qMax(count, 1)), 0});
                 }
 
-                if (it->count == it->index++ || !checkConditions(action->conditionType(), action->conditions()))
+                if ((!action->atLeastOnce() || it->index) && (it->count == it->index || !checkConditions(action->conditionType(), action->conditions())))
                 {
                     m_loops.erase(it);
                     break;
                 }
+
+                it->index++;
 
                 m_index.insert(m_actions, index);
                 m_actions = &action->actions();

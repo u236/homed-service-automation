@@ -207,11 +207,12 @@ class LoopAction : public ActionObject
 
 public:
 
-    LoopAction(const QVariant &count, ConditionObject::Type conditionType, bool hideWhile, ActionList *parent) :
-        ActionObject(Type::loop), m_count(count), m_conditionType(conditionType), m_hideWhile(hideWhile) { m_actions.setParent(parent); }
+    LoopAction(const QVariant &count, ConditionObject::Type conditionType, bool atLeastOnce, bool hideWhile, ActionList *parent) :
+        ActionObject(Type::loop), m_count(count), m_conditionType(conditionType), m_atLeastOnce(atLeastOnce), m_hideWhile(hideWhile) { m_actions.setParent(parent); }
 
     inline QVariant count(void) { return m_count; }
     inline ConditionObject::Type conditionType(void) { return m_conditionType; }
+    inline bool atLeastOnce(void) { return m_atLeastOnce; }
     inline bool hideWhile(void) { return m_hideWhile; }
 
     inline QList <Condition> &conditions(void) { return m_conditions; }
@@ -221,7 +222,7 @@ private:
 
     QVariant m_count;
     ConditionObject::Type m_conditionType;
-    bool m_hideWhile;
+    bool m_atLeastOnce, m_hideWhile;
 
     QList <Condition> m_conditions;
     ActionList m_actions;

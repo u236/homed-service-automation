@@ -532,7 +532,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 if (!count.isValid())
                     continue;
 
-                action = Action(new LoopAction(count, static_cast <int> (conditionType) < 0 ? ConditionObject::Type::AND : conditionType, item.value("hideWhile").toBool(), &list));
+                action = Action(new LoopAction(count, static_cast <int> (conditionType) < 0 ? ConditionObject::Type::AND : conditionType, item.value("atLeastOnce").toBool(), item.value("hideWhile").toBool(), &list));
                 unserializeConditions(reinterpret_cast <LoopAction*> (action.data())->conditions(), item.value("conditions").toArray());
                 unserializeActions(reinterpret_cast <LoopAction*> (action.data())->actions(), item.value("actions").toArray(), add);
                 parsePattern(count.toString());
@@ -782,6 +782,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
                 LoopAction *action = reinterpret_cast <LoopAction*> (list.at(i).data());
                 json.insert("count", QJsonValue::fromVariant(action->count()));
                 json.insert("conditionType", m_conditionTypes.valueToKey(static_cast <int> (action->conditionType())));
+                json.insert("atLeastOnce", action->atLeastOnce());
                 json.insert("hideWhile", action->hideWhile());
                 json.insert("conditions", serializeConditions(action->conditions()));
                 json.insert("actions", serializeActions(action->actions()));
