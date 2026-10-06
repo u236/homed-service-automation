@@ -529,7 +529,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 if (!count.isValid())
                     continue;
 
-                action = Action(new LoopAction(count, static_cast <int> (conditionType) < 0 ? ConditionObject::Type::AND : conditionType, &list));
+                action = Action(new LoopAction(count, static_cast <int> (conditionType) < 0 ? ConditionObject::Type::AND : conditionType, item.value("hideWhile").toBool(), &list));
                 unserializeConditions(reinterpret_cast <LoopAction*> (action.data())->conditions(), item.value("conditions").toArray());
                 unserializeActions(reinterpret_cast <LoopAction*> (action.data())->actions(), item.value("actions").toArray(), add);
                 parsePattern(count.toString());
@@ -559,7 +559,7 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
 
         action->setUuid(uuid);
         action->setTriggerName(item.value("triggerName").toString().trimmed());
-        action->setActive(type == ActionObject::Type::condition ? true : item.value("active").toBool(true));
+        action->setActive(item.value("active").toBool(true));
         list.append(action);
     }
 }
@@ -686,7 +686,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
     for (int i = 0; i < list.count(); i++)
     {
         ActionObject::Type type = list.at(i)->type();
-        QJsonObject json = {{"type", m_actionTypes.valueToKey(static_cast <int> (type))}, {"uuid", list.at(i)->uuid()}};
+        QJsonObject json = {{"type", m_actionTypes.valueToKey(static_cast <int> (type))}, {"uuid", list.at(i)->uuid()}, {"active", list.at(i)->active()}};
 
         switch (type)
         {
@@ -779,6 +779,7 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
                 LoopAction *action = reinterpret_cast <LoopAction*> (list.at(i).data());
                 json.insert("count", QJsonValue::fromVariant(action->count()));
                 json.insert("conditionType", m_conditionTypes.valueToKey(static_cast <int> (action->conditionType())));
+                json.insert("hideWhile", action->hideWhile());
                 json.insert("conditions", serializeConditions(action->conditions()));
                 json.insert("actions", serializeActions(action->actions()));
                 break;
@@ -796,9 +797,6 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
 
         if (!list.at(i)->triggerName().isEmpty())
             json.insert("triggerName", list.at(i)->triggerName());
-
-        if (type != ActionObject::Type::condition)
-            json.insert("active", list.at(i)->active());
 
         array.append(json);
     }
