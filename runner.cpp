@@ -125,12 +125,24 @@ QString Runner::requestFrame(const QString &device)
 
 void Runner::runActions(void)
 {
-    for (int i = m_index.value(m_actions); i < m_actions->count(); i++)
+    while (!m_aborted)
     {
-        const Action &item = m_actions->at(i);
+        int index = m_index.value(m_actions);
+        const Action &item = m_actions->value(index);
 
-        if (m_aborted)
+        if (item.isNull())
+        {
+            if (m_actions->parent())
+            {
+                m_actions = m_actions->parent();
+                continue;
+            }
+
+            quit();
             return;
+        }
+
+        m_index.insert(m_actions, index + 1);
 
         if (!item->active() || (!item->triggerName().isEmpty() && item->triggerName() != m_meta.value("triggerName")))
             continue;
@@ -195,18 +207,15 @@ void Runner::runActions(void)
             case ActionObject::Type::condition:
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
-                m_index.insert(m_actions, ++i);
                 m_actions = &action->actions(checkConditions(action));
                 m_index.insert(m_actions, 0);
-                runActions();
-                return;
+                break;
             }
 
             case ActionObject::Type::delay:
             {
                 int delay = parsePattern(reinterpret_cast <DelayAction*> (item.data())->value().toString()).toInt();
                 logDebug(automation()->log()) << this << "timer started for" << delay << "seconds";
-                m_index.insert(m_actions, ++i);
                 m_timer->start(delay * 1000);
                 m_frames.clear();
                 return;
@@ -219,15 +228,6 @@ void Runner::runActions(void)
             }
         }
     }
-
-    if (m_actions->parent())
-    {
-        m_actions = m_actions->parent();
-        runActions();
-        return;
-    }
-
-    quit();
 }
 
 void Runner::threadStarted(void)
