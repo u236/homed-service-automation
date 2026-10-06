@@ -22,6 +22,11 @@ public:
 
 private:
 
+    struct LoopStruct
+    {
+        quint32 count, index;
+    };
+
     QTimer *m_timer;
     Controller *m_controller;
 
@@ -34,13 +39,14 @@ private:
     ActionList *m_actions;
 
     QMap <ActionList*, quint32> m_index;
+    QMap <ActionList*, LoopStruct> m_loops;
     QMap <QString, QString> m_meta, m_frames;
 
     void propertyMessage(PropertyAction *action, QString &topic, QVariant &message);
 
     QString parseFrame(QString string);
     QVariant parsePattern(QString string);
-    bool checkConditions(ConditionAction *action);
+    bool checkConditions(ConditionObject::Type type, const QList <Condition> &conditions);
 
     QString requestFrame(const QString &device);
 

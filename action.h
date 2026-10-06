@@ -36,6 +36,7 @@ public:
         telegram,
         shell,
         condition,
+        loop,
         delay,
         exit
     };
@@ -198,6 +199,30 @@ private:
 
     QList <Condition> m_conditions;
     ActionList m_then, m_else;
+
+};
+
+class LoopAction : public ActionObject
+{
+
+public:
+
+    LoopAction(const QVariant &count, ConditionObject::Type conditionType, ActionList *parent) :
+        ActionObject(Type::loop), m_count(count), m_conditionType(conditionType) { m_actions.setParent(parent); }
+
+    inline QVariant count(void) { return m_count; }
+    inline ConditionObject::Type conditionType(void) { return m_conditionType; }
+
+    inline QList <Condition> &conditions(void) { return m_conditions; }
+    inline ActionList &actions(void) { return m_actions; }
+
+private:
+
+    QVariant m_count;
+    ConditionObject::Type m_conditionType;
+
+    QList <Condition> m_conditions;
+    ActionList m_actions;
 
 };
 

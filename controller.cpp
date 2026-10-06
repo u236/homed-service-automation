@@ -39,7 +39,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[(.*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
-    QList <QString> valueList = {"colorTemperature", "file", "level", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
+    QList <QString> valueList = {"colorTemperature", "file", "level", "loopIndex", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
     int position;
 
     if (!string.startsWith("#!"))
@@ -91,7 +91,13 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 3: // mqtt
+            case 3: // loopIndex
+            {
+                value = meta.value("loopIndex");
+                break;
+            }
+
+            case 4: // mqtt
             {
                 auto it = m_topics.find(itemList.value(1).trimmed());
 
@@ -104,7 +110,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 4: // property
+            case 5: // property
             {
                 QString endpoint = itemList.value(1).trimmed(), propertyName = itemList.value(2).trimmed();
                 const Device &device = findDevice(endpoint);
@@ -152,49 +158,49 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 5: // shellOutput
+            case 6: // shellOutput
             {
                 value = meta.value("shellOutput");
                 break;
             }
 
-            case 6: // state
+            case 7: // state
             {
                 value = m_automations->states().value(itemList.value(1).trimmed()).toString();
                 break;
             }
 
-            case 7: // sunrise
-            case 8: // sunset
-            case 9: // timestamp
+            case 8:  // sunrise
+            case 9:  // sunset
+            case 10: // timestamp
             {
                 QDateTime dateTime = QDateTime::currentDateTime();
                 QString format = itemList.value(1).trimmed();
 
                 switch (index)
                 {
-                    case 7: dateTime.setTime(m_sun->sunrise()); break;
-                    case 8: dateTime.setTime(m_sun->sunset()); break;
+                    case 8: dateTime.setTime(m_sun->sunrise()); break;
+                    case 9: dateTime.setTime(m_sun->sunset()); break;
                 }
 
                 value = format.isEmpty() ? QString::number(dateTime.toSecsSinceEpoch()) : dateTime.toString(format);
                 break;
             }
 
-            case 10: // triggerMessage
+            case 11: // triggerMessage
             {
                 QString property = itemList.value(1).trimmed(), message = meta.value("triggerMessage");
                 value = property.isEmpty() ? message : Parser::jsonValue(message.toUtf8(), property).toString();
                 break;
             }
 
-            case 11: // triggerName
+            case 12: // triggerName
             {
                 value = meta.value("triggerName");
                 break;
             }
 
-            case 12: // triggerProperty
+            case 13: // triggerProperty
             {
                 QString endpoint = meta.value("triggerEndpoint"), property = meta.value("triggerProperty");
                 const Device &device = findDevice(endpoint);
@@ -216,7 +222,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 13: // triggerTopic
+            case 14: // triggerTopic
             {
                 QString index = itemList.value(1).trimmed(), topic = meta.value("triggerTopic");
                 value = index.isEmpty() ? topic : topic.split('/').value(index.toInt());

@@ -521,6 +521,21 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 break;
             }
 
+            case ActionObject::Type::loop:
+            {
+                QVariant count = item.value("count").toVariant();
+                ConditionObject::Type conditionType = static_cast <ConditionObject::Type> (m_conditionTypes.keyToValue(item.value("conditionType").toString().toUtf8().constData()));
+
+                if (!count.isValid())
+                    continue;
+
+                action = Action(new LoopAction(count, static_cast <int> (conditionType) < 0 ? ConditionObject::Type::AND : conditionType, &list));
+                unserializeConditions(reinterpret_cast <LoopAction*> (action.data())->conditions(), item.value("conditions").toArray());
+                unserializeActions(reinterpret_cast <LoopAction*> (action.data())->actions(), item.value("actions").toArray(), add);
+                parsePattern(count.toString());
+                break;
+            }
+
             case ActionObject::Type::delay:
             {
                 QVariant value = item.value("delay").toVariant();
@@ -756,6 +771,16 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
                 json.insert("conditions", serializeConditions(action->conditions()));
                 json.insert("then", serializeActions(action->actions(true)));
                 json.insert("else", serializeActions(action->actions(false)));
+                break;
+            }
+
+            case ActionObject::Type::loop:
+            {
+                LoopAction *action = reinterpret_cast <LoopAction*> (list.at(i).data());
+                json.insert("count", QJsonValue::fromVariant(action->count()));
+                json.insert("conditionType", m_conditionTypes.valueToKey(static_cast <int> (action->conditionType())));
+                json.insert("conditions", serializeConditions(action->conditions()));
+                json.insert("actions", serializeActions(action->actions()));
                 break;
             }
 

@@ -85,10 +85,10 @@ QVariant Runner::parsePattern(QString string)
     return m_controller->parsePattern(data, m_meta, false);
 }
 
-bool Runner::checkConditions(ConditionAction *action)
+bool Runner::checkConditions(ConditionObject::Type type, const QList <Condition> &conditions)
 {
     QMutexLocker locker(m_controller->mutex());
-    return m_controller->checkConditions(action->conditionType(), action->conditions(), m_meta);
+    return m_controller->checkConditions(type, conditions, m_meta);
 }
 
 QString Runner::requestFrame(const QString &device)
@@ -146,6 +146,16 @@ void Runner::runActions(void)
 
         if (!item->active() || (!item->triggerName().isEmpty() && item->triggerName() != m_meta.value("triggerName")))
             continue;
+
+        if (!m_loops.isEmpty())
+        {
+            ActionList *list = m_actions;
+
+            while (list && !m_loops.contains(list))
+                list = list->parent();
+
+            m_meta.insert("loopIndex", list ? QString::number(m_loops.value(list).index) : QString());
+        }
 
         switch (item->type())
         {
@@ -207,7 +217,34 @@ void Runner::runActions(void)
             case ActionObject::Type::condition:
             {
                 ConditionAction *action = reinterpret_cast <ConditionAction*> (item.data());
-                m_actions = &action->actions(checkConditions(action));
+                m_actions = &action->actions(checkConditions(action->conditionType(), action->conditions()));
+                m_index.insert(m_actions, 0);
+                break;
+            }
+
+            case ActionObject::Type::loop:
+            {
+                LoopAction *action = reinterpret_cast <LoopAction*> (item.data());
+                auto it = m_loops.find(&action->actions());
+
+                if (it == m_loops.end())
+                {
+                    int count = parsePattern(action->count().toString()).toInt();
+
+                    if (count < 1)
+                        break;
+
+                    it = m_loops.insert(&action->actions(), {static_cast <quint32> (count), 0});
+                }
+
+                if (it->count == it->index++ || !checkConditions(action->conditionType(), action->conditions()))
+                {
+                    m_loops.erase(it);
+                    break;
+                }
+
+                m_index.insert(m_actions, index);
+                m_actions = &action->actions();
                 m_index.insert(m_actions, 0);
                 break;
             }
