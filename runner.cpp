@@ -189,7 +189,7 @@ void Runner::runActions(void)
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
-                emit telegramAction(parsePattern(action->message()).toString(), parsePattern(action->file()).toString(), parsePattern(action->keyboard()).toString(), action->uuid(), action->thread(), action->silent(), action->remove(), action->update(), &action->chats());
+                emit telegramAction(parsePattern(action->message()).toString(), parsePattern(action->file()).toString(), parsePattern(action->keyboard()).toString(), action->uuid(), action->thread(), action->rich(), action->silent(), action->remove(), action->update(), &action->chats());
                 break;
             }
 

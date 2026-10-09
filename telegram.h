@@ -16,7 +16,7 @@ public:
     Telegram(QSettings *config, AutomationList *automations, QObject *parent);
     ~Telegram(void);
 
-    void sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats);
+    void sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, const QList <qint64> &chats);
 
 private:
 

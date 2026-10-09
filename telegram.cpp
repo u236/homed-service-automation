@@ -25,11 +25,12 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
-void Telegram::sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats)
+void Telegram::sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, const QList <qint64> &chats)
 {
     QList <qint64> chatList = chats.isEmpty() ? QList <qint64> {m_chat} : chats;
     QList <QString> typeList = {"animation", "audio", "message", "photo", "video"}, itemList = file.split('|'), formList, messageList;
     QString document = itemList.value(0).trimmed(), type = file.isEmpty() ? "message" : itemList.value(1).trimmed();
+    QJsonObject media;
     QJsonArray array;
 
     if (m_token.isEmpty() || !m_chat)
@@ -39,12 +40,30 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
         type = "document";
 
     if (!file.isEmpty())
-        formList.append(QString("-F %1=%2'%3'").arg(type, QFile::exists(document) ? "@" : QString(), document));
-
-    if (!message.isEmpty())
     {
-        messageList.append(QString("-F %1='%2'").arg(file.isEmpty() ? "text" : "caption", QString(message).replace("'", "'\\''")));
+        formList.append((QFile::exists(document) ? QString("-F %1=@'%2'") : QString("--form-string %1='%2'")).arg(type, QString(document).replace("'", "'\\''")));
+        media = {{"type", type}, {"media", QFile::exists(document) ? QString("attach://%1").arg(type) : document}};
+    }
+
+    if (rich)
+    {
+        QJsonObject json = {{"markdown", media.isEmpty() ? message : QString("![](tg://%1?id=media)\n\n%2").arg(type, message).trimmed()}};
+
+        if (!media.isEmpty())
+            json.insert("media", QJsonArray {QJsonObject {{"id", "media"}, {"media", media}}});
+
+        messageList.append(QString("--form-string rich_message='%1'").arg(QString(QJsonDocument(json).toJson(QJsonDocument::Compact)).replace("'", "'\\''")));
+    }
+    else if (!message.isEmpty())
+    {
+        messageList.append(QString("--form-string %1='%2'").arg(media.isEmpty() ? "text" : "caption", QString(message).replace("'", "'\\''")));
         messageList.append("-F parse_mode=Markdown");
+
+        if (!media.isEmpty())
+        {
+            media.insert("caption", message);
+            media.insert("parse_mode", "Markdown");
+        }
     }
 
     if (!keyboard.isEmpty())
@@ -81,7 +100,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
     }
 
     if (!array.isEmpty())
-        formList.append(QString("-F reply_markup='%1'").arg(QString(QJsonDocument(QJsonObject {{"inline_keyboard", array}}).toJson(QJsonDocument::Compact))));
+        formList.append(QString("--form-string reply_markup='%1'").arg(QString(QJsonDocument(QJsonObject {{"inline_keyboard", array}}).toJson(QJsonDocument::Compact)).replace("'", "'\\''")));
 
     if (!update)
     {
@@ -96,7 +115,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
     {
         QList <QString> list = formList;
         QProcess *process(new QProcess(this));
-        QString method = QString("send%1").arg(QString(type).replace(0, 1, type.at(0).toUpper())), id;
+        QString method = rich ? "sendRichMessage" : QString("send%1").arg(QString(type).replace(0, 1, type.at(0).toUpper())), id;
         qint64 chatId = chatList.at(i);
 
         connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
@@ -108,19 +127,12 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
             if (update)
             {
                 list.append(QString("-F message_id=%1").arg(m_automations->messages().value(id)));
-                method = file.isEmpty() ? "editMessageText" : "editMessageMedia";
+                method = "editMessageText";
 
-                if (!file.isEmpty())
+                if (!rich && !media.isEmpty())
                 {
-                    QJsonObject json = {{"type", type}, {"media", QFile::exists(document) ? QString("attach://%1").arg(type) : document}};
-
-                    if (!message.isEmpty())
-                    {
-                        json.insert("caption", message);
-                        json.insert("parse_mode", "Markdown");
-                    }
-
-                    list.append(QString("-F media='%1'").arg(QString(QJsonDocument(json).toJson(QJsonDocument::Compact))));
+                    list.append(QString("--form-string media='%1'").arg(QString(QJsonDocument(media).toJson(QJsonDocument::Compact)).replace("'", "'\\''")));
+                    method = "editMessageMedia";
                 }
             }
             else if (remove)
@@ -210,7 +222,11 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
         logDebug(m_debug) << "Telegram Bot API response:" << m_buffer.constData();
 
         if (!json.value("ok").toBool())
+        {
             logWarning << "Telegram updates request error, description:" << (json.contains("description") ? json.value("description").toString() : "(empty)");
+            m_timer->start(GET_UPDATES_RETRY_TIMEOUT);
+            return;
+        }
 
         for (auto it = array.begin(); it != array.end(); it++)
         {
@@ -232,7 +248,7 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
                     if (!data.contains(type))
                         continue;
 
-                    sendMessage(QString("File ID:\n`%1`\n\nType:\n`%2`").arg(type != "photo" ? data.value(type).toObject().value("file_id").toString() : data.value("photo").toArray().last().toObject().value("file_id").toString(), type), QString(), QString(), QString(), 0, false, false, false, {chat});
+                    sendMessage(QString("File ID:\n`%1`\n\nType:\n`%2`").arg(type != "photo" ? data.value(type).toObject().value("file_id").toString() : data.value("photo").toArray().last().toObject().value("file_id").toString(), type), QString(), QString(), QString(), 0, false, false, false, false, {chat});
                 }
             }
 
@@ -244,7 +260,7 @@ void Telegram::finished(int exitCode, QProcess::ExitStatus)
             if (message == "/getThreadId" && data.contains("message_thread_id"))
             {
                 qint64 threadId = data.value("message_thread_id").toVariant().toLongLong();
-                sendMessage(QString("Thread ID: `%1`").arg(threadId), QString(), QString(), QString(), threadId, false, false, false, {chat});
+                sendMessage(QString("Thread ID: `%1`").arg(threadId), QString(), QString(), QString(), threadId, false, false, false, false, {chat});
                 continue;
             }
 

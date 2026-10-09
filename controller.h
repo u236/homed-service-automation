@@ -96,7 +96,7 @@ private slots:
     void publishMessage(const QString &topic, const QVariant &data, bool retain);
     void updateState(const QString &name, const QVariant &value);
     void frameRequest(const QString &id, const QString &device);
-    void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats);
+    void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, QList <qint64> *chats);
 
     void finished(void);
     void update(void);

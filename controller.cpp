@@ -958,9 +958,9 @@ void Controller::frameRequest(const QString &id, const QString &device)
     mqttPublish(mqttTopic("command/camera"), {{"action", "getFrame"}, {"id", id}, {"device", device}});
 }
 
-void Controller::telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool silent, bool remove, bool update, QList <qint64> *chats)
+void Controller::telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, QList <qint64> *chats)
 {
-    m_telegram->sendMessage(message, file, keyboard, uuid, thread, silent, remove, update, *chats);
+    m_telegram->sendMessage(message, file, keyboard, uuid, thread, rich, silent, remove, update, *chats);
 }
 
 void Controller::finished(void)

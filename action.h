@@ -138,13 +138,14 @@ class TelegramAction : public ActionObject
 
 public:
 
-    TelegramAction(const QString &message, const QString &file, const QString &keyboard, qint64 thread, bool silent, bool remove, bool update, const QList <qint64> &chats) :
-        ActionObject(Type::telegram), m_message(message), m_file(file), m_keyboard(keyboard), m_thread(thread), m_silent(silent), m_remove(remove), m_update(update), m_chats(chats) {}
+    TelegramAction(const QString &message, const QString &file, const QString &keyboard, qint64 thread, bool rich, bool silent, bool remove, bool update, const QList <qint64> &chats) :
+        ActionObject(Type::telegram), m_message(message), m_file(file), m_keyboard(keyboard), m_thread(thread), m_rich(rich), m_silent(silent), m_remove(remove), m_update(update), m_chats(chats) {}
 
     inline QString message(void) { return m_message; }
     inline QString file(void) { return m_file; }
     inline QString keyboard(void) { return m_keyboard; }
     inline qint64 thread(void) { return m_thread; }
+    inline bool rich(void) { return m_rich; }
     inline bool silent(void) { return m_silent; }
     inline bool remove(void) { return m_remove; }
     inline bool update(void) { return m_update; }
@@ -155,7 +156,7 @@ private:
 
     QString m_message, m_file, m_keyboard;
     qint64 m_thread;
-    bool m_silent, m_remove, m_update;
+    bool m_rich, m_silent, m_remove, m_update;
 
     QList <qint64> m_chats;
 };
