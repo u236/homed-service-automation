@@ -28,42 +28,82 @@ Telegram::~Telegram(void)
 void Telegram::sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, const QList <qint64> &chats)
 {
     QList <qint64> chatList = chats.isEmpty() ? QList <qint64> {m_chat} : chats;
-    QList <QString> typeList = {"animation", "audio", "message", "photo", "video"}, itemList = file.split('|'), formList, messageList;
-    QString document = itemList.value(0).trimmed(), type = file.isEmpty() ? "message" : itemList.value(1).trimmed();
+    QList <QString> fileList = file.trimmed().split('\n'), formList, messageList;
+    QString type = "message";
     QJsonObject media;
     QJsonArray array;
 
     if (m_token.isEmpty() || !m_chat)
         return;
 
-    if (!typeList.contains(type))
-        type = "document";
-
-    if (!file.isEmpty())
+    if (!rich)
     {
-        formList.append((QFile::exists(document) ? QString("-F %1=@'%2'") : QString("--form-string %1='%2'")).arg(type, QString(document).replace("'", "'\\''")));
-        media = {{"type", type}, {"media", QFile::exists(document) ? QString("attach://%1").arg(type) : document}};
-    }
-
-    if (rich)
-    {
-        QJsonObject json = {{"markdown", media.isEmpty() ? message : QString("![](tg://%1?id=media)\n\n%2").arg(type, message).trimmed()}};
-
-        if (!media.isEmpty())
-            json.insert("media", QJsonArray {QJsonObject {{"id", "media"}, {"media", media}}});
-
-        messageList.append(QString("--form-string rich_message='%1'").arg(QString(QJsonDocument(json).toJson(QJsonDocument::Compact)).replace("'", "'\\''")));
-    }
-    else if (!message.isEmpty())
-    {
-        messageList.append(QString("--form-string %1='%2'").arg(media.isEmpty() ? "text" : "caption", QString(message).replace("'", "'\\''")));
-        messageList.append("-F parse_mode=Markdown");
-
-        if (!media.isEmpty())
+        if (!file.isEmpty())
         {
-            media.insert("caption", message);
-            media.insert("parse_mode", "Markdown");
+            QList <QString> typeList = {"animation", "audio", "photo", "video"}, itemList = fileList.at(0).split('|');
+            QString document = itemList.value(0).trimmed();
+            bool exists = QFile::exists(document);
+
+            type = itemList.value(1).trimmed();
+
+            if (!typeList.contains(type))
+                type = "document";
+
+            formList.append((exists ? QString("-F %1=@'%2'") : QString("--form-string %1='%2'")).arg(type, QString(document).replace("'", "'\\''")));
+            media = {{"type", type}, {"media", exists ? QString("attach://%1").arg(type) : document}};
         }
+
+        if (!message.isEmpty())
+        {
+            messageList.append(QString("--form-string %1='%2'").arg(media.isEmpty() ? "text" : "caption", QString(message).replace("'", "'\\''")));
+            messageList.append("-F parse_mode=Markdown");
+
+            if (!media.isEmpty())
+            {
+                media.insert("caption", message);
+                media.insert("parse_mode", "Markdown");
+            }
+        }
+    }
+    else
+    {
+        QList <QString> typeList = {"audio", "photo", "video"}, markdownList;
+        QString text = message;
+        QJsonArray items;
+        QJsonObject json;
+
+        for (int i = 0; i < fileList.count(); i++)
+        {
+            QList <QString> list = fileList.at(i).split('|');
+            QString document = list.value(0).trimmed(), id = QString::number(i + 1);
+            bool exists = QFile::exists(document);
+
+            if (document.isEmpty())
+                continue;
+
+            type = list.value(1).trimmed();
+
+            if (!typeList.contains(type))
+                type = "document";
+
+            if (exists)
+                formList.append(QString("-F %1=@'%2'").arg(id, QString(document).replace("'", "'\\''")));
+
+            text.replace(QRegExp(QString("!\\[%1\\](?:\\[([^\\]]*)\\])?").arg(id)), QString("![](tg://%1?id=%2 \"\\1\")").arg(type, id));
+
+            if (!text.contains(QRegExp(QString("tg://[a-z]+\\?id=%1(?!\\d)").arg(id))))
+                markdownList.append(QString("![](tg://%1?id=%2)").arg(type, id));
+
+            items.append(QJsonObject {{"id", id}, {"media", QJsonObject {{"type", type}, {"media", exists ? QString("attach://%1").arg(id) : document}}}});
+        }
+
+        markdownList.append(text.replace(" \"\")", ")"));
+
+        if (!items.isEmpty())
+            json.insert("media", items);
+
+        json.insert("markdown", markdownList.join("\n\n").trimmed());
+        messageList.append(QString("--form-string rich_message='%1'").arg(QString(QJsonDocument(json).toJson(QJsonDocument::Compact)).replace("'", "'\\''")));
     }
 
     if (!keyboard.isEmpty())
@@ -129,7 +169,7 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
                 list.append(QString("-F message_id=%1").arg(m_automations->messages().value(id)));
                 method = "editMessageText";
 
-                if (!rich && !media.isEmpty())
+                if (!media.isEmpty())
                 {
                     list.append(QString("--form-string media='%1'").arg(QString(QJsonDocument(media).toJson(QJsonDocument::Compact)).replace("'", "'\\''")));
                     method = "editMessageMedia";
