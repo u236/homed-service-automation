@@ -403,8 +403,9 @@ void Controller::addRunner(const Automation &automation, const QMap <QString, QS
 
     connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
-    connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::frameRequest, this, &Controller::frameRequest, Qt::BlockingQueuedConnection);
+    connect(runner, &Runner::telegramTyping, this, &Controller::telegramTyping, Qt::BlockingQueuedConnection);
+    connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::finished, this, &Controller::finished);
 
     automation->updateCounter();
@@ -956,6 +957,11 @@ void Controller::updateState(const QString &name, const QVariant &value)
 void Controller::frameRequest(const QString &id, const QString &device)
 {
     mqttPublish(mqttTopic("command/camera"), {{"action", "getFrame"}, {"id", id}, {"device", device}});
+}
+
+void Controller::telegramTyping(qint64 thread, QList <qint64> *chats)
+{
+    m_telegram->sendTyping(thread, *chats);
 }
 
 void Controller::telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, QList <qint64> *chats)

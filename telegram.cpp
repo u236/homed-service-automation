@@ -25,6 +25,26 @@ Telegram::~Telegram(void)
     m_process->close();
 }
 
+void Telegram::sendTyping(qint64 thread, const QList <qint64> &chats)
+{
+    QList <qint64> chatList = chats.isEmpty() ? QList <qint64> {m_chat} : chats;
+
+    if (m_token.isEmpty() || !m_chat)
+        return;
+
+    for (int i = 0; i < chatList.count(); i++)
+    {
+        QJsonObject json = {{"chat_id", chatList.at(i)}, {"action", "typing"}};
+        QProcess *process(new QProcess(this));
+
+        if (thread)
+            json.insert("message_thread_id", thread);
+
+        connect(process, static_cast <void (QProcess::*)(int, QProcess::ExitStatus)> (&QProcess::finished), this, &Telegram::finished);
+        sendRequest(process, QString("--http1.1 -X POST -H 'Content-Type: application/json' -d '%1' -s https://api.telegram.org/bot%2/sendChatAction").arg(QJsonDocument(json).toJson(QJsonDocument::Compact), m_token));
+    }
+}
+
 void Telegram::sendMessage(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, const QList <qint64> &chats)
 {
     QList <qint64> chatList = chats.isEmpty() ? QList <qint64> {m_chat} : chats;
