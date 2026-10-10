@@ -422,8 +422,8 @@ void Controller::addRunner(const Automation &automation, const QMap <QString, QS
 
 void Controller::runAutomation(const Automation &automation, const Trigger &trigger, QMap <QString, QString> &meta)
 {
+    QString name = trigger->name().contains(QRegExp("\\[\\[.*\\]\\]|\\{\\{[^\\{\\}]*\\}\\}")) ? parsePattern(trigger->name(), meta, false).toString() : trigger->name();
     Runner *runner = findRunner(automation);
-    QString name = parsePattern(trigger->name(), meta, false).toString();
     bool start = true;
 
     logDebug(automation->log()) << automation << "triggered by" << triggerString(automation, trigger, name).toUtf8().constData();
