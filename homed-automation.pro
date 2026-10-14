@@ -19,3 +19,10 @@ SOURCES += \
     runner.cpp \
     telegram.cpp \
     trigger.cpp
+
+DISTFILES += $$files(deploy/data/usr/share/homed-automation/*, true)
+
+deploy.files = deploy/data/usr/share/homed-automation/*
+deploy.path = /usr/share/homed-automation
+
+INSTALLS += deploy
