@@ -59,9 +59,10 @@ private slots:
 
 signals:
 
+    void frameRequest(const QString &id, const QString &device);
     void publishMessage(const QString &topic, const QVariant &data, bool retain = false);
     void updateState(const QString &name, const QVariant &value);
-    void frameRequest(const QString &id, const QString &device);
+    void callScene(const QString &scene, const QString &chain);
 
     void telegramTyping(qint64 thread, QList <qint64> *chats);
     void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, QList <qint64> *chats);

@@ -33,6 +33,7 @@ public:
         property,
         mqtt,
         state,
+        scene,
         telegram,
         shell,
         condition,
@@ -130,6 +131,22 @@ private:
 
     QString m_name;
     QVariant m_value;
+
+};
+
+class SceneAction : public ActionObject
+{
+
+public:
+
+    SceneAction(const QString &scene) :
+        ActionObject(Type::scene), m_scene(scene) {}
+
+    inline QString scene(void) { return m_scene; }
+
+private:
+
+    QString m_scene;
 
 };
 

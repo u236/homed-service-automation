@@ -172,6 +172,17 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
                 break;
             }
 
+            case TriggerObject::Type::scene:
+            {
+                QString scene = item.value("scene").toString().trimmed();
+
+                if (scene.isEmpty())
+                    continue;
+
+                trigger = Trigger(new SceneTrigger(scene));
+                break;
+            }
+
             case TriggerObject::Type::telegram:
             {
                 QString message = item.value("message").toString().trimmed();
@@ -482,6 +493,18 @@ void AutomationList::unserializeActions(ActionList &list, const QJsonArray &acti
                 break;
             }
 
+            case ActionObject::Type::scene:
+            {
+                QString scene = item.value("scene").toString().trimmed();
+
+                if (scene.isEmpty())
+                    continue;
+
+                action = Action(new SceneAction(scene));
+                parsePattern(scene);
+                break;
+            }
+
             case ActionObject::Type::telegram:
             {
                 QString message = item.value("message").toString().trimmed(), file = item.value("file").toString().trimmed();
@@ -723,6 +746,13 @@ QJsonArray AutomationList::serializeActions(const ActionList &list)
                 break;
             }
 
+            case ActionObject::Type::scene:
+            {
+                SceneAction *action = reinterpret_cast <SceneAction*> (list.at(i).data());
+                json.insert("scene", action->scene());
+                break;
+            }
+
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (list.at(i).data());
@@ -876,6 +906,13 @@ QJsonArray AutomationList::serialize(void)
                     if (trigger->force())
                         item.insert("force", true);
 
+                    break;
+                }
+
+                case TriggerObject::Type::scene:
+                {
+                    SceneTrigger *trigger = reinterpret_cast <SceneTrigger*> (automation->triggers().at(j).data());
+                    item.insert("scene", trigger->scene());
                     break;
                 }
 

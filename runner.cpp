@@ -186,6 +186,13 @@ void Runner::runActions(void)
                 break;
             }
 
+            case ActionObject::Type::scene:
+            {
+                SceneAction *action = reinterpret_cast <SceneAction*> (item.data());
+                emit callScene(parsePattern(action->scene()).toString(), m_meta.value("sceneChain"));
+                break;
+            }
+
             case ActionObject::Type::telegram:
             {
                 TelegramAction *action = reinterpret_cast <TelegramAction*> (item.data());
@@ -196,8 +203,8 @@ void Runner::runActions(void)
 
             case ActionObject::Type::shell:
             {
-                QProcess process;
                 ShellAction *action = reinterpret_cast <ShellAction*> (item.data());
+                QProcess process;
 
                 process.setProcessChannelMode(QProcess::MergedChannels);
                 process.start("/bin/sh", {"-c", parsePattern(action->command()).toString()});

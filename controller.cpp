@@ -401,9 +401,10 @@ void Controller::addRunner(const Automation &automation, const QMap <QString, QS
 {
     Runner *runner = new Runner(this, automation, meta);
 
+    connect(runner, &Runner::frameRequest, this, &Controller::frameRequest, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::publishMessage, this, &Controller::publishMessage, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::updateState, this, &Controller::updateState, Qt::BlockingQueuedConnection);
-    connect(runner, &Runner::frameRequest, this, &Controller::frameRequest, Qt::BlockingQueuedConnection);
+    connect(runner, &Runner::callScene, this, &Controller::callScene, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::telegramTyping, this, &Controller::telegramTyping, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::telegramAction, this, &Controller::telegramAction, Qt::BlockingQueuedConnection);
     connect(runner, &Runner::finished, this, &Controller::finished);
@@ -577,6 +578,24 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     if (!item->match(b, c))
                         continue;
 
+                    break;
+                }
+
+                case TriggerObject::Type::scene:
+                {
+                    SceneTrigger *item = reinterpret_cast <SceneTrigger*> (trigger.data());
+                    QString link = QString("%1:%2").arg(automation->uuid()).arg(j);
+
+                    if (!item->match(a.toString()))
+                        continue;
+
+                    if (b.toString().split('/').contains(link))
+                    {
+                        logWarning << automation << "scene" << a.toString() << "loop detected";
+                        continue;
+                    }
+
+                    meta.insert("sceneChain", QString("%1/%2").arg(b.toString(), link).remove(QRegExp("^/")));
                     break;
                 }
 
@@ -925,6 +944,11 @@ void Controller::telegramReceived(const QString &message, qint64 chat)
     handleTrigger(TriggerObject::Type::telegram, message, chat);
 }
 
+void Controller::frameRequest(const QString &id, const QString &device)
+{
+    mqttPublish(mqttTopic("command/camera"), {{"action", "getFrame"}, {"id", id}, {"device", device}});
+}
+
 void Controller::publishMessage(const QString &topic, const QVariant &data, bool retain)
 {
     if (data.type() == QVariant::Map)
@@ -954,9 +978,9 @@ void Controller::updateState(const QString &name, const QVariant &value)
     m_automations->store(true);
 }
 
-void Controller::frameRequest(const QString &id, const QString &device)
+void Controller::callScene(const QString &scene, const QString &chain)
 {
-    mqttPublish(mqttTopic("command/camera"), {{"action", "getFrame"}, {"id", id}, {"device", device}});
+    handleTrigger(TriggerObject::Type::scene, scene, chain);
 }
 
 void Controller::telegramTyping(qint64 thread, QList <qint64> *chats)

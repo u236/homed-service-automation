@@ -18,6 +18,7 @@ public:
         property,
         mqtt,
         state,
+        scene,
         telegram,
         time,
         interval,
@@ -163,6 +164,23 @@ private:
     Statement m_statement;
     QVariant m_value;
     bool m_force;
+
+};
+
+class SceneTrigger : public TriggerObject
+{
+
+public:
+
+    SceneTrigger(const QString &scene) :
+        TriggerObject(Type::scene), m_scene(scene) {}
+
+    inline QString scene(void) { return m_scene; }
+    inline bool match(const QString &scene) { return scene.toLower() == m_scene.toLower(); }
+
+private:
+
+    QString m_scene;
 
 };
 
