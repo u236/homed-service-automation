@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.7.1"
+#define SERVICE_VERSION         "2.8.0"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 #define RUNNER_STARTUP_DELAY    10
@@ -23,7 +23,8 @@ public:
         restartService,
         updateAutomation,
         removeAutomation,
-        removeState
+        removeState,
+        callScene
     };
 
     enum class Event
@@ -97,7 +98,7 @@ private slots:
     void frameRequest(const QString &id, const QString &device);
     void publishMessage(const QString &topic, const QVariant &data, bool retain);
     void updateState(const QString &name, const QVariant &value, const QString &chain);
-    void callScene(const QString &scene, const QString &chain);
+    void callScene(const QString &scene, const QString &chain = QString());
 
     void telegramTyping(qint64 thread, QList <qint64> *chats);
     void telegramAction(const QString &message, const QString &file, const QString &keyboard, const QString &uuid, qint64 thread, bool rich, bool silent, bool remove, bool update, QList <qint64> *chats);

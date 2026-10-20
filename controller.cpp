@@ -815,6 +815,16 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
                 break;
             }
+
+            case Command::callScene:
+            {
+                QString scene = json.value("scene").toString().trimmed();
+
+                if (!scene.isEmpty())
+                    callScene(scene);
+
+                break;
+            }
         }
     }
     else if (subTopic.startsWith("service/"))
