@@ -69,6 +69,7 @@ private:
     QMap <QString, QByteArray> m_topics;
 
     QString triggerString(const Automation &automation, const Trigger &trigger, const QString &name = QString());
+    bool triggerLoop(const Automation &automation, const Trigger &trigger, const QString &chain, QMap <QString, QString> &meta);
 
     Runner *findRunner(const Automation &automation, bool pending = false);
     void abortRunners(const Automation &automation);
@@ -95,7 +96,7 @@ private slots:
 
     void frameRequest(const QString &id, const QString &device);
     void publishMessage(const QString &topic, const QVariant &data, bool retain);
-    void updateState(const QString &name, const QVariant &value);
+    void updateState(const QString &name, const QVariant &value, const QString &chain);
     void callScene(const QString &scene, const QString &chain);
 
     void telegramTyping(qint64 thread, QList <qint64> *chats);

@@ -61,7 +61,7 @@ signals:
 
     void frameRequest(const QString &id, const QString &device);
     void publishMessage(const QString &topic, const QVariant &data, bool retain = false);
-    void updateState(const QString &name, const QVariant &value);
+    void updateState(const QString &name, const QVariant &value, const QString &chain);
     void callScene(const QString &scene, const QString &chain);
 
     void telegramTyping(qint64 thread, QList <qint64> *chats);

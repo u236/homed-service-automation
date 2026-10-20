@@ -182,14 +182,14 @@ void Runner::runActions(void)
             case ActionObject::Type::state:
             {
                 StateAction *action = reinterpret_cast <StateAction*> (item.data());
-                emit updateState(action->name(), parsePattern(action->value().toString()));
+                emit updateState(action->name(), parsePattern(action->value().toString()), m_meta.value("triggerChain"));
                 break;
             }
 
             case ActionObject::Type::scene:
             {
                 SceneAction *action = reinterpret_cast <SceneAction*> (item.data());
-                emit callScene(parsePattern(action->scene()).toString(), m_meta.value("sceneChain"));
+                emit callScene(parsePattern(action->scene()).toString(), m_meta.value("triggerChain"));
                 break;
             }
 
@@ -262,8 +262,13 @@ void Runner::runActions(void)
             case ActionObject::Type::delay:
             {
                 int delay = parsePattern(reinterpret_cast <DelayAction*> (item.data())->value().toString()).toInt();
-                logDebug(automation()->log()) << this << "timer started for" << delay << "seconds";
+
+                if (delay <= 0)
+                    delay = 1;
+
+                logDebug(automation()->log()) << this << "timer started for" << delay << (delay > 1 ? "seconds" : "second");
                 m_timer->start(delay * 1000);
+                m_meta.remove("triggerChain");
                 m_frames.clear();
                 return;
             }

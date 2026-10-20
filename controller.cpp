@@ -375,6 +375,20 @@ QString Controller::triggerString(const Automation &automation, const Trigger &t
     return name.isEmpty() ? QString("[%1]").arg(automation->triggers().indexOf(trigger) + 1) : QString("\"%1\"").arg(name);
 }
 
+bool Controller::triggerLoop(const Automation &automation, const Trigger &trigger, const QString &chain, QMap <QString, QString> &meta)
+{
+    QString link = QString("%1:%2").arg(automation->uuid()).arg(automation->triggers().indexOf(trigger));
+
+    if (chain.split('/').contains(link))
+    {
+        logWarning << automation << "loop detected";
+        return true;
+    }
+
+    meta.insert("triggerChain", QString("%1/%2").arg(chain, link).remove(QRegExp("^/")));
+    return false;
+}
+
 Runner *Controller::findRunner(const Automation &automation, bool pending)
 {
     for (int i = 0; i < m_runners.count(); i++)
@@ -575,7 +589,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                         continue;
                     }
 
-                    if (!item->match(b, c))
+                    if (!item->match(b, c) || triggerLoop(automation, trigger, d.toString(), meta))
                         continue;
 
                     break;
@@ -584,18 +598,10 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 case TriggerObject::Type::scene:
                 {
                     SceneTrigger *item = reinterpret_cast <SceneTrigger*> (trigger.data());
-                    QString link = QString("%1:%2").arg(automation->uuid()).arg(j);
 
-                    if (!item->match(a.toString()))
+                    if (!item->match(a.toString()) || triggerLoop(automation, trigger, b.toString(), meta))
                         continue;
 
-                    if (b.toString().split('/').contains(link))
-                    {
-                        logWarning << automation << "scene" << a.toString() << "loop detected";
-                        continue;
-                    }
-
-                    meta.insert("sceneChain", QString("%1/%2").arg(b.toString(), link).remove(QRegExp("^/")));
                     break;
                 }
 
@@ -960,7 +966,7 @@ void Controller::publishMessage(const QString &topic, const QVariant &data, bool
     mqttPublishString(topic, data.toString(), retain);
 }
 
-void Controller::updateState(const QString &name, const QVariant &value)
+void Controller::updateState(const QString &name, const QVariant &value, const QString &chain)
 {
     QMutexLocker locker(m_mutex);
     QVariant check = m_automations->states().value(name);
@@ -970,7 +976,7 @@ void Controller::updateState(const QString &name, const QVariant &value)
     else
         m_automations->states().remove(name);
 
-    handleTrigger(TriggerObject::Type::state, name, check, m_automations->states().value(name));
+    handleTrigger(TriggerObject::Type::state, name, check, m_automations->states().value(name), chain);
 
     if (check == m_automations->states().value(name))
         return;
