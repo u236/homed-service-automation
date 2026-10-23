@@ -39,7 +39,7 @@ quint8 Controller::getEndpointId(const QString &endpoint)
 QVariant Controller::parsePattern(QString string, const QMap <QString, QString> &meta, bool condition)
 {
     QRegExp calculate("\\[\\[(.*)\\]\\]"), replace("\\{\\{[^\\{\\}]*\\}\\}"), split("\\s+(?=(?:[^']*['][^']*['])*[^']*$)");
-    QList <QString> valueList = {"colorTemperature", "file", "level", "loopIndex", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
+    QList <QString> valueList = {"colorTemperature", "file", "level", "loopIndex", "mqtt", "property", "shellOutput", "state", "sunrise", "sunset", "timestamp", "triggerEndpoint", "triggerMessage", "triggerName", "triggerProperty", "triggerTopic"};
     int position;
 
     if (!string.startsWith("#!"))
@@ -187,23 +187,23 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 11: // triggerMessage
+            case 11: // triggerEndpoint
+            case 14: // triggerProperty
             {
-                QString property = itemList.value(1).trimmed(), message = meta.value("triggerMessage");
-                value = property.isEmpty() ? message : Parser::jsonValue(message.toUtf8(), property).toString();
-                break;
-            }
-
-            case 12: // triggerName
-            {
-                value = meta.value("triggerName");
-                break;
-            }
-
-            case 13: // triggerProperty
-            {
+                QRegExp suffix("_(\\d+)$");
                 QString endpoint = meta.value("triggerEndpoint"), property = meta.value("triggerProperty");
                 const Device &device = findDevice(endpoint);
+
+                if (index == 11)
+                {
+                    if (itemList.count() < 2)
+                    {
+                        value = suffix.indexIn(property) != -1 ? suffix.cap(1) : endpoint.split('/').value(2);
+                        break;
+                    }
+
+                    property = itemList.value(1).trimmed().append(suffix.indexIn(property) != -1 ? suffix.cap() : QString());
+                }
 
                 if (!property.isEmpty() && !device.isNull())
                 {
@@ -222,7 +222,20 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
                 break;
             }
 
-            case 14: // triggerTopic
+            case 12: // triggerMessage
+            {
+                QString property = itemList.value(1).trimmed(), message = meta.value("triggerMessage");
+                value = property.isEmpty() ? message : Parser::jsonValue(message.toUtf8(), property).toString();
+                break;
+            }
+
+            case 13: // triggerName
+            {
+                value = meta.value("triggerName");
+                break;
+            }
+
+            case 15: // triggerTopic
             {
                 QString index = itemList.value(1).trimmed(), topic = meta.value("triggerTopic");
                 value = index.isEmpty() ? topic : topic.split('/').value(index.toInt());
@@ -514,14 +527,16 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 case TriggerObject::Type::property:
                 {
                     PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
+                    QString endpoint = item->endpoint().split('/').value(2) != "any" ? item->endpoint() : item->endpoint().mid(0, item->endpoint().length() - 4);
+                    bool any = endpoint != item->endpoint();
 
-                    if (item->endpoint() != a.toString() || item->property() != b.toString())
+                    if ((a.toString() != endpoint && (!any || !a.toString().startsWith(QString("%1/").arg(endpoint)))) || (b.toString() != item->property() && (!any || a.toString() != endpoint || !QRegExp(QString("%1_\\d+").arg(item->property())).exactMatch(b.toString()))))
                         continue;
 
-                    meta.insert("triggerEndpoint", item->endpoint());
-                    meta.insert("triggerProperty", item->property());
+                    meta.insert("triggerEndpoint", a.toString());
+                    meta.insert("triggerProperty", b.toString());
 
-                    if (item->hold())
+                    if (!any && item->hold())
                     {
                         bool check = item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates, match = check ? item->match(d) : item->match(c, d);
 
