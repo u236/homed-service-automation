@@ -505,7 +505,7 @@ void Controller::holdTrigger(const Automation &automation, const Trigger &trigge
     trigger->meta() = meta;
 }
 
-void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d)
+void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, const QVariant &b, const QVariant &c, const QVariant &d, bool startup)
 {
     for (int i = 0; i < m_automations->count(); i++)
     {
@@ -530,7 +530,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                     QString endpoint = item->endpoint().split('/').value(2) != "any" ? item->endpoint() : item->endpoint().mid(0, item->endpoint().length() - 4);
                     bool any = endpoint != item->endpoint();
 
-                    if ((a.toString() != endpoint && (!any || !a.toString().startsWith(QString("%1/").arg(endpoint)))) || (b.toString() != item->property() && (!any || a.toString() != endpoint || !QRegExp(QString("%1_\\d+").arg(item->property())).exactMatch(b.toString()))))
+                    if ((startup && !item->startup()) || (a.toString() != endpoint &&(!any || !a.toString().startsWith(QString("%1/").arg(endpoint)))) || (b.toString() != item->property() && (!any || a.toString() != endpoint || !QRegExp(QString("%1_\\d+").arg(item->property())).exactMatch(b.toString()))))
                         continue;
 
                     meta.insert("triggerEndpoint", a.toString());
@@ -559,7 +559,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 {
                     MqttTrigger *item = reinterpret_cast <MqttTrigger*> (trigger.data());
 
-                    if (item->topic() != a.toString())
+                    if ((startup && !item->startup()) || item->topic() != a.toString())
                         continue;
 
                     meta.insert("triggerMessage", c.toString());
@@ -723,7 +723,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
     QByteArray check = m_topics.value(topic.name());
     QString subTopic = topic.name().replace(0, mqttTopic().length(), QString());
     QJsonObject json = QJsonDocument::fromJson(message).object();
-    bool update = true;
+    bool update = true, startup = !m_topics.contains(topic.name());
 
     for (int i = 0; i < m_subscriptions.count(); i++)
     {
@@ -737,7 +737,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 update = false;
             }
 
-            handleTrigger(TriggerObject::Type::mqtt, item, check, message, topic.name());
+            handleTrigger(TriggerObject::Type::mqtt, item, check, message, topic.name(), startup);
         }
     }
 
@@ -935,6 +935,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             quint8 endpointId = getEndpointId(string.replace(device->topic(), device->key()));
             QList <QString> list = {"action", "event", "scene"};
             QMap <QString, QVariant> data = json.toVariantMap(), properties = device->properties().value(endpointId), check = properties;
+            bool startup = !device->properties().contains(endpointId);
 
             properties.insert(data);
 
@@ -952,7 +953,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             device->properties().insert(endpointId, properties);
 
             for (auto it = data.begin(); it != data.end(); it++)
-                handleTrigger(TriggerObject::Type::property, endpointId ? QString("%1/%2").arg(device->key()).arg(endpointId) : device->key(), it.key(), check.value(it.key()), it.value());
+                handleTrigger(TriggerObject::Type::property, endpointId ? QString("%1/%2").arg(device->key()).arg(endpointId) : device->key(), it.key(), check.value(it.key()), it.value(), startup);
         }
     }
 }

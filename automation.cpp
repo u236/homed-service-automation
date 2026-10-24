@@ -122,7 +122,7 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
                     if (!value.isValid())
                         continue;
 
-                    trigger = Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value, item.value("force").toBool()));
+                    trigger = Trigger(new PropertyTrigger(endpoint, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value, item.value("startup").toBool(true), item.value("force").toBool()));
                     break;
                 }
 
@@ -143,7 +143,7 @@ Automation AutomationList::parse(const QJsonObject &json, bool add)
                     if (!value.isValid())
                         continue;
 
-                    trigger = Trigger(new MqttTrigger(topic, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value, item.value("force").toBool()));
+                    trigger = Trigger(new MqttTrigger(topic, property, static_cast <TriggerObject::Statement> (m_triggerStatements.value(i)), value, item.value("startup").toBool(true), item.value("force").toBool()));
                     emit addSubscription(topic);
                     break;
                 }
@@ -874,6 +874,9 @@ QJsonArray AutomationList::serialize(void)
                     item.insert("property", trigger->property());
                     item.insert(m_triggerStatements.valueToKey(static_cast <int> (trigger->statement())), QJsonValue::fromVariant(trigger->value()));
 
+                    if (!trigger->startup())
+                        item.insert("startup", false);
+
                     if (trigger->force())
                         item.insert("force", true);
 
@@ -889,6 +892,9 @@ QJsonArray AutomationList::serialize(void)
 
                     if (!trigger->property().isEmpty())
                         item.insert("property", trigger->property());
+
+                    if (!trigger->startup())
+                        item.insert("startup", false);
 
                     if (trigger->force())
                         item.insert("force", true);

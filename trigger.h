@@ -93,13 +93,15 @@ class PropertyTrigger : public TriggerObject
 
 public:
 
-    PropertyTrigger(const QString &endpoint, const QString &property, Statement statement, const QVariant &value, bool force) :
-        TriggerObject(Type::property), m_endpoint(endpoint), m_property(property), m_statement(statement), m_value(value), m_force(force) {}
+    PropertyTrigger(const QString &endpoint, const QString &property, Statement statement, const QVariant &value, bool startup, bool force) :
+        TriggerObject(Type::property), m_endpoint(endpoint), m_property(property), m_statement(statement), m_value(value), m_startup(startup), m_force(force) {}
 
     inline QString endpoint(void) { return m_endpoint; }
     inline QString property(void) { return m_property; }
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
+
+    inline bool startup(void) { return m_startup; }
     inline bool force(void) { return m_force; }
 
     inline bool match(const QVariant &value) { return TriggerObject::match(QVariant(), value, m_statement, m_value, false); }
@@ -110,7 +112,7 @@ private:
     QString m_endpoint, m_property;
     Statement m_statement;
     QVariant m_value;
-    bool m_force;
+    bool m_startup, m_force;
 
 };
 
@@ -119,13 +121,15 @@ class MqttTrigger : public TriggerObject
 
 public:
 
-    MqttTrigger(const QString &topic, const QString &property, Statement statement, const QVariant &value, bool force) :
-        TriggerObject(Type::mqtt), m_topic(topic), m_property(property), m_statement(statement), m_value(value), m_force(force) {}
+    MqttTrigger(const QString &topic, const QString &property, Statement statement, const QVariant &value, bool startup, bool force) :
+        TriggerObject(Type::mqtt), m_topic(topic), m_property(property), m_statement(statement), m_value(value), m_startup(startup), m_force(force) {}
 
     inline QString topic(void) { return m_topic; }
     inline QString property(void) { return m_property; }
     inline Statement statement(void) { return m_statement; }
     inline QVariant value(void) { return m_value; }
+
+    inline bool startup(void) { return m_startup; }
     inline bool force(void) { return m_force; }
 
     inline bool match(const QByteArray &message) { return TriggerObject::match(QVariant(), parse(message), m_statement, m_value, false); }
@@ -136,7 +140,7 @@ private:
     QString m_topic, m_property;
     Statement m_statement;
     QVariant m_value;
-    bool m_force;
+    bool m_startup, m_force;
 
     inline QVariant parse(const QByteArray &message) { return m_property.isEmpty() ? message : Parser::jsonValue(message, m_property); }
 
