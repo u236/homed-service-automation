@@ -94,7 +94,7 @@ class PropertyTrigger : public TriggerObject
 public:
 
     PropertyTrigger(const QString &endpoint, const QString &property, Statement statement, const QVariant &value, bool startup, bool force) :
-        TriggerObject(Type::property), m_endpoint(endpoint), m_property(property), m_statement(statement), m_value(value), m_startup(startup), m_force(force) {}
+        TriggerObject(Type::property), m_endpoint(endpoint), m_property(property), m_statement(statement), m_value(value), m_startup(startup), m_force(force), m_any(endpoint.split('/').value(2) == "any") {}
 
     inline QString endpoint(void) { return m_endpoint; }
     inline QString property(void) { return m_property; }
@@ -103,6 +103,7 @@ public:
 
     inline bool startup(void) { return m_startup; }
     inline bool force(void) { return m_force; }
+    inline bool any(void) { return m_any; }
 
     inline bool match(const QVariant &value) { return TriggerObject::match(QVariant(), value, m_statement, m_value, false); }
     inline bool match(const QVariant &oldValue, const QVariant &newValue) { return TriggerObject::match(oldValue, newValue, m_statement, m_value, m_force); }
@@ -112,7 +113,7 @@ private:
     QString m_endpoint, m_property;
     Statement m_statement;
     QVariant m_value;
-    bool m_startup, m_force;
+    bool m_startup, m_force, m_any;
 
 };
 
