@@ -527,16 +527,15 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 case TriggerObject::Type::property:
                 {
                     PropertyTrigger *item = reinterpret_cast <PropertyTrigger*> (trigger.data());
-                    QString endpoint = item->endpoint().split('/').value(2) != "any" ? item->endpoint() : item->endpoint().mid(0, item->endpoint().length() - 4);
-                    bool any = endpoint != item->endpoint();
+                    QString endpoint = item->any() ? item->endpoint().mid(0, item->endpoint().length() - 4) : item->endpoint();
 
-                    if ((startup && !item->startup()) || (a.toString() != endpoint &&(!any || !a.toString().startsWith(QString("%1/").arg(endpoint)))) || (b.toString() != item->property() && (!any || a.toString() != endpoint || !QRegExp(QString("%1_\\d+").arg(item->property())).exactMatch(b.toString()))))
+                    if ((startup && !item->startup()) || (a.toString() != endpoint && (!item->any() || !a.toString().startsWith(QString("%1/").arg(endpoint)))) || (b.toString() != item->property() && (!item->any() || a.toString() != endpoint || !QRegExp(QString("%1_\\d+").arg(item->property())).exactMatch(b.toString()))))
                         continue;
 
                     meta.insert("triggerEndpoint", a.toString());
                     meta.insert("triggerProperty", b.toString());
 
-                    if (!any && item->hold())
+                    if (!item->any() && item->hold())
                     {
                         bool check = item->statement() != TriggerObject::Statement::changes && item->statement() != TriggerObject::Statement::updates, match = check ? item->match(d) : item->match(c, d);
 
