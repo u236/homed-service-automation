@@ -42,7 +42,7 @@ void Runner::propertyMessage(PropertyAction *action, QString &topic, QVariant &m
     if (!device.isNull())
     {
         quint8 endpointId = m_controller->getEndpointId(endpoint);
-        QVariant value = action->value(device->properties().value(endpointId).value(property));
+        QVariant value = action->value(device->properties().value(endpointId).value(property)); // TODO: parse patterns for increase and decrease statements
         QString string;
 
         if (value.type() == QVariant::String)
