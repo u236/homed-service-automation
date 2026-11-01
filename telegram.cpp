@@ -128,26 +128,33 @@ void Telegram::sendMessage(const QString &message, const QString &file, const QS
 
     if (!keyboard.isEmpty())
     {
+        QRegExp comma(",(?=(?:[^\"]*[\"][^\"]*[\"])*[^\"]*$)"), colon(":(?=(?:[^\"]*[\"][^\"]*[\"])*[^\"]*$)");
         QList <QString> lines = keyboard.trimmed().split('\n');
 
         for (int i = 0; i < lines.count(); i++)
         {
-            QList <QString> items = lines.at(i).split(',');
+            QList <QString> items = lines.at(i).split(comma);
             QJsonArray line;
 
             for (int j = 0; j < items.count(); j++)
             {
-                QList <QString> item = items.at(j).split(':');
+                QList <QString> item = items.at(j).split(colon);
                 QJsonObject json;
+
+                for (int k = 0; k < item.count(); k++)
+                {
+                    QString value = item.at(k).trimmed();
+                    item.replace(k, value.startsWith('"') && value.endsWith('"') ? value.mid(1, value.length() - 2) : value);
+                }
 
                 if (item.value(0).isEmpty())
                     continue;
 
-                json.insert("text", item.value(0).trimmed());
-                json.insert("callback_data", item.value(item.count() > 1 ? 1 : 0).trimmed());
+                json.insert("text", item.value(0));
+                json.insert("callback_data", item.value(item.count() > 1 ? 1 : 0));
 
                 if (!item.value(2).isEmpty())
-                    json.insert("style", item.value(2).trimmed());
+                    json.insert("style", item.value(2));
 
                 line.append(json);
             }
