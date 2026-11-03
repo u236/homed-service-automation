@@ -861,7 +861,6 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
             if (!device->topic().startsWith(QString("%1/").arg(service)))
                 continue;
 
-            mqttUnsubscribe(mqttTopic("fd/%1").arg(device->topic()));
             mqttUnsubscribe(mqttTopic("fd/%1/#").arg(device->topic()));
             device->clearTopic();
         }
@@ -899,10 +898,7 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
                 if (device->topic() != topic)
                 {
                     if (!device->topic().isEmpty())
-                    {
-                        mqttUnsubscribe(mqttTopic("fd/%1").arg(device->topic()));
                         mqttUnsubscribe(mqttTopic("fd/%1/#").arg(device->topic()));
-                    }
 
                     device->setTopic(topic);
                     check = true;
@@ -918,7 +914,6 @@ void Controller::mqttReceived(const QByteArray &message, const QMqttTopicName &t
 
             if (check)
             {
-                mqttSubscribe(mqttTopic("fd/%1").arg(topic));
                 mqttSubscribe(mqttTopic("fd/%1/#").arg(topic));
                 mqttPublish(mqttTopic("command/%1").arg(service), {{"action", "getProperties"}, {"device", names ? name : id}, {"service", "automation"}});
             }
