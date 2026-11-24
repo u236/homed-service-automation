@@ -1,7 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
-#define SERVICE_VERSION         "2.9.0"
+#define SERVICE_VERSION         "2.9.1"
 #define EMPTY_PATTERN_VALUE     "_NULL_"
 #define SUBSCRIPTION_DELAY      1000
 #define RUNNER_STARTUP_DELAY    10
@@ -57,7 +57,6 @@ private:
 
     AutomationList *m_automations;
     Telegram *m_telegram;
-    Sun *m_sun;
 
     QMetaEnum m_commands, m_events;
     QDateTime m_dateTime;
@@ -81,7 +80,6 @@ private:
     void handleTrigger(TriggerObject::Type type, const QVariant &a = QVariant(), const QVariant &b = QVariant(), const QVariant &c = QVariant(), const QVariant &d = QVariant(), bool startup = false);
 
     void publishEvent(const QString &name, Event event);
-    void updateSun(void);
 
 public slots:
 

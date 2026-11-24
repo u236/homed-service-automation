@@ -104,10 +104,13 @@ public:
     AutomationList(QSettings *config, QObject *parent);
     ~AutomationList(void);
 
+    inline Sun *sun(void) { return m_sun; }
+
     inline QMap <QString, qint64> &messages(void) { return m_messages; }
     inline QMap <QString, QVariant> &states(void) { return m_states; }
 
     void init(void);
+    void updateSun(void);
     void store(bool sync = false);
 
     AutomationObject::Mode getMode(const QJsonObject &json);
@@ -119,6 +122,7 @@ public:
 private:
 
     QTimer *m_timer;
+    Sun *m_sun;
 
     QMetaEnum m_automationModes, m_triggerTypes, m_conditionTypes, m_actionTypes, m_triggerStatements, m_conditionStatements, m_actionStatements;
     QFile m_file;

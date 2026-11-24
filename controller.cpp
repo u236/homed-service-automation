@@ -4,9 +4,6 @@
 
 Controller::Controller(const QString &configFile) : HOMEd(SERVICE_VERSION, configFile, true), m_timer(new QTimer(this)), m_mutex(new QMutex), m_automations(new AutomationList(getConfig(), this)), m_telegram(new Telegram(getConfig(), m_automations,  this)), m_commands(QMetaEnum::fromType <Command> ()), m_events(QMetaEnum::fromType <Event> ()), m_dateTime(QDateTime::currentDateTime()), m_startup(false)
 {
-    m_sun = new Sun(getConfig()->value("location/latitude").toDouble(), getConfig()->value("location/longitude").toDouble());
-    updateSun();
-
     connect(m_automations, &AutomationList::addSubscription, this, &Controller::addSubscription);
     connect(m_telegram, &Telegram::messageReceived, this, &Controller::telegramReceived);
     connect(m_timer, &QTimer::timeout, this, &Controller::update);
@@ -66,7 +63,7 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
             case 2: // level
             {
                 int min = itemList.value(1).toInt(), max = itemList.value(2).toInt();
-                double position = m_sun->position();
+                double position = m_automations->sun()->position();
 
                 if (!min)
                     min = index ? 100 : 153;
@@ -179,8 +176,8 @@ QVariant Controller::parsePattern(QString string, const QMap <QString, QString> 
 
                 switch (index)
                 {
-                    case 8: dateTime.setTime(m_sun->sunrise()); break;
-                    case 9: dateTime.setTime(m_sun->sunset()); break;
+                    case 8: dateTime.setTime(m_automations->sun()->sunrise()); break;
+                    case 9: dateTime.setTime(m_automations->sun()->sunset()); break;
                 }
 
                 value = format.isEmpty() ? QString::number(dateTime.toSecsSinceEpoch()) : dateTime.toString(format);
@@ -329,7 +326,7 @@ bool Controller::checkConditions(ConditionObject::Type type, const QList <Condit
             {
                 TimeCondition *condition = reinterpret_cast <TimeCondition*> (item.data());
 
-                if (condition->match(QTime(now.time().hour(), now.time().minute()), m_sun))
+                if (condition->match(QTime(now.time().hour(), now.time().minute()), m_automations->sun()))
                     count++;
 
                 break;
@@ -633,7 +630,7 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
                 {
                     TimeTrigger *item = reinterpret_cast <TimeTrigger*> (trigger.data());
 
-                    if (!item->match(a.toTime(), m_sun))
+                    if (!item->match(a.toTime(), m_automations->sun()))
                         continue;
 
                     break;
@@ -660,19 +657,6 @@ void Controller::handleTrigger(TriggerObject::Type type, const QVariant &a, cons
 void Controller::publishEvent(const QString &name, Event event)
 {
     mqttPublish(mqttTopic("event/%1").arg(serviceTopic()), {{"automation", name}, {"event", m_events.valueToKey(static_cast <int> (event))}});
-}
-
-void Controller::updateSun(void)
-{
-    QMutexLocker locker(m_mutex);
-
-    m_sun->setDate(QDate::currentDate());
-    m_sun->setOffset(QDateTime::currentDateTime().offsetFromUtc());
-
-    m_sun->updateSunrise();
-    m_sun->updateSunset();
-
-    logInfo << "Sunrise set to" << m_sun->sunrise().toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sun->sunset().toString("hh:mm").toUtf8().constData();
 }
 
 void Controller::quit(void)
@@ -1036,7 +1020,11 @@ void Controller::update(void)
     QDateTime now = QDateTime::currentDateTime();
 
     if (m_dateTime.date() != now.date())
-        updateSun();
+    {
+        QMutexLocker locker(m_mutex);
+        m_automations->updateSun();
+        m_automations->store();
+    }
 
     if (m_dateTime.time().minute() != now.time().minute())
     {

@@ -4,6 +4,9 @@
 
 AutomationList::AutomationList(QSettings *config, QObject *parent) : QObject(parent), m_timer(new QTimer(this)), m_sync(false)
 {
+    m_sun = new Sun(config->value("location/latitude").toDouble(), config->value("location/longitude").toDouble());
+    updateSun();
+
     m_automationModes = QMetaEnum::fromType <AutomationObject::Mode> ();
 
     m_triggerTypes = QMetaEnum::fromType <TriggerObject::Type> ();
@@ -25,6 +28,7 @@ AutomationList::~AutomationList(void)
 {
     m_sync = true;
     writeDatabase();
+    delete m_sun;
 }
 
 void AutomationList::init(void)
@@ -49,6 +53,17 @@ void AutomationList::init(void)
     }
 
     m_file.close();
+}
+
+void AutomationList::updateSun(void)
+{
+    m_sun->setDate(QDate::currentDate());
+    m_sun->setOffset(QDateTime::currentDateTime().offsetFromUtc());
+
+    m_sun->updateSunrise();
+    m_sun->updateSunset();
+
+    logInfo << "Sunrise set to" << m_sun->sunrise().toString("hh:mm").toUtf8().constData() << "and sunset set to" << m_sun->sunset().toString("hh:mm").toUtf8().constData();
 }
 
 void AutomationList::store(bool sync)
@@ -983,13 +998,15 @@ QJsonArray AutomationList::serialize(void)
 void AutomationList::writeDatabase(void)
 {
     HOMEd *homed = reinterpret_cast <HOMEd*> (parent());
-    QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}}, messages;
+    QJsonObject json = {{"automations", serialize()}, {"states", QJsonObject::fromVariantMap(m_states)}, {"sunrise", m_sun->sunrise().toString("hh:mm")}, {"sunset", m_sun->sunset().toString("hh:mm")}, {"timestamp", QDateTime::currentSecsSinceEpoch()}, {"version", SERVICE_VERSION}}, messages;
 
     homed->mqttPublishStatus(json);
 
     if (!m_sync)
         return;
 
+    json.remove("sunrise");
+    json.remove("sunset");
     m_sync = false;
 
     for (auto it = m_messages.begin(); it != m_messages.end(); it++)
